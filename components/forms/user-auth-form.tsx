@@ -15,61 +15,102 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import GoogleSignInButton from "../github-auth-button";
 
 const formSchema = z.object({
-  email: z.string().email({ message: "Enter a valid email address" }),
+  email: z.string().email({ message: "Ingresa un correo válido" }),
+  password: z
+    .string()
+    .min(8, "La contraseña debe tener al menos 8 caracteres")
+    .max(20, "La contraseña debe tener menos de 20 caracteres"),
 });
 
 type UserFormValue = z.infer<typeof formSchema>;
 
 export default function UserAuthForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl");
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const defaultValues = {
-    email: "demo@gmail.com",
+    email: "",
+    password: "",
   };
+
   const form = useForm<UserFormValue>({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
 
   const onSubmit = async (data: UserFormValue) => {
-    signIn("credentials", {
+    setLoading(true);
+    setError("");
+
+    const result = await signIn("credentials", {
       email: data.email,
-      callbackUrl: callbackUrl ?? "/dashboard",
+      password: data.password,
+      redirect: false,
+      callbackUrl,
     });
+
+    setLoading(false);
+
+    if (result?.error) {
+      setError(result.error);
+    } else if (result?.url) {
+      window.location.href = result.url;
+    }
   };
 
   return (
     <>
       <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-2 w-full"
-        >
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2 w-full">
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>Correo Electrónico</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
-                    placeholder="Enter your email..."
+                    placeholder="Ingresa tu correo..."
                     disabled={loading}
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                {form.formState.errors.email && (
+                  <FormMessage>{form.formState.errors.email.message}</FormMessage>
+                )}
               </FormItem>
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Contraseña</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    placeholder="Ingresa tu contraseña..."
+                    disabled={loading}
+                    {...field}
+                  />
+                </FormControl>
+                {form.formState.errors.password && (
+                  <FormMessage>{form.formState.errors.password.message}</FormMessage>
+                )}
+              </FormItem>
+            )}
+          />
+
+          {error && <p className="text-red-500">{error}</p>}
+
           <Button disabled={loading} className="ml-auto w-full" type="submit">
-            Continue With Email
+            {loading ? "Ingresando..." : "Ingresar"}
           </Button>
         </form>
       </Form>
@@ -77,13 +118,7 @@ export default function UserAuthForm() {
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t" />
         </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">
-            Or continue with
-          </span>
-        </div>
       </div>
-      <GoogleSignInButton />
     </>
   );
 }

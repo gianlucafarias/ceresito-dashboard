@@ -1,162 +1,135 @@
+"use client"
 import { CalendarDateRangePicker } from "@/components/date-range-picker";
 import { Overview } from "@/components/overview";
 import { RecentSales } from "@/components/recent-sales";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import Card, { CardContent, CardProps } from "@/components/Card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserCheck, Workflow } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton"
+
 
 export default function page() {
+  const [uniqueUsers, setUniqueUsers] = useState(null);
+  const [totalConversaciones, setTotalConversaciones] = useState(null);
+  const [totalFlujos, setTotalFlujos] = useState(null);
+  const [interaccionesLastWeek, setinteraccionesLastWeek] = useState(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Fetch para obtener el total de usuarios únicos
+        const responseUniqueUsers = await fetch('https://api.ceres.gob.ar/api/api/users/count');
+        if (responseUniqueUsers.ok) {
+          const data = await responseUniqueUsers.json();
+          setUniqueUsers(data.count);
+        } else {
+          console.error('Error al obtener el conteo de usuarios:', responseUniqueUsers.status);
+        }
+
+        // Fetch para obtener el total de conversaciones
+        const responseTotalConversaciones = await fetch('https://api.ceres.gob.ar/api/api/conversaciones');
+        if (responseTotalConversaciones.ok) {
+          const data = await responseTotalConversaciones.json();
+          setTotalConversaciones(data.length);
+        } else {
+          console.error('Error al obtener el total de conversaciones:', responseTotalConversaciones.status);
+        }
+
+        // Fetch para obtener el total de flujos recorridos
+        const responseTotalFlujos = await fetch('https://api.ceres.gob.ar/api/api/visitas-flujo');
+        if (responseTotalFlujos.ok) {
+          const data = await responseTotalFlujos.json();
+          setTotalFlujos(data.totalVisitas);
+        } else {
+          console.error('Error al obtener el total de flujos recorridos:', responseTotalFlujos.status);
+        }
+
+        // Fetch para obtener el total de usuarios únicos
+        const responseInteractionsLastWeek = await fetch('https://api.ceres.gob.ar/api/api/interactions/last-week/count');
+        if (responseInteractionsLastWeek.ok) {
+          const data = await responseInteractionsLastWeek.json();
+          setinteraccionesLastWeek(data.count);
+        } else {
+          console.error('Error al obtener el conteo de interacciones:', responseInteractionsLastWeek.status);
+        }
+      } catch (error) {
+        console.error('Error al realizar la solicitud:', error);
+      }
+    }
+
+    fetchData();
+  }, []);
+
   return (
     <ScrollArea className="h-full">
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">
-            Hi, Welcome back 👋
+            Hola, bienvenido 👋
           </h2>
-          <div className="hidden md:flex items-center space-x-2">
-            <CalendarDateRangePicker />
-            <Button>Download</Button>
-          </div>
         </div>
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics" disabled>
-              Analytics
-            </TabsTrigger>
-          </TabsList>
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Total Revenue
-                  </CardTitle>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    className="h-4 w-4 text-muted-foreground"
-                  >
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">$45,231.89</div>
-                  <p className="text-xs text-muted-foreground">
-                    +20.1% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Subscriptions
-                  </CardTitle>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    className="h-4 w-4 text-muted-foreground"
-                  >
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">+2350</div>
-                  <p className="text-xs text-muted-foreground">
-                    +180.1% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Sales</CardTitle>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    className="h-4 w-4 text-muted-foreground"
-                  >
-                    <rect width="20" height="14" x="2" y="5" rx="2" />
-                    <path d="M2 10h20" />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">+12,234</div>
-                  <p className="text-xs text-muted-foreground">
-                    +19% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Active Now
-                  </CardTitle>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    className="h-4 w-4 text-muted-foreground"
-                  >
-                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">+573</div>
-                  <p className="text-xs text-muted-foreground">
-                    +201 since last hour
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
-              <Card className="col-span-4">
-                <CardHeader>
-                  <CardTitle>Overview</CardTitle>
-                </CardHeader>
-                <CardContent className="pl-2">
-                  <Overview />
-                </CardContent>
-              </Card>
-              <Card className="col-span-4 md:col-span-3">
-                <CardHeader>
-                  <CardTitle>Recent Sales</CardTitle>
-                  <CardDescription>
-                    You made 265 sales this month.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RecentSales />
-                </CardContent>
-              </Card>
-            </div>
+            <section className="grid w-full grid-cols-1 gap-4 gap-x-8 transition-all sm:grid-cols-2 xl:grid-cols-4">
+              {uniqueUsers === null ? (
+                <Skeleton className="h-[120px]" />
+              ) : (
+                <Card
+                  label="Usuarios únicos totales"
+                  amount={uniqueUsers}
+                  description=""
+                  icon={UserCheck}
+                />
+              )}
+              {totalConversaciones === null ? (
+                <Skeleton className="h-[120px]" />
+              ) : (
+                <Card
+                  label="Conversaciones totales"
+                  amount={totalConversaciones}
+                  description=""
+                  icon={UserCheck}
+                />
+              )}
+              {totalFlujos === null ? (
+                <Skeleton className="h-[120px]" />
+              ) : (
+                <Card
+                  label="Flujos recorridos"
+                  amount={totalFlujos}
+                  description=""
+                  icon={UserCheck}
+                />
+              )}
+              {interaccionesLastWeek === null ? (
+                <Skeleton className="h-[120px]" />
+              ) : (
+                <Card
+                  label="Interacciones esta semana"
+                  amount={interaccionesLastWeek}
+                  description=""
+                  icon={UserCheck}
+                />
+              )}
+            </section>
+            <section className="grid grid-cols-1 gap-4 transition-all lg:grid-cols-2">
+              <CardContent className="flex justify-between gap-4">
+                <section>
+                  <p>Flujos más visitados</p>
+                </section>
+                <Overview />
+              </CardContent>
+              <CardContent className="flex justify-between gap-4">
+                <section>
+                  <p>Ultimas Conversaciones</p>
+                </section>
+                <RecentSales />
+              </CardContent>
+            </section>
           </TabsContent>
         </Tabs>
       </div>

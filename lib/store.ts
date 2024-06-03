@@ -25,18 +25,18 @@ export type Task = {
 export type State = {
   tasks: Task[];
   columns: Column[];
-  draggedTask: string | null;
+  draggedTask: { id: string | null; status: ColumnId | null };
 };
 
 export type Actions = {
-  addTask: (title: string, description?: string) => void;
+  addTask: (title: string, description?: string, status?: ColumnId) => void;
+  updateCol: (id: UniqueIdentifier, newName: string) => void;
   addCol: (title: string) => void;
-  dragTask: (id: string | null) => void;
-  removeTask: (title: string) => void;
+  dragTask: (id: string | null, status: ColumnId | null) => void;
+  removeTask: (id: string) => void;
   removeCol: (id: UniqueIdentifier) => void;
   setTasks: (updatedTask: Task[]) => void;
   setCols: (cols: Column[]) => void;
-  updateCol: (id: UniqueIdentifier, newName: string) => void;
 };
 
 export const useTaskStore = create<State & Actions>()(
@@ -44,36 +44,19 @@ export const useTaskStore = create<State & Actions>()(
     (set) => ({
       tasks: [],
       columns: defaultCols,
-      draggedTask: null,
-      addTask: (title: string, description?: string) =>
+      draggedTask: { id: null, status: null },
+
+      addTask: (title, description, status = "TODO") =>
         set((state) => ({
           tasks: [
             ...state.tasks,
-            { id: uuid(), title, description, status: "TODO" },
+            { id: uuid(), title, description, status },
           ],
         })),
-      updateCol: (id: UniqueIdentifier, newName: string) =>
-        set((state) => ({
-          columns: state.columns.map((col) =>
-            col.id === id ? { ...col, title: newName } : col,
-          ),
-        })),
-      addCol: (title: string) =>
-        set((state) => ({
-          columns: [...state.columns, { id: uuid(), title }],
-        })),
-      dragTask: (id: string | null) => set({ draggedTask: id }),
-      removeTask: (id: string) =>
-        set((state) => ({
-          tasks: state.tasks.filter((task) => task.id !== id),
-        })),
-      removeCol: (id: UniqueIdentifier) =>
-        set((state) => ({
-          columns: state.columns.filter((col) => col.id !== id),
-        })),
-      setTasks: (newTasks: Task[]) => set({ tasks: newTasks }),
-      setCols: (newCols: Column[]) => set({ columns: newCols }),
+
+      // Resto de las acciones
     }),
-    { name: "task-store", skipHydration: true },
-  ),
+    { name: "task-store", skipHydration: true }
+  )
 );
+

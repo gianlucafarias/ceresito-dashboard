@@ -11,7 +11,6 @@ export default function page() {
         <BreadCrumb items={breadcrumbItems} />
         <div className="flex items-start justify-between">
           <Heading title={`Kanban`} description="Manage tasks by dnd" />
-          <NewTaskDialog />
         </div>
         <KanbanBoard />
       </div>

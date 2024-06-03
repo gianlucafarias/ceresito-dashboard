@@ -4,10 +4,6 @@ import CredentialProvider from "next-auth/providers/credentials";
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    GithubProvider({
-      clientId: process.env.GITHUB_ID ?? "",
-      clientSecret: process.env.GITHUB_SECRET ?? "",
-    }),
     CredentialProvider({
       credentials: {
         email: {
@@ -15,9 +11,14 @@ export const authOptions: NextAuthOptions = {
           type: "email",
           placeholder: "example@gmail.com",
         },
+        password: {
+          label: "password",
+          type: "password",
+          placeholder: "contraseña",
+        }
       },
       async authorize(credentials, req) {
-        const user = { id: "1", name: "John", email: credentials?.email };
+        const user = { id: "1", name: "John", email: credentials?.email, password: "ceres2340" };
         if (user) {
           // Any object returned will be saved in `user` property of the JWT
           return user;

@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader } from "../ui/card";
 import { ColumnActions } from "./column-action";
 import { TaskCard } from "./task-card";
+import NewTaskDialog from "./new-task-dialog";
 
 export interface Column {
   id: UniqueIdentifier;
@@ -100,6 +101,7 @@ export function BoardColumn({ column, tasks, isOverlay }: BoardColumnProps) {
             <TaskCard key={task.id} task={task} />
           ))}
         </SortableContext>
+        <NewTaskDialog initialStatus={column.id} />
       </CardContent>
     </Card>
   );

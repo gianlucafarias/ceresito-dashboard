@@ -29,6 +29,7 @@ import {
   User2Icon,
   UserX2Icon,
   X,
+  HardHat,
 } from "lucide-react";
 
 export type Icon = LucideIcon;

@@ -1,0 +1,192 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Mensaje {
+  id          Int      @id @default(autoincrement())
+  cuadrilla   Cuadrilla @relation(fields: [cuadrillaId], references: [id])
+  cuadrillaId Int
+  contenido   String
+  remitente   String
+  timestamp   DateTime @default(now())
+  leido       Boolean  @default(false)
+}
+
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  role      Role     @relation(fields: [roleId], references: [id])
+  roleId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  accounts  Account[]
+  sessions  Session[]
+  projects  Project[] @relation("UserProjects")
+  tasks     Task[]    @relation("UserTasks")
+  comments  Comment[] @relation("UserComments") // Añadir esta línea para la relación inversa
+}
+
+
+model Project {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String
+  startDate   DateTime
+  endDate     DateTime
+  budget      Float?    
+  status      String     @default("PENDING")
+  owner       User      @relation("UserProjects", fields: [ownerId], references: [id])
+  ownerId     Int
+  tasks       Task[]
+  stages      Stage[]
+  comments    Comment[]
+  documents   Document[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Task {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String
+  status      String
+  project     Project   @relation(fields: [projectId], references: [id])
+  projectId   Int
+  assignee    User      @relation("UserTasks", fields: [assigneeId], references: [id])
+  assigneeId  Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Stage {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String
+  project     Project   @relation(fields: [projectId], references: [id])
+  projectId   Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Comment {
+  id        Int       @id @default(autoincrement())
+  content   String
+  author    User      @relation("UserComments", fields: [authorId], references: [id]) // Añadir nombre de la relación
+  authorId  Int
+  project   Project   @relation(fields: [projectId], references: [id])
+  projectId Int
+  createdAt DateTime  @default(now())
+}
+
+model Document {
+  id          Int       @id @default(autoincrement())
+  name        String
+  url         String
+  project     Project   @relation(fields: [projectId], references: [id])
+  projectId   Int
+  createdAt   DateTime  @default(now())
+}
+
+model Template {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String
+  tasks       String[]  // An array of task titles for simplicity
+  stages      String[]  // An array of stage names for simplicity
+  createdAt   DateTime  @default(now())
+}
+
+model Account {
+  id                Int       @id @default(autoincrement())
+  userId            Int
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?   @db.Text
+  access_token      String?   @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?   @db.Text
+  session_state     String?
+  oauth_token_secret String?  @db.Text
+  oauth_token       String?   @db.Text
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+
+model Role {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[]
+}
+
+model Cuadrilla {
+  id                        Int               @id @default(autoincrement())
+  nombre                    String
+  telefono                  String
+  tipo                      TipoReclamo[]
+  disponible                Boolean           @default(true)
+  ultimaAsignacion          DateTime?
+  limiteReclamosSimultaneos Int               @default(1)
+  reclamosAsignados         Int[]             
+  RegistroReclamo           RegistroReclamo[]
+  Mensajes                  Mensaje[]
+}
+
+model TipoReclamo {
+  id       Int      @id @default(autoincrement())
+  nombre   String
+  cuadrilla Cuadrilla[]
+}
+
+model RegistroReclamo {
+  id              Int       @id @default(autoincrement())
+  cuadrilla       Cuadrilla @relation(fields: [cuadrillaId], references: [id])
+  cuadrillaId     Int
+  reclamoId       Int
+  reclamo         String
+  fecha           DateTime
+  fechaRegistro   DateTime  @default(now())
+  fechaAsignacion DateTime?
+  fechaSolucion   DateTime?
+  estado          String
+  prioridad       String?
+  detalle         String?
+  direccion       String?
+  barrio          String?
+}

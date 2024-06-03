@@ -3,8 +3,8 @@ import Sidebar from "@/components/layout/sidebar";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Next Shadcn Dashboard Starter",
-  description: "Basic dashboard with Next.js and Shadcn",
+  title: "Panel",
+  description: "Gobierno de la Ciudad de Ceres",
 };
 
 export default function DashboardLayout({
@@ -15,9 +15,9 @@ export default function DashboardLayout({
   return (
     <>
       <Header />
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen">
         <Sidebar />
-        <main className="w-full pt-16">{children}</main>
+        <main className="flex-1 overflow-auto pt-16">{children}</main>
       </div>
     </>
   );

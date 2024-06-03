@@ -13,20 +13,29 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "../ui/textarea";
 
-import { useTaskStore } from "@/lib/store";
+import { ColumnId, Task, useTaskStore } from "@/lib/store";
+import { useEffect, useState } from "react";
 
-export default function NewTaskDialog() {
+interface NewTaskDialogProps {
+  initialStatus: ColumnId;
+}
+
+export default function NewTaskDialog({ initialStatus }: NewTaskDialogProps) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const addTask = useTaskStore((state) => state.addTask);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-    const { title, description } = Object.fromEntries(formData);
-
-    if (typeof title !== "string" || typeof description !== "string") return;
-    addTask(title, description);
+    const newTask: Task = {
+      id: `task${Date.now()}`,
+      title,
+      description,
+      status: initialStatus,
+    };
+    addTask(newTask);
+    setTitle("");
+    setDescription("");
   };
 
   return (
@@ -52,6 +61,8 @@ export default function NewTaskDialog() {
             <Input
               id="title"
               name="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="Todo title..."
               className="col-span-4"
             />
@@ -60,17 +71,17 @@ export default function NewTaskDialog() {
             <Textarea
               id="description"
               name="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Description..."
               className="col-span-4"
             />
           </div>
         </form>
         <DialogFooter>
-          <DialogTrigger asChild>
-            <Button type="submit" size="sm" form="todo-form">
-              Add Todo
-            </Button>
-          </DialogTrigger>
+          <Button type="submit" size="sm" form="todo-form">
+            Add Todo
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

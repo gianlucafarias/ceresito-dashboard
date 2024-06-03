@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Project" ALTER COLUMN "status" SET DEFAULT 'PENDING',
+ALTER COLUMN "budget" DROP NOT NULL;

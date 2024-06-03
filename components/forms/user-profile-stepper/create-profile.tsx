@@ -288,7 +288,7 @@ export const CreateProfileOne: React.FC<ProfileFormType> = ({
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>Correo electronico</FormLabel>
                       <FormControl>
                         <Input
                           disabled={loading}

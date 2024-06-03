@@ -22,7 +22,6 @@ import type { Column } from "./board-column";
 import { BoardColumn, BoardContainer } from "./board-column";
 import NewSectionDialog from "./new-section-dialog";
 import { TaskCard } from "./task-card";
-// import { coordinateGetter } from "./multipleContainersKeyboardPreset";
 
 const defaultCols = [
   {
@@ -41,58 +40,40 @@ const defaultCols = [
 
 export type ColumnId = (typeof defaultCols)[number]["id"];
 
-const initialTasks: Task[] = [
-  {
-    id: "task1",
-    status: "DONE",
-    title: "Project initiation and planning",
-  },
-  {
-    id: "task2",
-    status: "DONE",
-    title: "Gather requirements from stakeholders",
-  },
-];
 export function KanbanBoard() {
-  // const [columns, setColumns] = useState<Column[]>(defaultCols);
   const columns = useTaskStore((state) => state.columns);
   const setColumns = useTaskStore((state) => state.setCols);
   const pickedUpTaskColumn = useRef<ColumnId | null>(null);
   const columnsId = useMemo(() => columns.map((col) => col.id), [columns]);
 
-  // const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const tasks = useTaskStore((state) => state.tasks);
   const setTasks = useTaskStore((state) => state.setTasks);
   const [activeColumn, setActiveColumn] = useState<Column | null>(null);
   const [isMounted, setIsMounted] = useState<Boolean>(false);
-
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor),
-    useSensor(TouchSensor),
-    // useSensor(KeyboardSensor, {
-    //   coordinateGetter: coordinateGetter,
-    // }),
+    useSensor(TouchSensor)
   );
 
   useEffect(() => {
     setIsMounted(true);
-  }, [isMounted]);
-
-  useEffect(() => {
     useTaskStore.persist.rehydrate();
   }, []);
-  if (!isMounted) return;
+
+  if (!isMounted) return null;
 
   function getDraggingTaskData(taskId: UniqueIdentifier, columnId: ColumnId) {
     const tasksInColumn = tasks.filter((task) => task.status === columnId);
     const taskPosition = tasksInColumn.findIndex((task) => task.id === taskId);
     const column = columns.find((col) => col.id === columnId);
+    const draggedTask = tasks.find((task) => task.id === taskId);
     return {
       tasksInColumn,
       taskPosition,
       column,
+      draggedTask,
     };
   }
 
@@ -266,13 +247,20 @@ export function KanbanBoard() {
     if (activeId === overId) return;
 
     const isActiveAColumn = activeData?.type === "Column";
-    if (!isActiveAColumn) return;
-
-    const activeColumnIndex = columns.findIndex((col) => col.id === activeId);
-
-    const overColumnIndex = columns.findIndex((col) => col.id === overId);
-
-    setColumns(arrayMove(columns, activeColumnIndex, overColumnIndex));
+    if (isActiveAColumn) {
+      const activeColumnIndex = columnsId.findIndex((col) => col === activeId);
+      const overColumnIndex = columnsId.findIndex((col) => col === overId);
+      setColumns(arrayMove(columns, activeColumnIndex, overColumnIndex));
+    } else if (activeData?.type === "Task") {
+      const { tasksInColumn, taskPosition, column, draggedTask } = getDraggingTaskData(
+        active.id,
+        over.data.current?.task.status as ColumnId
+      );
+      if (draggedTask) {
+        draggedTask.status = over.data.current?.task.status as ColumnId;
+        setTasks(arrayMove(tasks, tasksInColumn.findIndex((t) => t.id === activeId), taskPosition));
+      }
+    }
   }
 
   function onDragOver(event: DragOverEvent) {
@@ -290,11 +278,11 @@ export function KanbanBoard() {
     const overData = over.data.current;
 
     const isActiveATask = activeData?.type === "Task";
-    const isOverATask = activeData?.type === "Task";
+    const isOverATask = overData?.type === "Task";
 
     if (!isActiveATask) return;
 
-    // Im dropping a Task over another Task
+    // Manejando el arrastre de una tarea sobre otra tarea
     if (isActiveATask && isOverATask) {
       const activeIndex = tasks.findIndex((t) => t.id === activeId);
       const overIndex = tasks.findIndex((t) => t.id === overId);
@@ -310,7 +298,7 @@ export function KanbanBoard() {
 
     const isOverAColumn = overData?.type === "Column";
 
-    // Im dropping a Task over a column
+    // Manejando el arrastre de una tarea sobre una columna
     if (isActiveATask && isOverAColumn) {
       const activeIndex = tasks.findIndex((t) => t.id === activeId);
       const activeTask = tasks[activeIndex];
