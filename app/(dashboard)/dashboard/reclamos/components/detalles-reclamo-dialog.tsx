@@ -18,19 +18,38 @@ import { CheckIcon, ClockIcon, MapPin, UserIcon, WrenchIcon } from "lucide-react
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 
+interface Cuadrilla {
+  id: number;
+  nombre: string;
+  tipo: Array<{ id: number; nombre: string }>;
+  disponible: boolean; 
+}
 
-  interface DetallesReclamoDialogProps {
-    open: boolean;
-    onClose: () => void;
-    reclamo: Task;
-    onSuccessfulUpdate: () => void;
-    cuadrillas: any[]; // Añadir la prop de cuadrillas disponibles
 
-  }
+interface Reclamo {
+  id: number,
+  fechaAsignacion: Date,
+  cuadrillaId: number,
+  fecha: Date,
+  latitud: number,
+  longitud: number,
+  estado: string,
 
-  const handleSuccessfulUpdate = () => {
-    toast.success('Estado actualizado correctamente');
-  };
+}
+
+
+
+interface DetallesReclamoDialogProps {
+  open: boolean;
+  onClose: () => void;
+  reclamo: Task;
+  onSuccessfulUpdate: () => void;
+  cuadrillas: Cuadrilla[];
+}
+
+const handleSuccessfulUpdate = () => {
+  toast.success('Estado actualizado correctamente');
+};
 
   export const DetallesReclamoDialog = ({
     open,
@@ -47,9 +66,13 @@ import { Button } from "@/components/ui/button";
       console.log("Cuadrillas disponibles:", cuadrillas);
     }, [cuadrillas, reclamo]);
   
-    const cuadrillasDisponibles = reclamo 
-      ? cuadrillas.filter(c => c.tipo.some(t => t.nombre.toLowerCase() === reclamo.reclamo.toLowerCase()))
-      : [];
+    const cuadrillasDisponibles = reclamo
+    ? cuadrillas.filter(
+        (c) =>
+          c.tipo.some((t) => t.nombre.toLowerCase() === reclamo.reclamo.toLowerCase()) &&
+          c.disponible  // Filtrando solo las cuadrillas disponibles
+      )
+    : [];
   
     useEffect(() => {
       console.log("Cuadrillas disponibles después del filtrado:", cuadrillasDisponibles);
@@ -168,7 +191,7 @@ import { Button } from "@/components/ui/button";
                       <SelectGroup>
                         <SelectLabel>Cuadrillas Disponibles</SelectLabel>
                         {cuadrillasDisponibles.map((cuadrilla) => (
-                          <SelectItem key={cuadrilla.id} value={cuadrilla.id}>
+                          <SelectItem key={cuadrilla.id} value={cuadrilla.nombre}>
                             {cuadrilla.nombre}
                           </SelectItem>
                         ))}

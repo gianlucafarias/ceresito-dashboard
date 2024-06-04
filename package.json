@@ -60,6 +60,7 @@
     "fs": "^0.0.1-security",
     "google-auth-library": "^9.9.0",
     "google-spreadsheet": "^4.1.1",
+    "googleapis": "^137.1.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.291.0",
     "next": "^14.0.1",

@@ -5,6 +5,7 @@ import { CalendarIcon, ChevronDown, ChevronUp, MessageCircle } from 'lucide-reac
 import io from 'socket.io-client';
 import { Badge } from "@/components/ui/badge"; // Importar el componente Badge
 import { Progress } from "@/components/ui/progress"; // Importar el componente Progress
+import { Button } from '@/components/ui/button';
 
 const CuadrillaPage = () => {
   const { id } = useParams();
@@ -203,7 +204,7 @@ const CuadrillaPage = () => {
                         </div>
                         <div className="flex flex-col gap-2">
                           <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Asignado a</span>
-                          <span className="text-base font-medium">Juan Pérez</span>
+                          <span className="text-base font-medium">Cuadrilla N° 00{reclamo.cuadrillaId}</span>
                         </div>
                         <div className="flex flex-col gap-2">
                           <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Descripción</span>
@@ -213,12 +214,11 @@ const CuadrillaPage = () => {
                     </div>
                     <div className="flex gap-4">
                       {reclamo.estado === 'ASIGNADO' && (
-                        <button
+                        <Button
                           onClick={() => handleMarkAsInProcess(reclamo.id)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
                         >
-                          Marcar como En Proceso
-                        </button>
+                          Aceptar Reclamo
+                        </Button>
                       )}
                       {reclamo.estado === 'EN_PROCESO' && (
                         <button

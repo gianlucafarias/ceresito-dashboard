@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ["utfs.io"],
+    domains: ['api.ceres.gob.ar'],
+
   },
   typescript: {
     ignoreBuildErrors: true,
