@@ -1,10 +1,13 @@
 const { createServer } = require('http');
 const { Server } = require('socket.io');
+require('dotenv').config();
+
+const PORT = process.env.CHAT_PORT || 3001;
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // Cambia esto según tus necesidades de seguridad
+    origin: "*", 
     methods: ["GET", "POST"]
   }
 });
@@ -21,6 +24,6 @@ io.on('connection', (socket) => {
   });
 });
 
-httpServer.listen(3001, () => {
-  console.log('listening on *:3001');
+httpServer.listen(PORT, () => {
+  console.log(`listening on *:${PORT}`);
 });

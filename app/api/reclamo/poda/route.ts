@@ -1,10 +1,8 @@
 "use server"
 import { NextResponse } from 'next/server';
-import { getPodaData } from '@/app/(dashboard)/dashboard/reclamos/poda/components/GetData';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 import fs from 'fs';
-const RESPONSES_SHEET_ID = process.env.RESPONSES_SHEET_ID!;
 const CREDENTIALS = JSON.parse(fs.readFileSync('./credenciales.json', 'utf-8'));
 
 

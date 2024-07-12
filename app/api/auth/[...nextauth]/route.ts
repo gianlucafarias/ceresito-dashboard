@@ -5,20 +5,6 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-interface User {
-  id: number;
-  email: string;
-  username: string;
-  password: string;
-  roleId: number; 
-}
-
-interface JWT {
-  id: number;
-  email: string;
-  name: string;
-  role: number; 
-}
 
 const handler = NextAuth({
   providers: [
@@ -34,7 +20,7 @@ const handler = NextAuth({
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email  },
         });
 
         if (!user) {
@@ -53,7 +39,6 @@ const handler = NextAuth({
   ],
   pages: {
     signIn: "/auth/signin",
-    error: "/auth/error", // Error redirection
   },
   callbacks: {
     async jwt({ token, user }) {

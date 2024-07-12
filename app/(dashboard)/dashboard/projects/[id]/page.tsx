@@ -3,7 +3,7 @@ import { useParams } from 'next/navigation';
 import TaskList from '@/components/projects/TaskList';
 import StageList from '@/components/projects/StageList';
 import NewStageDialog from '@/components/projects/NewStageDialog';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import KanbanBoard from '@/components/projects/kanban/KanbanBoard';
 
 export default function ProjectPage() {
@@ -18,10 +18,7 @@ export default function ProjectPage() {
     setReloadStages(!reloadStages);
   };
 
-  useEffect(() => {
-    // Aquí podrías cargar cualquier dato adicional que necesites para el proyecto
-  }, [id, reloadStages]);
-
+  
   return (
     <div>
       <h1>Project {id}</h1>

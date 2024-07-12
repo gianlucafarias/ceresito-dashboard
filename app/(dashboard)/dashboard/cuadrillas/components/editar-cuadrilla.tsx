@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { useForm } from 'react-hook-form';
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/components/ui/use-toast";
 
 interface EditarCuadrillaDialogProps {
   open: boolean;
@@ -32,9 +31,8 @@ export const EditarCuadrillaDialog = ({
   cuadrilla,
   onUpdateCuadrilla,
 }: EditarCuadrillaDialogProps) => {
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm();
+  const { register, handleSubmit, setValue, formState: {  } } = useForm();
   const [tipos, setTipos] = useState<TipoCuadrilla[]>([]);
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchTipoReclamos = async () => {

@@ -18,6 +18,5 @@ export async function GET(request: Request) {
   const sheet = doc.sheetsByTitle['Hoja 1'];
   const rows = await sheet.getRows();
   const locations = rows.map((row) => [row._rawData[8], row._rawData[9]]);
-  console.log(rows)
   return new Response(JSON.stringify(locations));
 }

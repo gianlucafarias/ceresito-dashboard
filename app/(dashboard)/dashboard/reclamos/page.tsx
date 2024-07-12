@@ -1,86 +1,66 @@
-"use client"
+import * as React from "react"
+import type { SearchParams } from "@/types"
 
-import { z } from "zod"
-import { columns } from "./components/columns"
-import { DataTable } from "./components/data-table"
-import { reclamoSchema } from "./data/schema"
-import { useEffect, useState } from "react"
-import { DetallesReclamoDialog } from "./components/detalles-reclamo-dialog"
-import { Toaster, toast } from 'sonner'
+import { Skeleton } from "@/components/ui/skeleton"
+import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
+import { DateRangePicker } from "@/components/date-range-picker"
+import { Shell } from "@/components/shell"
 
-async function getTasks() {
-  const response = await fetch('https://api.ceres.gob.ar/api/api/reclamos')
-  const data = await response.json()
-  const tasks = z.array(reclamoSchema).parse(data);
-  return tasks;
+import { TasksTable } from "./_components/tasks-table"
+import { TasksTableProvider } from "./_components/tasks-table-provider"
+import { getTasks } from "./_lib/queries"
+import { searchParamsSchema } from "./_lib/validations"
+import { Toaster } from "sonner"
+
+export interface IndexPageProps {
+  searchParams: SearchParams
 }
 
-// Función para ordenar reclamos por ID de manera descendente
-const ordenarReclamosPorIdDesc = (reclamos: any) => {
-  return reclamos.sort((a: any, b: any) => b.id - a.id);
-}
+export default async function IndexPage({ searchParams }: IndexPageProps) {
+  const search = searchParamsSchema.parse(searchParams)
 
-export default function TaskPage() {
-  const [tasks, setTasks] = useState([]);
-  const [selectedReclamo, setSelectedReclamo] = useState(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [cuadrillas, setCuadrillas] = useState([]);
+  const tasksPromise = getTasks(search)
 
-  useEffect(() => {
-    fetch('/api/cuadrillas')
-      .then(res => res.json())
-      .then(data => {
-        console.log('Cuadrillas fetched:', data);
-        setCuadrillas(data);
-      })
-      .catch(err => console.error('Error fetching cuadrillas:', err));
-  }, []);
-
-  const handleRowClick = (reclamo: any) => {
-    setSelectedReclamo(reclamo);
-    setIsDialogOpen(true); // Abre el diálogo
-  };
-
-  const handleCloseDialog = () => {
-    setSelectedReclamo(null);
-    setIsDialogOpen(false); // Cierra el diálogo
-  };
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const data = await getTasks();
-        const reclamosOrdenados = ordenarReclamosPorIdDesc(data); // Ordenar los reclamos por ID descendente
-        setTasks(reclamosOrdenados);
-      } catch (error) {
-        console.error('Error al obtener los reclamos:', error);
-      }
-    }
-    fetchData();
-  }, []);
-
+  
   return (
-    <>
-      <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
-        {/* Contenido de la página */}
-        <DataTable
-          data={tasks}
-          columns={columns}
-          onRowClick={handleRowClick} // Pasa la función handleRowClick como prop
-        />
-      </div>
-      {/* Diálogo de detalles del reclamo */}
-      {selectedReclamo && (
-        <DetallesReclamoDialog
-          open={isDialogOpen}
-          onClose={handleCloseDialog}
-          reclamo={selectedReclamo}
-          cuadrillas={cuadrillas} // Pasar las cuadrillas disponibles
-          onSuccessfulUpdate={() => { /* Implementa la función de actualización exitosa */ }}
+    <Shell className="gap-2">
+      {/**
+       * The `TasksTableProvider` is use to enable some feature flags for the `TasksTable` component.
+       * Feel free to remove this, as it's not required for the `TasksTable` component to work.
+       * 
+       */}
+       <TasksTableProvider>
+      
+        {/**
+         * The `DateRangePicker` component is used to render the date range picker UI.
+         * It is used to filter the tasks based on the selected date range it was created at.
+         * The business logic for filtering the tasks based on the selected date range is handled inside the component.
+         */}
+        <React.Suspense fallback={<Skeleton className="h-7 w-52" />}>
+          <DateRangePicker
+            triggerSize="sm"
+            triggerClassName="ml-auto w-56 sm:w-60"
+            align="end"
+          />
+        </React.Suspense>
+        <React.Suspense
+          fallback={
+            <DataTableSkeleton
+              columnCount={5}
+              searchableColumnCount={1}
+              filterableColumnCount={2}
+              cellWidths={["10rem", "40rem", "12rem", "12rem", "8rem"]}
+              shrinkZero
+            />
+          }
+        >
+             <Toaster position="top-right" />
 
-        />
-      )}
-      <Toaster position="top-right" richColors />
-    </>
-  );
+          <TasksTable tasksPromise={tasksPromise} />
+        </React.Suspense>
+        
+      </TasksTableProvider>
+    
+    </Shell>
+  )
 }

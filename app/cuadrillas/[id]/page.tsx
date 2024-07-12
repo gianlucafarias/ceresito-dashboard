@@ -1,10 +1,8 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { CalendarIcon, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
-import io from 'socket.io-client';
+import { ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
 import { Badge } from "@/components/ui/badge"; // Importar el componente Badge
-import { Progress } from "@/components/ui/progress"; // Importar el componente Progress
 import { Button } from '@/components/ui/button';
 
 const CuadrillaPage = () => {
@@ -16,7 +14,6 @@ const CuadrillaPage = () => {
   const [mensajes, setMensajes] = useState([]);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const socket = io('http://localhost:3001');
 
   useEffect(() => {
     if (id) {

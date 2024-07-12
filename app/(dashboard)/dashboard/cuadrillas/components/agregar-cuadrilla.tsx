@@ -11,7 +11,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { useForm } from 'react-hook-form';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { PhoneInput } from "./phone-input";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -32,7 +31,7 @@ export const AgregarCuadrillaDialog = ({
   onClose,
   onAddCuadrilla,
 }: AgregarCuadrillaDialogProps) => {
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const { register, handleSubmit, formState: {  } } = useForm();
   const [tipos, setTipos] = useState<TipoCuadrilla[]>([]);
   const [telefono, setTelefono] = useState<string>("");
 
@@ -61,7 +60,6 @@ export const AgregarCuadrillaDialog = ({
       limiteReclamosSimultaneos: parseInt(data.limiteReclamos),
     };
 
-    console.log(formData);
 
     try {
       const response = await fetch("/api/cuadrillas/agregar", {

@@ -4,7 +4,7 @@ import { persist } from "zustand/middleware";
 import { Column } from "@/components/kanban/board-column";
 import { UniqueIdentifier } from "@dnd-kit/core";
 
-export type Status = "TODO" | "IN_PROGRESS" | "DONE";
+export type Status = "COMPLETADO" | "EN PROCESO" | "PENDIENTE" | "ASIGNADO" | "CANCELADO" ;
 
 const defaultCols = [
   {
@@ -17,9 +17,13 @@ export type ColumnId = (typeof defaultCols)[number]["id"];
 
 export type Task = {
   id: string;
-  title: string;
-  description?: string;
-  status: Status;
+  nombre: string;
+  detalle?: string;
+  estado: Status;
+  ubicacion: string;
+  barrio: string;
+  prioridad: string;
+  
 };
 
 export type State = {

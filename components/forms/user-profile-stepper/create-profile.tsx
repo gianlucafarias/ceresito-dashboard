@@ -39,13 +39,11 @@ interface ProfileFormType {
 
 export const CreateProfileOne: React.FC<ProfileFormType> = ({
   initialData,
-  categories,
 }) => {
   const params = useParams();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [imgLoading, setImgLoading] = useState(false);
   const title = initialData ? "Edit product" : "Create Your Profile";
   const description = initialData
     ? "Edit a product."

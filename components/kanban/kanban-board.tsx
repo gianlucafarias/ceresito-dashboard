@@ -252,7 +252,7 @@ export function KanbanBoard() {
       const overColumnIndex = columnsId.findIndex((col) => col === overId);
       setColumns(arrayMove(columns, activeColumnIndex, overColumnIndex));
     } else if (activeData?.type === "Task") {
-      const { tasksInColumn, taskPosition, column, draggedTask } = getDraggingTaskData(
+      const { tasksInColumn, taskPosition, draggedTask } = getDraggingTaskData(
         active.id,
         over.data.current?.task.status as ColumnId
       );

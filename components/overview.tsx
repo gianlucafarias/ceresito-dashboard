@@ -9,7 +9,6 @@ async function fetchVisitasFlujo() {
     const data = await response.json();
     return data.visitasFlujo.sort((a, b) => a.nombre_flujo.localeCompare(b.nombre_flujo));
   } catch (error) {
-    console.error("Error fetching data:", error);
     return [];
   }
 }

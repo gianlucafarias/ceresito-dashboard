@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import {  NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 type Params = {
     id: any
   }
 
-export async function GET(request: Request, context: { params: Params }) {
+export async function GET(context: { params: Params }) {
   const { id } = context.params;
   const cuadrillaId = parseInt(id, 10);
 

@@ -1,5 +1,8 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { useRouter } from 'next/navigation';
+import { useCallback } from 'react';
+import { toast } from 'sonner';
 import {
   Form,
   FormControl,
@@ -11,7 +14,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -27,8 +29,7 @@ const formSchema = z.object({
 type UserFormValue = z.infer<typeof formSchema>;
 
 export default function UserAuthForm() {
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const defaultValues = {
@@ -41,31 +42,41 @@ export default function UserAuthForm() {
     defaultValues,
   });
 
-  const onSubmit = async (data: UserFormValue) => {
+  const onSubmit = useCallback(async (data: UserFormValue) => {
+    if (loading) return;
     setLoading(true);
     setError("");
-
+try {
     const result = await signIn("credentials", {
       email: data.email,
       password: data.password,
       redirect: false,
-      callbackUrl,
+
     });
-
-    setLoading(false);
-
     if (result?.error) {
       setError(result.error);
-    } else if (result?.url) {
-      window.location.href = result.url;
+      toast.error("Error al iniciar sesión: " + result.error)
+    } else {
+      toast.success("Sesión Iniciada correctamente. ¡Bienvenido!")
+      router.push('/dashboard');
     }
-  };
+  }
+  catch (error) {
+    setError("Ocurrió un error al iniciar sesion")
+    toast.error("Error inesperado al iniciar sesión")
+  } finally {
+    setLoading(false)
+  }
+  }, [loading, router]);
 
   return (
     <>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2 w-full">
-          <FormField
+      <form onSubmit={(e) => {
+  e.preventDefault();
+  form.handleSubmit(onSubmit)(e);
+}} className="space-y-2 w-full">
+            <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
@@ -122,3 +133,4 @@ export default function UserAuthForm() {
     </>
   );
 }
+

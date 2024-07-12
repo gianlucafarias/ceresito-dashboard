@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DndContext, DragEndEvent, DragOverlay } from '@dnd-kit/core';
-import { arrayMove, SortableContext, useSortable } from '@dnd-kit/sortable';
+import { arrayMove, SortableContext } from '@dnd-kit/sortable';
 
 import { useParams } from 'next/navigation';
 import { KanbanColumn } from './KanbanColumn';
@@ -17,7 +17,7 @@ interface Stage {
 export default function KanbanBoard() {
   const { id } = useParams();
   const [stages, setStages] = useState<Stage[]>([]);
-  const [activeStage, setActiveStage] = useState<Stage | null>(null);
+  const [activeStage] = useState<Stage | null>(null);
 
   useEffect(() => {
     const fetchStages = async () => {

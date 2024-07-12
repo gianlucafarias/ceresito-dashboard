@@ -1,4 +1,3 @@
-import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { authenticateUser } from '@/lib/auth';
 

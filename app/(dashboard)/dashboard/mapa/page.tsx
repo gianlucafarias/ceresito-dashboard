@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { GoogleMap, Circle, useJsApiLoader, InfoWindow, Marker } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, InfoWindow, Marker } from '@react-google-maps/api';
 import { Badge } from '@/components/ui/badge';
 
 const mapStyles = 
@@ -42,12 +42,6 @@ const mapStyles =
   }
 ]
 
-  const colorsByReclamoType = {
-    Arboles: 'green',
-    Luminarias: 'blue',
-    Arreglos: 'yellow',
-    Animales: 'red'
-  };
 
 const containerStyle = {
   width: '100%',

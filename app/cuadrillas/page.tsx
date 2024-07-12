@@ -12,14 +12,10 @@ import { Input } from "@/components/ui/input";
 import {
   BriefcaseIcon,
   CheckIcon,
-  CircleEllipsis,
   FilterIcon,
   LightbulbIcon,
-  Menu,
-  MoveHorizontalIcon,
   PawPrintIcon,
   TreesIcon,
-  UsersIcon,
   WrenchIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -41,7 +37,7 @@ interface Cuadrilla {
   estado: String;
 }
 
-export default function page() {
+export default function Page() {
   const [showDialog, setShowDialog] = useState(false);
   const [cuadrillas, setCuadrillas] = useState<Cuadrilla[]>([]);
 
@@ -54,7 +50,6 @@ export default function page() {
 
   // Función para abrir el diálogo
   const openDialog = () => {
-    console.log("Abriendo diálogo...");
     setShowDialog(true);
   };
 

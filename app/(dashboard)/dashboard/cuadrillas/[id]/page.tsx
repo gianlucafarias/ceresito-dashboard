@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { CalendarIcon, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
-import io from 'socket.io-client';
 
 interface Reclamo {
   id: number;
@@ -31,7 +30,6 @@ const CuadrillaPage = () => {
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [nuevoMensaje, setNuevoMensaje] = useState<string>("");
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false); // Estado para manejar el chat
-  const socket = io('http://localhost:3001');
 
   useEffect(() => {
     if (id) {

@@ -4,16 +4,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
-import { MapPin, ClockIcon, CheckIcon, WrenchIcon } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-
+import { MapPin  } from "lucide-react";
+import { Reclamo } from "@/types";
+import Image from "next/image";
 interface ReclamoDetailsDialogProps {
   open: boolean;
   onClose: () => void;
@@ -27,13 +22,6 @@ export const DetallesReclamoDialog: React.FC<ReclamoDetailsDialogProps> = ({
 }) => {
   if (!reclamo) return null;
 
-  const fechaFormateada = (fechaRecibida: string) => {
-    const fecha = new Date(fechaRecibida);
-    const dia = fecha.getDate().toString().padStart(2, "0");
-    const mes = (fecha.getMonth() + 1).toString().padStart(2, "0");
-    const anio = fecha.getFullYear();
-    return `${dia}/${mes}/${anio}`;
-  };
 
   const getGoogleMapsLink = (lat: number, lng: number) => {
     return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
@@ -77,9 +65,11 @@ export const DetallesReclamoDialog: React.FC<ReclamoDetailsDialogProps> = ({
           </div>
           <div>
             <strong>Imagen:</strong>
-            <img
+            <Image
               src={reclamo.imagen}
               alt="Imagen del reclamo"
+              width={128}
+              height={128}
               className="mt-2 h-32 w-32 object-cover"
             />
           </div>

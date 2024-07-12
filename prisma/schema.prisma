@@ -105,8 +105,8 @@ model Template {
   id          Int       @id @default(autoincrement())
   name        String
   description String
-  tasks       String[]  // An array of task titles for simplicity
-  stages      String[]  // An array of stage names for simplicity
+  tasks       String[]  
+  stages      String[]  
   createdAt   DateTime  @default(now())
 }
 

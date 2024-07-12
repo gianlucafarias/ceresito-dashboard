@@ -16,7 +16,6 @@ import {
   LightbulbIcon,
   PawPrintIcon,
   TreesIcon,
-  UsersIcon,
   WrenchIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -24,13 +23,6 @@ import { useEffect, useState } from "react";
 import CuadrillaCard from "./components/cuadrilla-card";
 import { AgregarCuadrillaDialog } from "./components/agregar-cuadrilla";
 
-interface Mensaje {
-  id: number;
-  contenido: string;
-  remitente: string;
-  leido: boolean;
-  timestamp: Date;
-}
 
 interface Cuadrilla {
   id: number;
@@ -86,11 +78,7 @@ export default function Page() {
     }
   };
 
-  const handleUpdateCuadrilla = (updatedCuadrilla: Cuadrilla) => {
-    setCuadrillas((prevCuadrillas) => 
-      prevCuadrillas.map(cuadrilla => cuadrilla.id === updatedCuadrilla.id ? updatedCuadrilla : cuadrilla)
-    );
-  };
+
 
   return (
     <div className="flex flex-col w-full min-h-screen">

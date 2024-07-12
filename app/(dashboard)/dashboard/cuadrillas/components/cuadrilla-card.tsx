@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,

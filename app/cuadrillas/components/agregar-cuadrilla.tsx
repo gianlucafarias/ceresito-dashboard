@@ -8,7 +8,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useEffect, useState } from "react";
 import { useForm } from 'react-hook-form';
 
@@ -59,7 +58,6 @@ interface TipoCuadrilla {
         limiteReclamosSimultaneos: parseInt(data.limiteReclamos),
       };
   
-      console.log(formData); // Agregar console.log para verificar los datos enviados
   
       try {
         const response = await fetch("/api/cuadrillas/agregar", {

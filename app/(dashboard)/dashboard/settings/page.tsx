@@ -56,7 +56,6 @@ const userSchema = z.object({
 });
 
 export default function Page() {
-  const { register, handleSubmit, reset } = useForm()
   const [tipoReclamos, setTipoReclamos] = useState<TipoReclamo[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [users, setUsers] = useState<User[]>([]);

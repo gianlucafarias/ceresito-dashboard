@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "../ui/textarea";
 
 import { ColumnId, Task, useTaskStore } from "@/lib/store";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface NewTaskDialogProps {
   initialStatus: ColumnId;

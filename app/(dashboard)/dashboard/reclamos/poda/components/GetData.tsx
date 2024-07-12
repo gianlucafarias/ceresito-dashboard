@@ -1,6 +1,5 @@
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
-import { NextResponse } from 'next/server';
 import fs from 'fs';
 
 const RESPONSES_SHEET_ID = process.env.RESPONSE_SHEET_ID!;
