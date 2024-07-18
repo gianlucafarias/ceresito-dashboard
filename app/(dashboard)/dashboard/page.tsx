@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,15 +10,14 @@ import { CardsStats } from "./cuadrillas/reportes/components/TipoReclamosChart";
 
 export default function DashboardPage() {
     const [cuadrillasActivas, setCuadrillasActivas] = useState(0);
-    const [reclamosAbiertos, setReclamosAbiertos] = useState(0);
-    const [reclamosResueltos, setReclamosResueltos] = useState(0);
-    const [tiempoPromedio, setTiempoPromedio] = useState("");
+    const [reclamosPendientes, setReclamosPendientes] = useState(0);
+    const [reclamosAsignados, setReclamosAsignados] = useState(0);
+    const [reclamosCompletados, setReclamosCompletados] = useState(0);
     const [cuadrillas, setCuadrillas] = useState([]);
-    const [comparacionReclamosAbiertos, setComparacionReclamosAbiertos] = useState(0);
-    const [comparacionReclamosResueltos, setComparacionReclamosResueltos] = useState(0);
+    const [tiempoPromedio, setTiempoPromedio] = useState("");
 
     useEffect(() => {
-        // Fetch data for metrics
+        // Fetch data for cuadrillas
         fetch('/api/cuadrillas')
             .then(res => res.json())
             .then(data => {
@@ -28,36 +27,18 @@ export default function DashboardPage() {
             })
             .catch(err => console.error(err));
 
+        // Fetch data for reclamos
         fetch('https://api.ceres.gob.ar/api/api/reclamos')
             .then(res => res.json())
             .then(data => {
-                const abiertos = data.filter((reclamo) => reclamo.estado === 'PENDIENTE').length;
-                setReclamosAbiertos(abiertos);
+                const pendientes = data.data.filter((reclamo) => reclamo.estado === 'PENDIENTE').length;
+                setReclamosPendientes(pendientes);
 
-                const resueltos = data.filter((reclamo) => reclamo.estado === 'COMPLETADO').length;
-                setReclamosResueltos(resueltos);
+                const asignados = data.data.filter((reclamo) => reclamo.estado === 'ASIGNADO').length;
+                setReclamosAsignados(asignados);
 
-                const hoy = new Date();
-                const hace7Dias = new Date(hoy);
-                hace7Dias.setDate(hace7Dias.getDate() - 7);
-                const hace14Dias = new Date(hoy);
-                hace14Dias.setDate(hace14Dias.getDate() - 14);
-
-                const abiertosSemanaActual = data.filter((reclamo) => 
-                    new Date(reclamo.fecha) >= hace7Dias && reclamo.estado === 'PENDIENTE').length;
-                const abiertosSemanaAnterior = data.filter((reclamo) => 
-                    new Date(reclamo.fecha) >= hace14Dias && new Date(reclamo.fecha) < hace7Dias && reclamo.estado === 'PENDIENTE').length;
-
-                const resueltosSemanaActual = data.filter((reclamo) => 
-                    new Date(reclamo.fecha) >= hace7Dias && reclamo.estado === 'COMPLETADO').length;
-                const resueltosSemanaAnterior = data.filter((reclamo) => 
-                    new Date(reclamo.fecha) >= hace14Dias && new Date(reclamo.fecha) < hace7Dias && reclamo.estado === 'COMPLETADO').length;
-
-                const porcentajeAbiertos = abiertosSemanaAnterior > 0 ? ((abiertosSemanaActual - abiertosSemanaAnterior) / abiertosSemanaAnterior) * 100 : (abiertosSemanaActual > 0 ? 100 : 0);
-                const porcentajeResueltos = resueltosSemanaAnterior > 0 ? ((resueltosSemanaActual - resueltosSemanaAnterior) / resueltosSemanaAnterior) * 100 : (resueltosSemanaActual > 0 ? 100 : 0);
-
-                setComparacionReclamosAbiertos(porcentajeAbiertos);
-                setComparacionReclamosResueltos(porcentajeResueltos);
+                const completados = data.data.filter((reclamo) => reclamo.estado === 'COMPLETADO').length;
+                setReclamosCompletados(completados);
             })
             .catch(err => console.error(err));
 
@@ -86,16 +67,6 @@ export default function DashboardPage() {
         const horas = Math.floor(milisegundos / (1000 * 60 * 60));
         const minutos = Math.floor((milisegundos % (1000 * 60 * 60)) / (1000 * 60));
         return `${horas}h ${minutos}m`;
-    };
-
-    const formatPorcentaje = (porcentaje) => {
-        if (porcentaje > 0) {
-            return `+${porcentaje.toFixed(1)}%`;
-        } else if (porcentaje < 0) {
-            return `${porcentaje.toFixed(1)}%`;
-        } else {
-            return '0%';
-        }
     };
 
     return (
@@ -129,39 +100,26 @@ export default function DashboardPage() {
                                     <CardTitle className="text-sm font-medium">Reclamos Pendientes</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{reclamosAbiertos}</div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        {formatPorcentaje(comparacionReclamosAbiertos)} desde la semana anterior
-                                    </p>
+                                    <div className="text-2xl font-bold">{reclamosPendientes}</div>
                                 </CardContent>
                             </Card>
-                            {reclamosResueltos === null ? (
-                                <Skeleton className="h-[120px]" />
-                            ) : (
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium">Reclamos Resueltos</CardTitle>
+                                    <CardTitle className="text-sm font-medium">Reclamos Asignados</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{reclamosResueltos}</div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        {formatPorcentaje(comparacionReclamosResueltos)} desde la semana anterior
-                                    </p>
+                                    <div className="text-2xl font-bold">{reclamosAsignados}</div>
                                 </CardContent>
                             </Card>
-                             )}
-                              {tiempoPromedio === null ? (
-                                <Skeleton className="h-[120px]" />
-                            ) : (
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium">Tiempo Promedio de Solución</CardTitle>
+                                    <CardTitle className="text-sm font-medium">Reclamos Completados</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{convertirTiempoPromedio(tiempoPromedio)}</div>
+                                    <div className="text-2xl font-bold">{reclamosCompletados}</div>
                                 </CardContent>
                             </Card>
-                             )}
+                            
                         </section>
                         <CardsStats />
                     </TabsContent>

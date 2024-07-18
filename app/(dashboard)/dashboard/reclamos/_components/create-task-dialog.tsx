@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { priorityEnum, labelEnum, statusEnum } from "@/db/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -71,7 +69,7 @@ export function CreateTaskDialog() {
           Nuevo Reclamo
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Crear Reclamo</DialogTitle>
           <DialogDescription>

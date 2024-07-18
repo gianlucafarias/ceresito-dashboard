@@ -1,19 +1,20 @@
 "use client"
 
 import * as React from "react"
-import { type Task } from "@/db/schema"
+import { tasks, type Task } from "@/db/schema"
 import type { DataTableFilterField } from "@/types"
 
 import { useDataTable } from "@/hooks/use-data-table"
 import { DataTableAdvancedToolbar } from "@/components/data-table/advanced/data-table-advanced-toolbar"
 import { DataTable } from "@/components/data-table/data-table"
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar"
-
+import { priorityEnum, statusEnum } from "@/db/schema"
 import type { getTasks } from "../_lib/queries"
 import { getColumns } from "./tasks-table-columns"
 import { TasksTableFloatingBar } from "./tasks-table-floating-bar"
 import { useTasksTable } from "./tasks-table-provider"
 import { TasksTableToolbarActions } from "./tasks-table-toolbar-actions"
+import { getPriorityIcon, getStatusIcon } from "../_lib/utils"
 
 interface TasksTableProps {
   tasksPromise: ReturnType<typeof getTasks>
@@ -40,12 +41,7 @@ export function TasksTable({ tasksPromise }: TasksTableProps) {
    * @prop {boolean} [withCount] - An optional boolean to display the count of the filter option.
    */
   const filterFields: DataTableFilterField<Task>[] = [
-    {
-      label: "Title",
-      value: "detalle",
-      placeholder: "Filter titles...",
-    },
-   
+
   ]
 
   const { table } = useDataTable({

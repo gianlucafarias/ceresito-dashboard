@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -79,7 +77,7 @@ export function UpdateTaskSheet({ task, ...props }: UpdateTaskSheetProps) {
 
   return (
     <Sheet {...props}>
-      <SheetContent className="flex flex-col gap-6 sm:max-w-md">
+      <SheetContent className="flex flex-col gap-6 sm:max-w-md max-h-[90vh] overflow-y-auto">
         <SheetHeader className="text-left">
           <SheetTitle>Editar Reclamo</SheetTitle>
           <SheetDescription>

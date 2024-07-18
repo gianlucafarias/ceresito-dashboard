@@ -144,3 +144,8 @@
     height:50px;
   }
 }
+
+.dialog-content {
+  max-height: 90vh; /* Limita la altura máxima al 90% de la vista */
+  overflow-y: auto; /* Permite el desplazamiento vertical */
+}
