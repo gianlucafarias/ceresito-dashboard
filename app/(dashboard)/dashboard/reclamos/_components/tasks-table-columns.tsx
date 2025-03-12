@@ -4,6 +4,8 @@ import * as React from "react";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { type ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
+import Link from "next/link";
+import { Edit2, Eye, Trash } from "lucide-react";
 
 import { getErrorMessage } from "@/lib/handle-error";
 import { formatDate } from "@/lib/utils";
@@ -31,23 +33,45 @@ import { UpdateTaskSheet } from "./update-task-sheet";
 import { labelEnum, statusEnum } from "@/db/schema";
 import { getStatusIcon } from "../_lib/utils";
 
+// Función para convertir texto a formato de oración
+const toSentenceCase = (str: string): string => {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+// Definición de tipo para acciones de fila
+export type DataTableRowAction<TData> = {
+  type: "update" | "delete";
+  row: {
+    original: TData;
+    toggleSelected: (selected: boolean) => void;
+  };
+} | null;
+
 export interface Reclamo {
   id: number;
   fecha: string;
-  nombre: string;
-  reclamo: string;
-  ubicacion: string;
-  barrio: string;
-  telefono: string;
-  estado: string;
-  detalle: string;
+  nombre: string | null;
+  reclamo: string | null;
+  ubicacion: string | null;
+  barrio: string | null;
+  telefono: string | null;
+  estado: string | null;
+  detalle: string | null;
   prioridad: string | null;
-  latitud: string;
-  longitud: string;
+  latitud: string | null;
+  longitud: string | null;
   cuadrillaid: number | null;
 }
 
-export function getColumns(): ColumnDef<Reclamo>[] {
+interface GetColumnsOptions {
+  setRowAction?: React.Dispatch<React.SetStateAction<DataTableRowAction<Reclamo>>>;
+}
+
+export function getColumns({
+  setRowAction,
+}: {
+  setRowAction: React.Dispatch<React.SetStateAction<DataTableRowAction<Reclamo> | null>>
+}): ColumnDef<Reclamo, unknown>[] {
   return [
     {
       id: "select",
@@ -58,7 +82,7 @@ export function getColumns(): ColumnDef<Reclamo>[] {
             (table.getIsSomePageRowsSelected() && "indeterminate")
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
+          aria-label="Seleccionar todos"
           className="translate-y-0.5"
         />
       ),
@@ -66,7 +90,7 @@ export function getColumns(): ColumnDef<Reclamo>[] {
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
+          aria-label="Seleccionar fila"
           className="translate-y-0.5"
         />
       ),
@@ -79,9 +103,8 @@ export function getColumns(): ColumnDef<Reclamo>[] {
         <DataTableColumnHeader column={column} title="Fecha" />
       ),
       cell: ({ row }) => formatDate(new Date(row.getValue("fecha"))),
-      enableSorting: false,
+      enableSorting: true,
       enableHiding: false,
-      
     },
     {
       accessorKey: "detalle",
@@ -89,32 +112,47 @@ export function getColumns(): ColumnDef<Reclamo>[] {
         <DataTableColumnHeader column={column} title="Reclamo" />
       ),
       cell: ({ row }) => {
-        const label = labelEnum.find(
-          (label) => label === row.original.reclamo
-        )        
         return (
-          <div className="flex space-x-2">
-            {label && <Badge variant="outline">{label}</Badge>}
-            <span className="max-w-[31.25rem] truncate font-medium">
-              {row.getValue("detalle")}
-            </span>
+          <div className="flex max-w-[500px] items-center">
+            <span className="truncate font-medium">{row.getValue("detalle")}</span>
           </div>
-        );
+        )
       },
+      enableSorting: true,
+      enableHiding: true,
+      enableColumnFilter: true,
     },
     {
       accessorKey: "ubicacion",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Ubicación" />
       ),
-      cell: ({ row }) => <div>{row.getValue("ubicacion")}</div>,
+      cell: ({ row }) => {
+        return (
+          <div className="flex items-center">
+            <span>{row.getValue("ubicacion")}</span>
+          </div>
+        )
+      },
+      enableSorting: true,
+      enableHiding: true,
+      enableColumnFilter: true,
     },
     {
       accessorKey: "barrio",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Barrio" />
       ),
-      cell: ({ row }) => <div>{row.getValue("barrio")}</div>,
+      cell: ({ row }) => {
+        return (
+          <div className="flex items-center">
+            <span>{row.getValue("barrio")}</span>
+          </div>
+        )
+      },
+      enableSorting: true,
+      enableHiding: true,
+      enableColumnFilter: true,
     },
     {
       accessorKey: "estado",
@@ -122,29 +160,113 @@ export function getColumns(): ColumnDef<Reclamo>[] {
         <DataTableColumnHeader column={column} title="Estado" />
       ),
       cell: ({ row }) => {
-        const estado = row.getValue("estado");
-
-        if (!estado) return null;
-
-        const Icon = getStatusIcon(estado);
+        const estado = row.getValue("estado") as string
+        const Icon = getStatusIcon(estado)
 
         return (
-          <div className="flex w-[6.25rem] items-center">
-            <Icon
-              className="mr-2 size-4 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <span className="capitalize">{estado}</span>
+          <div className="flex w-[100px] items-center">
+            {Icon && (
+              <span className="mr-2 h-2 w-2">
+                <Icon className="h-4 w-4" />
+              </span>
+            )}
+            <span>{toSentenceCase(estado)}</span>
           </div>
-        );
+        )
       },
-      filterFn: (row, id, value) => {
-        return Array.isArray(value) && value.includes(row.getValue(id));
-      },
+      enableSorting: true,
+      enableHiding: true,
+      enableColumnFilter: true,
+      filterFn: "equals",
     },
     {
       id: "actions",
       cell: function Cell({ row }) {
+        // Si estamos usando el sistema centralizado de acciones
+        if (setRowAction) {
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  aria-label="Abrir menú"
+                  variant="ghost"
+                  className="flex size-8 p-0 data-[state=open]:bg-muted"
+                >
+                  <DotsHorizontalIcon className="size-4" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem 
+                  onSelect={() => 
+                    setRowAction({
+                      type: "update",
+                      row: {
+                        original: row.original,
+                        toggleSelected: row.toggleSelected
+                      }
+                    })
+                  }
+                >
+                  <Edit2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/dashboard/reclamos/${row.original.id}`} className="flex items-center">
+                    <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Ver detalles
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Cambiar Estado</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                      value={row.original.estado || ""}
+                      onValueChange={(value) => {
+                        const id = row.original.id.toString();
+                        updateReclamoEstado(id, value)
+                          .then(({ error }) => {
+                            if (error) {
+                              toast.error(getErrorMessage(error));
+                            } else {
+                              toast.success("Estado del Reclamo Actualizado");
+                            }
+                          });
+                      }}
+                    >
+                      {statusEnum.map((label) => (
+                        <DropdownMenuRadioItem
+                          key={label}
+                          value={label}
+                          className="capitalize"
+                        >
+                          {label}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() =>
+                    setRowAction({
+                      type: "delete",
+                      row: {
+                        original: row.original,
+                        toggleSelected: row.toggleSelected
+                      }
+                    })
+                  }
+                >
+                  <Trash className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Eliminar
+                  <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        }
+        
+        // Mantener la implementación anterior para compatibilidad
         const [isUpdatePending, startUpdateTransition] = React.useTransition();
         const [showUpdateTaskSheet, setShowUpdateTaskSheet] =
           React.useState(false);
@@ -183,20 +305,17 @@ export function getColumns(): ColumnDef<Reclamo>[] {
                   <DropdownMenuSubTrigger>Cambiar Estado</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
                     <DropdownMenuRadioGroup
-                      value={row.original.estado}
+                      value={row.original.estado || ""}
                       onValueChange={(value) => {
-                        startUpdateTransition(async () => {
-                          const { error } = await updateReclamoEstado(
-                            row.original.id,
-                            value
-                          );
-
-                          if (error) {
-                            toast.error(getErrorMessage(error));
-                          } else {
-                            toast.success("Estado del Reclamo Actualizado");
-                          }
-                        });
+                        const id = row.original.id.toString();
+                        updateReclamoEstado(id, value)
+                          .then(({ error }) => {
+                            if (error) {
+                              toast.error(getErrorMessage(error));
+                            } else {
+                              toast.success("Estado del Reclamo Actualizado");
+                            }
+                          });
                       }}
                     >
                       {statusEnum.map((label) => (
@@ -204,7 +323,6 @@ export function getColumns(): ColumnDef<Reclamo>[] {
                           key={label}
                           value={label}
                           className="capitalize"
-                          disabled={isUpdatePending}
                         >
                           {label}
                         </DropdownMenuRadioItem>

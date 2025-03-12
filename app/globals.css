@@ -33,6 +33,16 @@
     --ring: 240 10% 3.9%;
 
     --radius: 0.5rem;
+
+    /* Variables para Charts */
+    --chart-1: 25 95% 53%;  /* Orange (pendientes) */
+    --chart-2: 214 89% 52%; /* Blue (asignados) */
+    --chart-3: 142 71% 45%; /* Green (completados) */
+    --chart-4: 214 89% 52%; /* Blue (recibidos) */
+    --chart-5: 262 83% 58%; /* Purple */
+    --chart-6: 0 72% 51%;   /* Red */
+    --chart-7: 45 93% 47%;  /* Yellow */
+    --chart-8: 172 66% 50%; /* Cyan */
   }
 
   .dark {
@@ -63,6 +73,16 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
+
+    /* Variables para Charts en modo oscuro */
+    --chart-1: 25 95% 53%;  /* Orange (pendientes) */
+    --chart-2: 214 89% 52%; /* Blue (asignados) */
+    --chart-3: 142 71% 45%; /* Green (completados) */
+    --chart-4: 214 89% 52%; /* Blue (recibidos) */
+    --chart-5: 262 83% 58%; /* Purple */
+    --chart-6: 0 72% 51%;   /* Red */
+    --chart-7: 45 93% 47%;  /* Yellow */
+    --chart-8: 172 66% 50%; /* Cyan */
   }
 }
 

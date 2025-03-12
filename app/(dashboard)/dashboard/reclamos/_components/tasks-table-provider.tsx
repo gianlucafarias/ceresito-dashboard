@@ -26,6 +26,7 @@ export function useTasksTable() {
 }
 
 export function TasksTableProvider({ children }: React.PropsWithChildren) {
+  // Solo habilitar floatingBar por defecto
   const [featureFlags, setFeatureFlags] = React.useState<FeatureFlagValue[]>(["floatingBar"]);
 
   return (

@@ -35,9 +35,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { updateTask } from "../_lib/actions";
 import { updateTaskSchema, type UpdateTaskSchema } from "../_lib/validations";
 import { ReloadIcon } from "@radix-ui/react-icons";
+import { type Reclamo } from "./tasks-table-columns";
 
 interface UpdateTaskSheetProps extends React.ComponentPropsWithRef<typeof Sheet> {
-  task: Task;
+  task: Reclamo | null;
 }
 
 export function UpdateTaskSheet({ task, ...props }: UpdateTaskSheetProps) {
@@ -46,21 +47,26 @@ export function UpdateTaskSheet({ task, ...props }: UpdateTaskSheetProps) {
   const form = useForm<UpdateTaskSchema>({
     resolver: zodResolver(updateTaskSchema),
     defaultValues: {
-      nombre: task.nombre ?? "",
-      telefono: task.telefono ?? "",
-      detalle: task.detalle,
-      ubicacion: task.ubicacion,
-      barrio: task.barrio,
-      reclamo: task.reclamo,
-      estado: task.estado,
-      prioridad: task.prioridad,
+      nombre: task?.nombre || "",
+      telefono: task?.telefono || "",
+      detalle: task?.detalle || "",
+      ubicacion: task?.ubicacion || "",
+      barrio: task?.barrio || "",
+      reclamo: task?.reclamo || "",
+      estado: task?.estado || "",
+      prioridad: task?.prioridad || "",
     },
   });
 
   function onSubmit(input: UpdateTaskSchema) {
+    if (!task) {
+      toast.error("No se pudo actualizar el reclamo: información no disponible");
+      return;
+    }
+
     startUpdateTransition(async () => {
       const { error } = await updateTask({
-        id: task.id,
+        id: task.id.toString(),
         ...input,
       });
 
@@ -73,6 +79,26 @@ export function UpdateTaskSheet({ task, ...props }: UpdateTaskSheetProps) {
       props.onOpenChange?.(false);
       toast.success("Reclamo actualizado");
     });
+  }
+
+  if (!task && props.open) {
+    return (
+      <Sheet {...props}>
+        <SheetContent>
+          <SheetHeader className="text-left">
+            <SheetTitle>Error</SheetTitle>
+            <SheetDescription>
+              No se pudo cargar la información del reclamo.
+            </SheetDescription>
+          </SheetHeader>
+          <SheetFooter className="pt-2">
+            <SheetClose asChild>
+              <Button>Cerrar</Button>
+            </SheetClose>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    );
   }
 
   return (
@@ -122,7 +148,7 @@ export function UpdateTaskSheet({ task, ...props }: UpdateTaskSheetProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo de Reclamo</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                     <FormControl>
                       <SelectTrigger className="capitalize">
                         <SelectValue placeholder="Seleccione un tipo de reclamo" />
@@ -187,7 +213,7 @@ export function UpdateTaskSheet({ task, ...props }: UpdateTaskSheetProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Estado</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                     <FormControl>
                       <SelectTrigger className="capitalize">
                         <SelectValue placeholder="Seleccione un estado" />
@@ -213,7 +239,7 @@ export function UpdateTaskSheet({ task, ...props }: UpdateTaskSheetProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Prioridad</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                     <FormControl>
                       <SelectTrigger className="capitalize">
                         <SelectValue placeholder="Seleccione una prioridad" />
