@@ -202,7 +202,7 @@ export function EditarReclamoForm({ reclamo }: EditarReclamoFormProps) {
                         />
                       </FormControl>
                       <FormDescription>
-                        Ejemplo: "Av. Belgrano 123" o "Frente a la plaza principal"
+                        Ejemplo: &quot;Av. Belgrano 123&quot; o &quot;Frente a la plaza principal&quot;
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
