@@ -20,7 +20,7 @@ export default async function ReclamoPage({ params }: ReclamoPageProps) {
   let historialReclamos: Reclamo[] = []
   
   try {
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${params.id}`, {
+    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${params.id}`, {
       next: { revalidate: 60 } // Revalidar cada minuto
     })
     
@@ -36,7 +36,7 @@ export default async function ReclamoPage({ params }: ReclamoPageProps) {
     // Si obtuvimos el reclamo y tiene un número de teléfono, buscar historial
     if (reclamo && reclamo.telefono) {
       try {
-        const responseHistorial = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/telefono/${reclamo.telefono}`, {
+        const responseHistorial = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/telefono/${reclamo.telefono}`, {
           next: { revalidate: 60 } // Revalidar cada minuto también para el historial
         })
 

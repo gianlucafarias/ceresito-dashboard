@@ -8,7 +8,7 @@ import type { CreateTaskSchema, UpdateTaskSchema } from "./validations"
 export async function createTask(input: CreateTaskSchema) {
   noStore()
   try {
-    const response = await fetch("https://api.ceres.gob.ar/api/api/reclamos/crear", {
+    const response = await fetch("https://api.ceres.gob.ar/api/api/reclamo/crear", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -47,7 +47,7 @@ export async function createTask(input: CreateTaskSchema) {
 export async function updateTask(input: UpdateTaskSchema & { id: string }) {
   noStore();
   try {
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${input.id}`, {
+    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${input.id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -93,7 +93,7 @@ export async function updateTasks(input: {
   try {
     await Promise.all(
       input.ids.map(async (id) => {
-        const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${id}`, {
+        const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -129,7 +129,7 @@ export async function updateReclamoEstado(id: string, estado: string, notificar:
   noStore();
   try {
     // Primero obtenemos los datos del reclamo para tener el teléfono del usuario y otros detalles
-    const reclamoResponse = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${id}`, {
+    const reclamoResponse = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -143,7 +143,7 @@ export async function updateReclamoEstado(id: string, estado: string, notificar:
     const reclamoData = await reclamoResponse.json();
     
     // Actualizamos el estado del reclamo
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${id}`, {
+    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -275,8 +275,9 @@ export async function updateReclamoEstado(id: string, estado: string, notificar:
 
 
 export async function deleteTask(input: { id: string }) {
+  noStore()
   try {
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${input.id}`, {
+    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${input.id}`, {
       method: "DELETE",
     })
 
@@ -285,6 +286,11 @@ export async function deleteTask(input: { id: string }) {
     }
 
     revalidatePath("/")
+
+    return {
+      data: null,
+      error: null,
+    }
   } catch (err) {
     return {
       data: null,
@@ -294,15 +300,15 @@ export async function deleteTask(input: { id: string }) {
 }
 
 export async function deleteTasks(input: { ids: string[] }) {
+  noStore()
   try {
     await Promise.all(
       input.ids.map(async (id) => {
-        const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${id}`, {
+        const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${id}`, {
           method: "DELETE",
         })
-
         if (!response.ok) {
-          throw new Error(`Error al eliminar el reclamo con id ${id} en la API externa`)
+          throw new Error(`Error al eliminar el reclamo con id ${id}`)
         }
       })
     )

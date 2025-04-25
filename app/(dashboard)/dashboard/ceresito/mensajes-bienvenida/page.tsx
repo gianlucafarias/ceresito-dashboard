@@ -65,7 +65,7 @@ type FormSchemaType = z.infer<typeof formSchema>;
 // Función para obtener los mensajes de bienvenida
 async function fetchMensajesBienvenida(): Promise<MensajeBienvenida[]> {
   console.log("Fetching configuraciones...");
-  const response = await fetch('http://localhost:3001/api/config');
+  const response = await fetch('https://api.ceres.gob.ar/api/api/config');
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
@@ -95,7 +95,7 @@ async function createMensajeBienvenida(nuevoMensaje: {
     console.log("Creando config (API):", nuevoMensaje);
     // Extraer clave para la URL, el resto va en el body
     const { clave, ...bodyData } = nuevoMensaje; 
-    const response = await fetch(`http://localhost:3001/api/config/${clave}`, {
+    const response = await fetch(`https://api.ceres.gob.ar/api/api/config/${clave}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ async function updateMensajeBienvenida(
     console.log(`Actualizando config ${datosActualizados.clave}:`, datosActualizados);
     // Extraer clave para la URL, el resto va en el body
     const { clave, ...bodyData } = datosActualizados;
-    const response = await fetch(`http://localhost:3001/api/config/${clave}`, {
+    const response = await fetch(`https://api.ceres.gob.ar/api/api/config/${clave}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',

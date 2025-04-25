@@ -182,6 +182,11 @@ export function getColumns({
     {
       id: "actions",
       cell: function Cell({ row }) {
+        // Mover la declaración de Hooks fuera de la condición
+        const [isUpdatePending, startUpdateTransition] = React.useTransition();
+        const [showUpdateTaskSheet, setShowUpdateTaskSheet] = React.useState(false);
+        const [showDeleteTaskDialog, setShowDeleteTaskDialog] = React.useState(false);
+        
         // Si estamos usando el sistema centralizado de acciones
         if (setRowAction) {
           return (
@@ -266,13 +271,7 @@ export function getColumns({
           );
         }
         
-        // Mantener la implementación anterior para compatibilidad
-        const [isUpdatePending, startUpdateTransition] = React.useTransition();
-        const [showUpdateTaskSheet, setShowUpdateTaskSheet] =
-          React.useState(false);
-        const [showDeleteTaskDialog, setShowDeleteTaskDialog] =
-          React.useState(false);
-
+        // Implementación anterior (ahora los Hooks ya están declarados)
         return (
           <>
             <UpdateTaskSheet

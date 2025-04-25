@@ -61,7 +61,7 @@ export function FeedbackChart() {
       setIsLoading(true);
       setError(null);
       try {
-        const apiUrl = `http://localhost:3001/api/feedback`; // Asegúrate que la URL es correcta
+        const apiUrl = `https://api.ceres.gob.ar/api/api/feedback`; // Asegúrate que la URL es correcta
         const response = await fetch(apiUrl);
         if (!response.ok) {
           throw new Error(`Error al obtener feedback: ${response.statusText}`);

@@ -86,7 +86,7 @@ export function MessagesPerDayChart() {
 
         // Construir la URL de la API
         // Asegúrate que la URL base sea la correcta (localhost:3001 o la URL de producción)
-        const apiUrl = `http://localhost:3001/api/interactions/last-week/count/${startDateString}/${endDateString}/${groupBy}`;
+        const apiUrl = `https://api.ceres.gob.ar/api/api/interactions/last-week/count/${startDateString}/${endDateString}/${groupBy}`;
         
         const response = await fetch(apiUrl);
         if (!response.ok) {

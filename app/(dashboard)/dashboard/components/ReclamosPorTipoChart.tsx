@@ -28,7 +28,7 @@ interface CountByTypeData {
 
 // Función de fetching
 const fetchReclamosCountByType = async (): Promise<CountByTypeData[]> => {
-    const res = await fetch('http://localhost:3001/api/reclamos/count-by-type');
+    const res = await fetch('https://api.ceres.gob.ar/api/api/reclamos/count-by-type');
     if (!res.ok) throw new Error('Error al cargar conteo de reclamos por tipo');
     const data = await res.json();
     // La API devuelve el array directamente

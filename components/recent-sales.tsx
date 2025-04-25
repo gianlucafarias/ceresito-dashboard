@@ -27,7 +27,7 @@ export function RecentSales() {
   useEffect(() => {
     setIsLoading(true);
     setError(null);
-    fetch('http://localhost:3001/api/last-interactions') // Cambiar endpoint
+    fetch('https://api.ceres.gob.ar/api/api/last-interactions') // Cambiar endpoint
       .then(response => {
         if (!response.ok) {
           throw new Error('Error al obtener las últimas interacciones');
