@@ -67,8 +67,12 @@ export function ReclamosPorTipoChart() {
             ...chartConfig, // Mantener la configuración base para 'count'
             ...apiData.reduce((acc, item, index) => {
                 // Usar el 'tipo' como clave para la configuración dinámica
-                acc[item.tipo] = {
-                    label: item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1),
+                // Protección contra item.tipo nulo
+                const tipoLabel = item.tipo ? (item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1)) : 'Sin Tipo'; // O usar '' si prefieres
+                const tipoKey = item.tipo ?? `unknown_${index}`; // Clave única si tipo es null
+
+                acc[tipoKey] = {
+                    label: tipoLabel, 
                     color: `hsl(var(--chart-${(index % 5) + 1}))`,
                 };
                 return acc;
