@@ -1,5 +1,9 @@
 "use client";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -8,57 +12,71 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "next-auth/react";
+import {
+  LogOutIcon,
+  UserCircleIcon,
+  CreditCardIcon,
+  BellIcon,
+  MoreVerticalIcon
+} from "lucide-react";
+
 export function UserNav() {
   const { data: session } = useSession();
+
+  const userName = session?.user?.username ?? "Usuario";
+  const userEmail = session?.user?.email ?? "Usuario";
+  const userImage = session?.user?.image ?? "";
+  const userInitial = (userName?.[0] ?? userEmail[0]).toUpperCase();
+
   if (session) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-            <Avatar className="h-8 w-8">
-              <AvatarImage
-                src={session.user?.image ?? ""}
-                alt={session.user?.name ?? ""}
-              />
-              <AvatarFallback>{session.user?.name?.[0]}</AvatarFallback>
+          <Button variant="ghost" className="relative h-10 w-auto px-2 flex items-center gap-2 rounded-full">
+            <Avatar className="h-8 w-8 rounded-lg">
+              <AvatarImage src={userImage} alt={userName ?? userEmail} />
+              <AvatarFallback className="rounded-lg">{userInitial}</AvatarFallback>
             </Avatar>
+            <div className="hidden lg:grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-medium">{userName ?? userEmail}</span>
+              {userName && <span className="truncate text-xs text-muted-foreground">{userEmail}</span>}
+            </div>
+            <MoreVerticalIcon className="ml-auto size-4 hidden lg:block" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56" align="end" forceMount>
-          <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">
-                {session.user?.name}
-              </p>
-              <p className="text-xs leading-none text-muted-foreground">
-                {session.user?.email}
-              </p>
-            </div>
+        <DropdownMenuContent className="w-56 rounded-lg" align="end" forceMount>
+          <DropdownMenuLabel className="font-normal p-0">
+             <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                <Avatar className="h-8 w-8 rounded-lg">
+                  <AvatarImage src={userImage} alt={userName ?? userEmail} />
+                  <AvatarFallback className="rounded-lg">{userInitial}</AvatarFallback>
+                </Avatar>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-medium">{userName ?? userEmail}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {userEmail}
+                  </span>
+                </div>
+              </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem>
-              Perfil
-              <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+              <UserCircleIcon className="mr-2 h-4 w-4" />
+              Cuenta
             </DropdownMenuItem>
-            
-            <DropdownMenuItem>
-              Ajustes
-              <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem>Mi Equipo</DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut()}>
+            <LogOutIcon className="mr-2 h-4 w-4" />
             Cerrar Sesión
-            <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     );
   }
+  return null;
 }

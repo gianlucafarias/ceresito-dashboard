@@ -38,6 +38,12 @@ model User {
   projects  Project[] @relation("UserProjects")
   tasks     Task[]    @relation("UserTasks")
   comments  Comment[] @relation("UserComments") // Añadir esta línea para la relación inversa
+
+  // Relaciones Kanban
+  ownedBoards         Board[]             @relation("UserOwnedBoards")
+  boardMemberships    BoardMembership[]   @relation("UserBoardMemberships")
+  assignedKanbanTasks KanbanTask[]        @relation("AssignedKanbanTasks")
+  createdKanbanTasks  KanbanTask[]        @relation("CreatedKanbanTasks")
 }
 
 
@@ -190,3 +196,54 @@ model RegistroReclamo {
   direccion       String?
   barrio          String?
 }
+
+// --- Modelos para Kanban ---
+
+model Board {
+  id          Int      @id @default(autoincrement())
+  name        String
+  owner       User     @relation("UserOwnedBoards", fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId     Int
+  memberships BoardMembership[]
+  tasks       KanbanTask[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+model BoardMembership {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation("UserBoardMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId   Int
+  joinedAt  DateTime @default(now())
+
+  @@unique([userId, boardId]) // Asegura que un usuario es miembro solo una vez por tablero
+  @@index([boardId])
+}
+
+model KanbanTask {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  // El estado representa la columna Kanban (ej: 'TODO', 'IN_PROGRESS', 'DONE')
+  status      String
+  // Para ordenar tareas dentro de una columna/estado
+  order       Float
+  board       Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId     Int
+  assignee    User?    @relation("AssignedKanbanTasks", fields: [assigneeId], references: [id], onDelete: SetNull) // Si el usuario asignado se elimina, la tarea queda sin asignar
+  assigneeId  Int?
+  creator     User     @relation("CreatedKanbanTasks", fields: [creatorId], references: [id], onDelete: Cascade) // Si el creador se elimina, sus tareas también
+  creatorId   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([boardId])
+  @@index([assigneeId])
+  @@index([creatorId])
+}
+
+// --- Fin Modelos para Kanban ---

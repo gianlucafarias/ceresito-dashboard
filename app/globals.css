@@ -35,14 +35,14 @@
     --radius: 0.5rem;
 
     /* Variables para Charts */
-    --chart-1: 25 95% 53%;  /* Orange (pendientes) */
-    --chart-2: 214 89% 52%; /* Blue (asignados) */
-    --chart-3: 142 71% 45%; /* Green (completados) */
-    --chart-4: 214 89% 52%; /* Blue (recibidos) */
-    --chart-5: 262 83% 58%; /* Purple */
+    --chart-1: 139 65% 20%;
+    --chart-2: 140 74% 44%;
+    --chart-3: 142 88% 28%;
+    --chart-4: 137 55% 15%;
+    --chart-5: 141 40% 9%;
     --chart-6: 0 72% 51%;   /* Red */
     --chart-7: 45 93% 47%;  /* Yellow */
-    --chart-8: 172 66% 50%; /* Cyan */
+    --chart-8: 172 66% 50%; /* Cyan */ --sidebar-background: 0 0% 98%; --sidebar-foreground: 240 5.3% 26.1%; --sidebar-primary: 240 5.9% 10%; --sidebar-primary-foreground: 0 0% 98%; --sidebar-accent: 240 4.8% 95.9%; --sidebar-accent-foreground: 240 5.9% 10%; --sidebar-border: 220 13% 91%; --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -75,14 +75,15 @@
     --ring: 240 4.9% 83.9%;
 
     /* Variables para Charts en modo oscuro */
-    --chart-1: 25 95% 53%;  /* Orange (pendientes) */
-    --chart-2: 214 89% 52%; /* Blue (asignados) */
-    --chart-3: 142 71% 45%; /* Green (completados) */
-    --chart-4: 214 89% 52%; /* Blue (recibidos) */
-    --chart-5: 262 83% 58%; /* Purple */
+    --chart-1: 139 65% 20%;
+    --chart-2: 140 74% 44%;
+    --chart-3: 142 88% 28%;
+    --chart-4: 137 55% 15%;
+    --chart-5: 141 40% 9%;
     --chart-6: 0 72% 51%;   /* Red */
     --chart-7: 45 93% 47%;  /* Yellow */
     --chart-8: 172 66% 50%; /* Cyan */
+    --sidebar-background: 240 5.9% 10%; --sidebar-foreground: 240 4.8% 95.9%; --sidebar-primary: 224.3 76.3% 48%; --sidebar-primary-foreground: 0 0% 100%; --sidebar-accent: 240 3.7% 15.9%; --sidebar-accent-foreground: 240 4.8% 95.9%; --sidebar-border: 240 3.7% 15.9%; --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -121,7 +122,7 @@
   top:0;
   width:10px;
   height:10px; 
-  background-color: #ff4200;
+  background-color: #155937;
   border-radius: 50%;
 }
 
@@ -131,7 +132,7 @@
   z-index:1;
   width:10px;
   height:10px; 
-  background-color: #ff4200;
+  background-color: #155937;
   border-radius: 50%;
   box-shadow: 0 0 10px rgba(0,0,0,.3) inset;
   animation-duration: 1s;
@@ -168,4 +169,15 @@
 .dialog-content {
   max-height: 90vh; /* Limita la altura máxima al 90% de la vista */
   overflow-y: auto; /* Permite el desplazamiento vertical */
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

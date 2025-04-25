@@ -1,20 +1,37 @@
-import { Task } from "@/lib/store";
+"use client";
+
 import { useDndContext, type UniqueIdentifier } from "@dnd-kit/core";
-import { SortableContext, useSortable } from "@dnd-kit/sortable";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cva } from "class-variance-authority";
-import { GripVertical } from "lucide-react";
-import { useMemo } from "react";
+import { GripVertical, Plus } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader } from "../ui/card";
 import { ColumnActions } from "./column-action";
 import { TaskCard } from "./task-card";
-import NewTaskDialog from "./new-task-dialog";
+import { NewTaskDialog } from "./new-task-dialog";
+import { DEFAULT_COLUMN_COLOR } from "./constants";
+import { TaskDetailsModal } from "./task-details-modal";
 
-export interface Column {
+interface KanbanTask {
+  id: number;
+  title: string;
+  description: string | null;
+  status: string; // Columna
+  order: number;
+  boardId: number;
+  creatorId: number;
+  assigneeId: number | null;
+  createdAt: string; 
+  updatedAt: string; 
+}
+
+export type Column = {
   id: UniqueIdentifier;
   title: string;
-}
+  color?: string; // Color opcional para la columna
+};
 
 export type ColumnType = "Column";
 
@@ -23,13 +40,19 @@ export interface ColumnDragData {
   column: Column;
 }
 
-interface BoardColumnProps {
+interface ColumnProps {
   column: Column;
-  tasks: Task[];
+  tasks: KanbanTask[]; // Esperar el tipo correcto
   isOverlay?: boolean;
+  boardId: number; // ID del tablero padre
+  onTaskCreated: () => void; // <-- Corregir tipo aquí
+  onTaskUpdated: () => void; // <-- Añadir prop para actualizar
 }
 
-export function BoardColumn({ column, tasks, isOverlay }: BoardColumnProps) {
+export function BoardColumn({ column, tasks, isOverlay, boardId, onTaskCreated, onTaskUpdated }: ColumnProps) {
+  const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const tasksIds = useMemo(() => {
     return tasks.map((task) => task.id);
   }, [tasks]);
@@ -50,6 +73,7 @@ export function BoardColumn({ column, tasks, isOverlay }: BoardColumnProps) {
     attributes: {
       roleDescription: `Column: ${column.title}`,
     },
+    disabled: isOverlay,
   });
 
   const style = {
@@ -70,6 +94,16 @@ export function BoardColumn({ column, tasks, isOverlay }: BoardColumnProps) {
     },
   );
 
+  const handleOpenModal = (task: KanbanTask) => {
+    setSelectedTask(task);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedTask(null);
+  };
+
   return (
     <Card
       ref={setNodeRef}
@@ -78,7 +112,10 @@ export function BoardColumn({ column, tasks, isOverlay }: BoardColumnProps) {
         dragging: isOverlay ? "overlay" : isDragging ? "over" : undefined,
       })}
     >
-      <CardHeader className="p-4 font-semibold border-b-2 text-left flex flex-row space-between items-center">
+      <CardHeader 
+        className="p-4 font-semibold border-b-2 text-left flex flex-row space-between items-center text-card-foreground"
+        style={{ backgroundColor: column.color || DEFAULT_COLUMN_COLOR }}
+      >
         <Button
           variant={"ghost"}
           {...attributes}
@@ -88,21 +125,28 @@ export function BoardColumn({ column, tasks, isOverlay }: BoardColumnProps) {
           <span className="sr-only">{`Move column: ${column.title}`}</span>
           <GripVertical />
         </Button>
-        {/* <span className="mr-auto !mt-0"> {column.title}</span> */}
-        {/* <Input
-          defaultValue={column.title}
-          className="text-base !mt-0 mr-auto"
-        /> */}
+        <span className="flex-grow mx-2 truncate" title={column.title}>{column.title}</span>
         <ColumnActions id={column.id} title={column.title} />
       </CardHeader>
       <CardContent className="flex flex-grow flex-col gap-4 p-2 overflow-y-auto overflow-x-hidden">
-        <SortableContext items={tasksIds}>
+        <SortableContext items={tasksIds.map(id => id.toString())}>
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+            <TaskCard key={task.id} task={task} onOpenModal={handleOpenModal} />
           ))}
         </SortableContext>
-        <NewTaskDialog initialStatus={column.id} />
+        <NewTaskDialog 
+          boardId={boardId} 
+          status={column.id.toString()} 
+          onTaskCreated={onTaskCreated} 
+        />
       </CardContent>
+
+      <TaskDetailsModal 
+        task={selectedTask} 
+        isOpen={isModalOpen} 
+        onClose={handleCloseModal} 
+        onTaskUpdated={onTaskUpdated}
+      />
     </Card>
   );
 }

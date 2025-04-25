@@ -2,9 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-import { Icons } from "@/components/icons";
-import { cn } from "@/lib/utils";
+import { ChevronRight, LucideIcon } from "lucide-react";
+import { Button } from "@/components/ui/button"
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from "@/components/ui/sidebar"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { NavItem } from "@/types";
 import { Dispatch, SetStateAction } from "react";
 
@@ -13,40 +28,75 @@ interface DashboardNavProps {
   setOpen?: Dispatch<SetStateAction<boolean>>;
 }
 
-export function DashboardNav({ items, setOpen }: DashboardNavProps) {
-  const path = usePathname();
-
-  if (!items?.length) {
-    return null;
-  }
+export function NavMain({
+  items,
+}: {
+  items: {
+    title: string
+    url: string
+    icon?: LucideIcon
+    items?: {
+      title: string
+      url: string
+    }[]
+  }[]
+}) {
+  const pathname = usePathname();
 
   return (
-    <nav className="grid items-start gap-2">
-      {items.map((item, index) => {
-        const Icon = Icons[item.icon || "arrowRight"];
-        return (
-          item.href && (
-            <Link
-              key={index}
-              href={item.disabled ? "/" : item.href}
-              onClick={() => {
-                if (setOpen) setOpen(false);
-              }}
-            >
-              <span
-                className={cn(
-                  "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                  path === item.href ? "bg-accent" : "transparent",
-                  item.disabled && "cursor-not-allowed opacity-80",
-                )}
+    <SidebarGroup>
+      <SidebarGroupContent className="flex flex-col gap-2">
+      <SidebarGroupLabel>Menú</SidebarGroupLabel>
+    
+        <SidebarMenu>
+          {items.map((item) =>
+            item.items && item.items.length > 0 ? (
+              <Collapsible
+                key={item.title}
+                asChild
+                defaultOpen={item.items?.some(subItem => pathname === subItem.url)}
+                className="group/collapsible"
               >
-                <Icon className="mr-2 h-4 w-4" />
-                <span>{item.title}</span>
-              </span>
-            </Link>
-          )
-        );
-      })}
-    </nav>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton tooltip={item.title}>
+                      {item.icon && <item.icon className="h-4 w-4" />}
+                      <span>{item.title}</span>
+                      <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {item.items?.map((subItem) => (
+                        <SidebarMenuSubItem key={subItem.title}>
+                          <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
+                            <Link href={subItem.url}>
+                              <span>{subItem.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+            ) : (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.url}
+                  tooltip={item.title}
+                >
+                  <Link href={item.url}>
+                    {item.icon && <item.icon className="h-4 w-4" />}
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          )}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
   );
 }

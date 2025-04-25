@@ -1,146 +1,81 @@
-import { Icons } from "@/components/icons";
+import {
+  LayoutDashboard,
+  Users,
+  Bot,
+  Map,
+  LogOut,
+  List,
+  Building,
+  Settings
+} from "lucide-react";
 import { NavItem, SidebarNavItem } from "@/types";
 
-export type User = {
-  id: number;
-  name: string;
-  company: string;
-  role: string;
-  verified: boolean;
-  status: string;
-};
-export const users: User[] = [
-  {
-    id: 1,
-    name: "Candice Schiner",
-    company: "Dell",
-    role: "Frontend Developer",
-    verified: false,
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "John Doe",
-    company: "TechCorp",
-    role: "Backend Developer",
-    verified: true,
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Alice Johnson",
-    company: "WebTech",
-    role: "UI Designer",
-    verified: true,
-    status: "Active",
-  },
-  {
-    id: 4,
-    name: "David Smith",
-    company: "Innovate Inc.",
-    role: "Fullstack Developer",
-    verified: false,
-    status: "Inactive",
-  },
-  {
-    id: 5,
-    name: "Emma Wilson",
-    company: "TechGuru",
-    role: "Product Manager",
-    verified: true,
-    status: "Active",
-  },
-  {
-    id: 6,
-    name: "James Brown",
-    company: "CodeGenius",
-    role: "QA Engineer",
-    verified: false,
-    status: "Active",
-  },
-  {
-    id: 7,
-    name: "Laura White",
-    company: "SoftWorks",
-    role: "UX Designer",
-    verified: true,
-    status: "Active",
-  },
-  {
-    id: 8,
-    name: "Michael Lee",
-    company: "DevCraft",
-    role: "DevOps Engineer",
-    verified: false,
-    status: "Active",
-  },
-  {
-    id: 9,
-    name: "Olivia Green",
-    company: "WebSolutions",
-    role: "Frontend Developer",
-    verified: true,
-    status: "Active",
-  },
-  {
-    id: 10,
-    name: "Robert Taylor",
-    company: "DataTech",
-    role: "Data Analyst",
-    verified: false,
-    status: "Active",
-  },
-];
-
-export type Employee = {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  gender: string;
-  date_of_birth: string; // Consider using a proper date type if possible
-  street: string;
-  city: string;
-  state: string;
-  country: string;
-  zipcode: string;
-  longitude?: number; // Optional field
-  latitude?: number; // Optional field
-  job: string;
-  profile_picture?: string | null; // Profile picture can be a string (URL) or null (if no picture)
-};
-
-export const navItems: NavItem[] = [
-  {
-    title: "Panel",
-    href: "/dashboard",
-    icon: "dashboard",
-    label: "Dashboard",
-  },
-  {
-    title: "Reclamos",
-    href: "/dashboard/reclamos",
-    icon: "user",
-    label: "user",
-  },
-  {
-    title: "Cuadrillas",
-    href: "/dashboard/cuadrillas",
-    icon: "profile",
-    label: "profile",
-  },
- 
-  {
-    title: "Mapa",
-    href: "/dashboard/mapa",
-    icon: "kanban",
-    label: "kanban",
-  },
-  {
-    title: "Salir",
-    href: "/",
-    icon: "login",
-    label: "login",
-  },
-];
+export const navItems = {
+  NavMain: [
+    {
+      title: "Panel",
+      url: "/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      title: "Obras",
+      url: "/dashboard/obras",
+      icon: Building,
+      items: [
+        {
+          title: "Reclamos",
+          url: "/dashboard/reclamos",
+        },
+        {
+          title: "Cuadrillas",
+          url: "/dashboard/cuadrillas",
+        },
+        {
+          title: "Mapa",
+          url: "/dashboard/mapa",
+        },
+      ]
+    },
+    
+    /*
+    {
+      title: "Cuadrillas",
+      href: "/dashboard/cuadrillas",
+      icon: Users,
+      label: "profile",
+    },
+    */
+   {
+    title: "Ceresito",
+    url: "/dashboard/ceresito",
+    icon: Bot,
+    items: [
+      {
+        title: "Estadisticas",
+        url: "/dashboard/ceresito",
+      },
+      {
+        title: "Mensajes de bienvenida",
+        url: "/dashboard/ceresito/mensajes-bienvenida",
+      },
+    ],
+   },
+    /*
+    {
+      title: "Tareas",
+      url: "/dashboard/kanban",
+      icon: List,
+    },
+    */
+   {
+    title: "Ajustes",
+    url: "/dashboard/settings",
+    icon: Settings
+   },
+    {
+      title: "Salir",
+      url: "/",
+      icon: LogOut,
+    },
+  ] 
+}

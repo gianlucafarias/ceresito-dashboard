@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
-import { useTaskStore } from "@/lib/store";
+import { useKanbanStore } from "@/lib/store";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { Input } from "../ui/input";
 
@@ -32,12 +32,15 @@ export function ColumnActions({
   id: UniqueIdentifier;
 }) {
   const [name, setName] = React.useState(title);
-  const updateCol = useTaskStore((state) => state.updateCol);
-  const removeCol = useTaskStore((state) => state.removeCol);
+  const currentKanbanId = useKanbanStore((state) => state.currentKanbanId);
+  const updateColumn = useKanbanStore((state) => state.updateColumn);
+  const removeColumn = useKanbanStore((state) => state.removeColumn);
   const [editDisable, setIsEditDisable] = React.useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  if (!currentKanbanId) return null;
 
   return (
     <>
@@ -45,11 +48,11 @@ export function ColumnActions({
         onSubmit={(e) => {
           e.preventDefault();
           setIsEditDisable(!editDisable);
-          updateCol(id, name);
+          updateColumn(currentKanbanId, id, name);
           toast({
-            title: "Name Updated",
+            title: "Nombre actualizado",
             variant: "default",
-            description: `${title} updated to ${name}`,
+            description: `${title} actualizado a ${name}`,
           });
         }}
       >
@@ -77,7 +80,7 @@ export function ColumnActions({
               }, 500);
             }}
           >
-            Rename
+            Renombrar
           </DropdownMenuItem>
           <DropdownMenuSeparator />
 
@@ -85,7 +88,7 @@ export function ColumnActions({
             onSelect={() => setShowDeleteDialog(true)}
             className="text-red-600"
           >
-            Delete Section
+            Eliminar sección
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -93,14 +96,15 @@ export function ColumnActions({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Are you sure want to delete column?
+              ¿Estás seguro de querer eliminar la sección?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              NOTE: All tasks related to this category will also be deleted.
+              NOTA: Todas las tareas relacionadas con esta categoría también
+              serán eliminadas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <Button
               variant="destructive"
               onClick={() => {
@@ -108,13 +112,13 @@ export function ColumnActions({
                 setTimeout(() => (document.body.style.pointerEvents = ""), 100);
 
                 setShowDeleteDialog(false);
-                removeCol(id);
+                removeColumn(currentKanbanId, id);
                 toast({
-                  description: "This column has been deleted.",
+                  description: "Esta sección ha sido eliminada.",
                 });
               }}
             >
-              Delete
+              Eliminar
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

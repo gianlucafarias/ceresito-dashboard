@@ -1,22 +1,32 @@
-import { DashboardNav } from "@/components/dashboard-nav";
+"use client"
+import * as React from "react"
+import { NavMain } from "@/components/dashboard-nav";
 import { navItems } from "@/constants/data";
-import { cn } from "@/lib/utils";
+// import { cn } from "@/lib/utils"; // No usado
 
-export default function Sidebar() {
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  // SidebarMenu, // No usado
+  // SidebarMenuButton, // No usado
+  // SidebarMenuItem, // No usado
+} from "@/components/ui/sidebar"
+import { UserNav } from "./user-nav";
+// import { ArrowUpCircleIcon } from "lucide-react"; // No usado
+
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <nav
-      className={cn(`relative hidden h-screen border-r pt-16 lg:block w-72`)}
-    >
-      <div className="space-y-4 py-4">
-        <div className="px-3 py-2">
-          <div className="space-y-1">
-            <h2 className="mb-2 px-4 text-xl font-semibold tracking-tight">
-              Menú
-            </h2>
-            <DashboardNav items={navItems} />
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
+    <Sidebar collapsible="offcanvas" {...props}>
+      {/* SidebarHeader se deja vacío */}
+      <SidebarHeader />
+      <SidebarContent>
+        <NavMain items={navItems.NavMain} />
+      </SidebarContent>
+      <SidebarFooter>
+        <UserNav />
+      </SidebarFooter>
+    </Sidebar>
+  )
 }

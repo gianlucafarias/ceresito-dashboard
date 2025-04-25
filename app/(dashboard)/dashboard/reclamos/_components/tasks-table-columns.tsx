@@ -182,10 +182,6 @@ export function getColumns({
     {
       id: "actions",
       cell: function Cell({ row }) {
-        const [isUpdatePending, startUpdateTransition] = React.useTransition();
-        const [showUpdateTaskSheet, setShowUpdateTaskSheet] = React.useState(false);
-        const [showDeleteTaskDialog, setShowDeleteTaskDialog] = React.useState(false);
-        
         // Si estamos usando el sistema centralizado de acciones
         if (setRowAction) {
           return (
@@ -270,7 +266,13 @@ export function getColumns({
           );
         }
         
-        // Implementación anterior para compatibilidad (ahora sin los hooks, ya definidos arriba)
+        // Mantener la implementación anterior para compatibilidad
+        const [isUpdatePending, startUpdateTransition] = React.useTransition();
+        const [showUpdateTaskSheet, setShowUpdateTaskSheet] =
+          React.useState(false);
+        const [showDeleteTaskDialog, setShowDeleteTaskDialog] =
+          React.useState(false);
+
         return (
           <>
             <UpdateTaskSheet

@@ -1,66 +1,64 @@
 import { create } from "zustand";
-import { v4 as uuid } from "uuid";
 import { persist } from "zustand/middleware";
-import { Column } from "@/components/kanban/board-column";
 import { UniqueIdentifier } from "@dnd-kit/core";
 
-export type Status = "COMPLETADO" | "EN PROCESO" | "PENDIENTE" | "ASIGNADO" | "CANCELADO" ;
+// Mantener Status si se usa externamente, o definirlo donde se necesite
+// Podría basarse en las columnas estáticas definidas en KanbanBoard
+export type Status = string; // Simplificado a string por ahora
 
-const defaultCols = [
-  {
-    id: "TODO" as const,
-    title: "Todo",
-  },
-] satisfies Column[];
+// --- Tipos obsoletos eliminados ---
+// export interface KanbanMember { ... }
+// export interface Kanban { ... }
+// export type Task = { ... };
+// ---------------------------------
 
-export type ColumnId = (typeof defaultCols)[number]["id"];
-
-export type Task = {
-  id: string;
-  nombre: string;
-  detalle?: string;
-  estado: Status;
-  ubicacion: string;
-  barrio: string;
-  prioridad: string;
-  
-};
-
+// Estado simplificado: solo mantiene el ID del tablero activo (si se necesita globalmente)
 export type State = {
-  tasks: Task[];
-  columns: Column[];
-  draggedTask: { id: string | null; status: ColumnId | null };
+  currentKanbanId: string | null;
 };
 
+// Acciones simplificadas
 export type Actions = {
-  addTask: (title: string, description?: string, status?: ColumnId) => void;
-  updateCol: (id: UniqueIdentifier, newName: string) => void;
-  addCol: (title: string) => void;
-  dragTask: (id: string | null, status: ColumnId | null) => void;
-  removeTask: (id: string) => void;
-  removeCol: (id: UniqueIdentifier) => void;
-  setTasks: (updatedTask: Task[]) => void;
-  setCols: (cols: Column[]) => void;
+  setCurrentKanban: (kanbanId: string | null) => void;
 };
 
-export const useTaskStore = create<State & Actions>()(
+// Exportar el store simplificado
+export const useKanbanStore = create<State & Actions>()(
   persist(
     (set) => ({
-      tasks: [],
-      columns: defaultCols,
-      draggedTask: { id: null, status: null },
+      // Estado inicial
+      currentKanbanId: null,
 
-      addTask: (title, description, status = "TODO") =>
-        set((state) => ({
-          tasks: [
-            ...state.tasks,
-            { id: uuid(), title, description, status },
-          ],
-        })),
+      // Única acción restante
+      setCurrentKanban: (kanbanId) => set({ currentKanbanId: kanbanId }),
 
-      // Resto de las acciones
+      // --- Acciones obsoletas eliminadas --- 
+      // createKanban: (...) => { ... },
+      // deleteKanban: (...) => { ... },
+      // updateKanban: (...) => { ... },
+      // addMemberToKanban: (...) => { ... },
+      // removeMemberFromKanban: (...) => { ... },
+      // addColumn: (...) => { ... },
+      // updateColumn: (...) => { ... },
+      // removeColumn: (...) => { ... },
+      // addTask: (...) => { ... },
+      // updateTask: (...) => { ... },
+      // removeTask: (...) => { ... },
+      // moveTask: (...) => { ... },
+      // ------------------------------------
     }),
-    { name: "task-store", skipHydration: true }
+    {
+      name: "kanban-store", // Nombre para persistencia (localStorage)
+      // Considerar si aún se necesita persistir solo el currentKanbanId
+      // partialize: (state) => ({ currentKanbanId: state.currentKanbanId }),
+      skipHydration: true, // Puede ser útil si la hidratación causaba problemas
+    }
   )
 );
+
+// --- Constantes y defaultColumns eliminadas, definir donde se usen --- 
+// export const COLOR_PALETTE = [...];
+// export const DEFAULT_TASK_COLOR = ...;
+// export const DEFAULT_COLUMN_COLOR = ...;
+// const defaultColumns = [...];
 

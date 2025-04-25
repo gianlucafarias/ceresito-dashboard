@@ -16,6 +16,8 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useQuery } from "react-query";
+import { ReclamosPorTipoChart } from './ReclamosPorTipoChart';
+import { ReclamosPorBarrioChart } from './ReclamosPorBarrioChart';
 
 // Definir tipos para los datos
 interface Cuadrilla {
@@ -203,39 +205,13 @@ export default function Dashboard() {
                             </Card>
                         </section>
 
-                        {/* Actividad Reciente */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Actividad Reciente</CardTitle>
-                                <CardDescription>
-                                    Últimas actualizaciones en el sistema
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {actividadReciente.slice(0, 3).map((actividad, i) => (
-                                        <div key={i} className="flex items-center gap-4 border-b pb-4">
-                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                                                actividad.tipo === 'completado' ? 'bg-green-100' : 
-                                                actividad.tipo === 'asignado' ? 'bg-blue-100' : 'bg-orange-100'
-                                            }`}>
-                                                {actividad.tipo === 'completado' ? 
-                                                    <CheckCircle className="h-6 w-6 text-green-600" /> : 
-                                                    actividad.tipo === 'asignado' ? 
-                                                    <UsersIcon className="h-6 w-6 text-blue-600" /> :
-                                                    <Calendar className="h-6 w-6 text-orange-600" />
-                                                }
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="font-medium">{actividad.titulo}</p>
-                                                <p className="text-sm text-muted-foreground">{actividad.descripcion}</p>
-                                                <p className="text-xs text-muted-foreground mt-1">{actividad.tiempo}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
+                        {/* Nueva sección para el gráfico */}
+                        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                            {/* Gráfico de Reclamos por Tipo */}
+                            <ReclamosPorTipoChart />
+
+                            <ReclamosPorBarrioChart />
+                        </section>
                     </TabsContent>
 
                     <TabsContent value="actividad" className="space-y-4">
@@ -249,7 +225,7 @@ export default function Dashboard() {
                             <CardContent>
                                 <div className="space-y-4">
                                     {actividadReciente.map((actividad, i) => (
-                                        <div key={i} className="flex items-center gap-4 border-b pb-4">
+                                        <div key={i} className="flex items-center gap-4 border-b pb-4 last:border-b-0 last:pb-0">
                                             <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
                                                 actividad.tipo === 'completado' ? 'bg-green-100' : 
                                                 actividad.tipo === 'asignado' ? 'bg-blue-100' : 'bg-orange-100'
