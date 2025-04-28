@@ -2,7 +2,12 @@
 const nextConfig = {
   images: {
     domains: ['api.ceres.gob.ar'],
-
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'pps.whatsapp.net',
+    }
+  ]
   },
   typescript: {
     ignoreBuildErrors: true,

@@ -75,6 +75,12 @@ const ConversationView = ({ details }: ConversationViewProps) => {
         //     answer === 'Estoy escuchando tu audio...') {
         //   return null;
         // }
+
+        // NUEVO: Filtrar cualquier mensaje que comience con '__'
+        if (answer.startsWith('__')) {
+          return null; // Omitir este mensaje
+        }
+
         return {
           id: msg.id,
           sender: sender,

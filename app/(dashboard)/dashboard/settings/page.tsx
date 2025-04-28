@@ -19,6 +19,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast"
 import { RolesCard } from "./components/RolesCard";
+import ProfilePhotoCard from './components/ProfilePhotoCard';
 
 interface Role {
   id: number,
@@ -208,6 +209,8 @@ export default function Page() {
   return (
     <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] bg-gray-100/40 flex-1 flex-col gap-4 p-4 md:gap-8 md:p-10 dark:bg-gray-800/40">
       <div className="grid gap-6">
+        <ProfilePhotoCard />
+
         <Card>
           <CardHeader>
             <CardTitle>Tipos de Arreglos</CardTitle>
@@ -388,7 +391,7 @@ export default function Page() {
               <div className="grid gap-2">
                 {users.map((user) => (
                   <div key={user.id} className="flex items-center justify-between bg-gray-100 px-4 py-3 rounded-md dark:bg-gray-950">
-                    <span>{user.username} - {user.role.name}</span>
+                    <span>{user.username} - {user.role && user.role.length > 0 ? user.role[0].name : 'Sin rol'}</span>
                     <div className="flex items-center gap-2">
                       {/* Implementa aquí el botón para editar usuarios */}
                     </div>
