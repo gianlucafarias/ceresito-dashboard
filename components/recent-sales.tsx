@@ -109,7 +109,7 @@ const ConversationView = ({ details }: ConversationViewProps) => {
     //   params.append('conversationId', details.conversationId);
     // }
 
-    const API_ENDPOINT = `http://localhost:3001/api/conversation-details?${params.toString()}`;
+    const API_ENDPOINT = `https://api.ceres.gob.ar/api/api/conversation-details?${params.toString()}`;
     console.log(`Fetching MORE messages from: ${API_ENDPOINT}`);
 
     try {
@@ -161,7 +161,7 @@ const ConversationView = ({ details }: ConversationViewProps) => {
       params.append('conversationId', conversationId);
     }
 
-    const API_ENDPOINT = `http://localhost:3001/api/conversation-details?${params.toString()}`;
+    const API_ENDPOINT = `https://api.ceres.gob.ar/api/api/conversation-details?${params.toString()}`;
     console.log(`Fetching initial conversation details from: ${API_ENDPOINT}`);
 
     fetch(API_ENDPOINT)
@@ -282,7 +282,7 @@ export function RecentSales() {
   useEffect(() => {
     setIsLoading(true);
     setError(null);
-    fetch('http://localhost:3001/api/last-interactions')
+    fetch('https://api.ceres.gob.ar/api/api/last-interactions')
       .then(response => {
         if (!response.ok) {
           throw new Error('Error al obtener las últimas interacciones');
