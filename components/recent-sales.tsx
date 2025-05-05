@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -54,7 +54,7 @@ const ConversationView = ({ details }: ConversationViewProps) => {
   const scrollHeightBeforeLoad = useRef<number>(0); // Para mantener la posición del scroll
 
   // Función para formatear mensajes (la lógica que ya teníamos)
-  const formatMessages = (apiMessages: any[]) => {
+  const formatMessages = useCallback((apiMessages: any[]) => {
     return apiMessages
       .map(msg => {
         let sender: 'user' | 'bot';
@@ -89,18 +89,17 @@ const ConversationView = ({ details }: ConversationViewProps) => {
         };
       })
       .filter(msg => msg !== null && msg.text !== '');
-  };
+  }, []);
 
   // Función para cargar más mensajes
-  const loadMoreMessages = async () => {
+  const loadMoreMessages = useCallback(async () => {
     if (!details || isLoadingMore || currentPage >= totalPages) {
-      return; // No cargar si no hay detalles, ya está cargando, o no hay más páginas
+      return;
     }
 
     setIsLoadingMore(true);
     const nextPage = currentPage + 1;
 
-    // Guardar la altura actual del scroll antes de añadir nuevos mensajes
     if (chatContainerRef.current) {
       scrollHeightBeforeLoad.current = chatContainerRef.current.scrollHeight;
     }
@@ -108,12 +107,8 @@ const ConversationView = ({ details }: ConversationViewProps) => {
     const params = new URLSearchParams({
       contactId: details.contactId.toString(),
       page: nextPage.toString(),
-      limit: '10' // O el límite que prefieras
+      limit: '10'
     });
-    // El backend ya no necesita conversationId para paginar
-    // if (details.conversationId) {
-    //   params.append('conversationId', details.conversationId);
-    // }
 
     const API_ENDPOINT = `https://api.ceres.gob.ar/api/api/conversation-details?${params.toString()}`;
     console.log(`Fetching MORE messages from: ${API_ENDPOINT}`);
@@ -124,21 +119,16 @@ const ConversationView = ({ details }: ConversationViewProps) => {
         throw new Error(`Error cargando más mensajes (status: ${response.status})`);
       }
       const data: ConversationApiResponse = await response.json();
-      const newFormattedMessages = formatMessages(data.messages); // Formatear nuevos mensajes
-      
-      // Añadir los nuevos mensajes AL PRINCIPIO del array existente
+      const newFormattedMessages = formatMessages(data.messages); // Usa la función memoizada
+
       setMessages(prevMessages => [...newFormattedMessages, ...prevMessages]);
       setCurrentPage(data.currentPage);
-      // totalPages ya debería estar establecido desde la carga inicial, pero lo actualizamos por si acaso
-      setTotalPages(data.totalPages); 
+      setTotalPages(data.totalPages);
 
     } catch (err: any) {
       console.error("Error fetching more messages:", err);
-      // Podríamos mostrar un error específico para la carga adicional
-      // setErrorMore(err.message || 'Error desconocido');
     } finally {
       setIsLoadingMore(false);
-      // Restaurar la posición del scroll después de que el DOM se actualice
       requestAnimationFrame(() => {
         if (chatContainerRef.current) {
             const newScrollHeight = chatContainerRef.current.scrollHeight;
@@ -146,7 +136,7 @@ const ConversationView = ({ details }: ConversationViewProps) => {
         }
       });
     }
-  };
+  }, [details, isLoadingMore, currentPage, totalPages, formatMessages]);
 
   // Efecto para la carga inicial
   useEffect(() => {
@@ -197,7 +187,7 @@ const ConversationView = ({ details }: ConversationViewProps) => {
         });
       });
 
-  }, [details]); // Dependencia de details para recargar si cambia la conversación
+  }, [details, formatMessages]);
 
   // Efecto para manejar el scroll
   useEffect(() => {
@@ -224,8 +214,7 @@ const ConversationView = ({ details }: ConversationViewProps) => {
         container.removeEventListener('scroll', handleScroll);
       }
     };
-  // }, [isLoadingMore, currentPage, totalPages, details]); // Añadir details si loadMoreMessages lo necesita directamente
-     }, [isLoadingMore, currentPage, totalPages, loadMoreMessages]); // Depender de la función estable
+  }, [isLoadingMore, currentPage, totalPages, loadMoreMessages]);
 
 
   return (

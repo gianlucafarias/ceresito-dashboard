@@ -18,18 +18,5 @@ export async function POST(request: Request) {
     return NextResponse.json(obtenerTipoReclamo)
  }
 
- export async function DELETE(request: Request) {
-    try {
-      const { id } = await request.json();
-      const deleteById = await prisma.tipoReclamo.delete({
-        where: {
-          id: Number(id),
-        },
-      });
-      return NextResponse.json({ deleteById });
-    } catch (error) {
-      console.error('Error al eliminar el tipo de reclamo:', error);
-      return NextResponse.error();
-    }
-  }
+ // La lógica DELETE se movió a app/api/tipoReclamo/[id]/route.ts
 

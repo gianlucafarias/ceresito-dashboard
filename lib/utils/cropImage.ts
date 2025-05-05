@@ -17,61 +17,51 @@ const createImage = (url: string): Promise<HTMLImageElement> =>
   });
 
 /**
- * Genera una imagen recortada.
+ * Genera una imagen recortada (versión simplificada sin rotación para ahorrar memoria).
  * @param {string} imageSrc - La URL (usualmente Data URL) de la imagen original.
  * @param {Area} pixelCrop - El área de recorte en píxeles obtenida de react-easy-crop.
- * @param {number} rotation - Rotación en grados (no implementado aquí, pero común añadirlo).
  * @returns {Promise<Blob | null>} - Promesa que resuelve con un Blob de la imagen recortada (JPEG por defecto) o null si falla.
  */
 export async function getCroppedImg(
   imageSrc: string,
-  pixelCrop: Area,
-  rotation = 0
+  pixelCrop: Area
 ): Promise<Blob | null> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
   if (!ctx) {
+    console.error('No se pudo obtener el contexto 2D del canvas');
     return null;
   }
 
-  const maxSize = Math.max(image.width, image.height);
-  const safeArea = 2 * maxSize;
-
-  // Establece el tamaño del canvas para acomodar la imagen rotada
-  canvas.width = safeArea;
-  canvas.height = safeArea;
-
-  // Traslada al centro del canvas
-  ctx.translate(safeArea / 2, safeArea / 2);
-  // Rota alrededor del centro
-  ctx.rotate((rotation * Math.PI) / 180);
-  // Traslada de vuelta al origen para dibujar la imagen
-  ctx.translate(-image.width / 2, -image.height / 2);
-
-  // Dibuja la imagen rotada en el canvas
-  ctx.drawImage(image, 0, 0);
-
-  // Extrae los datos de la imagen del canvas "roto"
-  const data = ctx.getImageData(0, 0, safeArea, safeArea);
-
-  // Establece el tamaño final del canvas al tamaño del recorte deseado
+  // Establecer el tamaño del canvas al tamaño del recorte deseado
   canvas.width = pixelCrop.width;
   canvas.height = pixelCrop.height;
 
-  // Pega la imagen "rota" en el canvas final, ajustando por el área de recorte y la rotación
-  ctx.putImageData(
-    data,
-    Math.round(0 - safeArea / 2 + image.width / 2 - pixelCrop.x),
-    Math.round(0 - safeArea / 2 + image.height / 2 - pixelCrop.y)
+  // Dibujar solo la parte recortada de la imagen original en el canvas
+  // drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
+  ctx.drawImage(
+    image,        // Imagen fuente
+    pixelCrop.x,  // Coordenada X de inicio del recorte en la fuente
+    pixelCrop.y,  // Coordenada Y de inicio del recorte en la fuente
+    pixelCrop.width, // Ancho del recorte en la fuente
+    pixelCrop.height, // Alto del recorte en la fuente
+    0,            // Coordenada X de inicio del dibujo en el canvas destino
+    0,            // Coordenada Y de inicio del dibujo en el canvas destino
+    pixelCrop.width, // Ancho del dibujo en el canvas destino
+    pixelCrop.height // Alto del dibujo en el canvas destino
   );
 
   // Devuelve el contenido del canvas como un Blob
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
+      if (!blob) {
+        console.error('La creación del Blob falló.');
+        reject(new Error('Canvas is empty'));
+        return;
+      }
       resolve(blob);
     }, 'image/jpeg', 0.9); // Calidad 0.9 para JPEG
-    // Podrías usar 'image/png' si prefieres PNG
   });
 } 
