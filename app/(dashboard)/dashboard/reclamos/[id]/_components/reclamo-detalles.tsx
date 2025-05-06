@@ -102,8 +102,8 @@ export function ReclamoDetalles({ reclamo, historial }: ReclamoDetallesProps) {
   const [notificarUsuario, setNotificarUsuario] = useState(true)
   const [isSubmittingComentario, setIsSubmittingComentario] = useState(false)
   
-  // Referencia para exportar a PDF
-  const componentRef = useRef<HTMLDivElement>(null)
+  // Ya no se usa la ref para la generación directa de PDF
+  // const componentRef = useRef<HTMLDivElement>(null)
   
   // Formatear la fecha para mostrar
   const fechaFormateada = reclamo.fecha 
@@ -223,165 +223,96 @@ export function ReclamoDetalles({ reclamo, historial }: ReclamoDetallesProps) {
     }
   }
   
-  // Implementación simplificada de exportación a PDF
-  const handleExportarPDF = () => {
+  // Nueva implementación de handleExportarPDF que llama al API
+  const handleExportarPDF = async () => {
+    if (!reclamo || !reclamo.id) {
+      toast({
+        title: "Error",
+        description: "No se pudo obtener el ID del reclamo para exportar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const idreclamo = reclamo.id;
+    const apiUrl = `https://api.ceres.gob.ar/api/api/reclamo/${idreclamo}/pdf`; 
+
     toast({
-      title: "Preparando PDF",
-      description: "Preparando la vista para imprimir o guardar como PDF...",
-    })
-    
-    // Guardamos las clases originales para restaurarlas después
-    const body = document.body;
-    const originalBodyClass = body.className;
-    const contenido = document.getElementById('reclamo-detalles');
-    
-    if (!contenido) {
+      title: "Exportando PDF...",
+      description: "Solicitando el PDF al servidor.",
+    });
+
+    try {
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        let errorDetails = `Error del servidor: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData && errorData.message) {
+            errorDetails += ` - ${errorData.message}`;
+          } else if (typeof errorData === 'string') {
+             errorDetails += ` - ${errorData}`;
+          }
+        } catch (e) { /* No hacer nada si el cuerpo del error no es JSON o está vacío */ }
+        throw new Error(errorDetails);
+      }
+
+      const blob = await response.blob();
+
+      if (blob.type === "application/json") {
+          const errorText = await blob.text();
+          let errorDetails = "La API devolvió un JSON en lugar de un PDF.";
+          try {
+              const errorData = JSON.parse(errorText);
+              if (errorData && errorData.message) {
+                  errorDetails += ` Mensaje: ${errorData.message}`;
+              } else if (errorData && errorData.error) {
+                   errorDetails += ` Error: ${errorData.error}`;
+              }
+          } catch (e) {
+              errorDetails += ` Contenido: ${errorText}`;
+          }
+          toast({
+              title: "Error de API",
+              description: errorDetails,
+              variant: "destructive",
+          });
+          return;
+      }
+      
+      if (blob.type !== "application/pdf") {
+          console.warn("La API no devolvió un PDF. Tipo recibido:", blob.type);
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `reclamo-${idreclamo}.pdf`; 
+      document.body.appendChild(a); 
+      a.click();
+      a.remove(); 
+      window.URL.revokeObjectURL(url); 
+
       toast({
-        title: "Error",
-        description: "No se pudo generar el PDF",
+        title: "PDF Descargado",
+        description: `El archivo reclamo-${idreclamo}.pdf debería estar descargándose.`,
+      });
+
+    } catch (error) {
+      console.error("Error al exportar PDF desde API:", error);
+      toast({
+        title: "Error al exportar PDF",
+        description: error instanceof Error ? error.message : "Ocurrió un error desconocido.",
         variant: "destructive",
       });
-      return;
     }
-    
-    // Creamos una nueva ventana para imprimir solo el contenido que queremos
-    const ventanaImpresion = window.open('', '_blank');
-    
-    if (!ventanaImpresion) {
-      toast({
-        title: "Error",
-        description: "El navegador bloqueó la ventana emergente. Por favor, permita ventanas emergentes para este sitio.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Estilo CSS para la impresión
-    ventanaImpresion.document.write(`
-      <html>
-        <head>
-          <title>Reclamo #${reclamo.id}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 20px;
-              line-height: 1.5;
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 20px;
-              border-bottom: 1px solid #ccc;
-              padding-bottom: 10px;
-            }
-            .section {
-              margin-bottom: 15px;
-              padding: 10px;
-              border: 1px solid #eee;
-              border-radius: 5px;
-            }
-            .section-title {
-              font-weight: bold;
-              margin-bottom: 5px;
-              font-size: 16px;
-            }
-            .section-content {
-              margin-left: 10px;
-            }
-            .label {
-              font-weight: bold;
-              display: inline-block;
-              width: 120px;
-            }
-            .estado {
-              padding: 3px 8px;
-              border-radius: 4px;
-              font-size: 12px;
-              font-weight: bold;
-            }
-            .estado-pendiente { background-color: #FEF9C3; color: #854D0E; }
-            .estado-asignado { background-color: #DBEAFE; color: #1E40AF; }
-            .estado-en-proceso { background-color: #FFEDD5; color: #9A3412; }
-            .estado-completado { background-color: #DCFCE7; color: #166534; }
-            .footer {
-              margin-top: 30px;
-              text-align: center;
-              font-size: 12px;
-              color: #666;
-            }
-            @media print {
-              body { padding: 0; }
-              .no-print { display: none; }
-              button { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Detalle de Reclamo #${reclamo.id}</h1>
-            <p>Generado el ${format(new Date(), "d 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })}</p>
-          </div>
-          
-          <div class="section">
-            <div class="section-title">Información General</div>
-            <div class="section-content">
-              <p><span class="label">Fecha de creación:</span> ${fechaFormateada}</p>
-              <p><span class="label">Estado:</span> <span class="estado estado-${reclamo.estado?.toLowerCase() || 'pendiente'}">${reclamo.estado || 'Pendiente'}</span></p>
-              <p><span class="label">Prioridad:</span> ${reclamo.prioridad || 'No asignada'}</p>
-              <p><span class="label">Categoría:</span> ${reclamo.reclamo || 'No especificada'}</p>
-            </div>
-          </div>
-          
-          <div class="section">
-            <div class="section-title">Descripción del Problema</div>
-            <div class="section-content">
-              <p>${reclamo.detalle || 'Sin detalles'}</p>
-            </div>
-          </div>
-          
-          <div class="section">
-            <div class="section-title">Ubicación</div>
-            <div class="section-content">
-              <p><span class="label">Dirección:</span> ${reclamo.ubicacion || 'No especificada'}</p>
-              <p><span class="label">Barrio:</span> ${reclamo.barrio || 'No especificado'}</p>
-            </div>
-          </div>
-          
-          <div class="section">
-            <div class="section-title">Datos del Solicitante</div>
-            <div class="section-content">
-              <p><span class="label">Nombre:</span> ${reclamo.nombre || 'No proporcionado'}</p>
-              <p><span class="label">Teléfono:</span> ${reclamo.telefono || 'No proporcionado'}</p>
-            </div>
-          </div>
-          
-          <div class="footer">
-            <p>Este documento es un comprobante de reclamo generado por el sistema de gestión municipal.</p>
-            <p>Municipalidad de Ceres - Gestión de Reclamos</p>
-          </div>
-          
-          <div class="no-print" style="text-align: center; margin-top: 20px;">
-            <button onclick="window.print();" style="padding: 10px 20px; background: #1e40af; color: white; border: none; border-radius: 4px; cursor: pointer;">
-              Imprimir o Guardar como PDF
-            </button>
-          </div>
-        </body>
-      </html>
-    `);
-    
-    ventanaImpresion.document.close();
-    
-    // Esperar a que el contenido se cargue y luego mostrar el diálogo de impresión
-    setTimeout(() => {
-      toast({
-        title: "PDF listo",
-        description: "Utilice el botón 'Imprimir o Guardar como PDF' o la opción de guardar como PDF de su navegador.",
-      });
-    }, 1000);
-  }
+  };
   
   return (
     <>
-      <Card ref={componentRef} id="reclamo-detalles" className="mb-6">
+      {/* La ref y el id ya no son necesarios para esta Card */}
+      <Card /* ref={componentRef} id="reclamo-detalles" */ className="mb-6">
         <CardHeader>
           <div className="mb-4 flex justify-end space-x-2">
             <Button 

@@ -291,7 +291,7 @@ export function RecentSales() {
          //    console.warn("Algunas interacciones fueron filtradas por no tener lastMessage.conversation_id");
          // }
          // Usamos data directamente, limitado a 10
-         setInteractions(data.slice(0, 10));
+         setInteractions(data.slice(0, 6));
       })
       .catch(error => {
         console.error(error);
