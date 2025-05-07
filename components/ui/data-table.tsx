@@ -5,7 +5,9 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
+  getSortedRowModel,
   useReactTable,
+  SortingState,
 } from "@tanstack/react-table";
 
 import {
@@ -19,23 +21,35 @@ import {
 import { Input } from "./input";
 import { Button } from "./button";
 import { ScrollArea, ScrollBar } from "./scroll-area";
+import React from "react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchKey: string;
+  sorting?: SortingState;
+  setSorting?: React.Dispatch<React.SetStateAction<SortingState>>;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   searchKey,
+  sorting,
+  setSorting,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    manualSorting: true,
+    manualPagination: true,
+    state: {
+      sorting,
+    },
+    onSortingChange: setSorting,
   });
 
   /* this can be used to get the selectedrows 
@@ -44,7 +58,7 @@ export function DataTable<TData, TValue>({
   return (
     <>
       <Input
-        placeholder={`Search ${searchKey}...`}
+        placeholder={`Buscar ${searchKey}...`}
         value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
         onChange={(event) =>
           table.getColumn(searchKey)?.setFilterValue(event.target.value)
@@ -58,13 +72,21 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
+                      className={header.column.getCanSort() ? "cursor-pointer select-none" : ""}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
                             header.getContext(),
                           )}
+                      {{
+                        asc: ' 🔼',
+                        desc: ' 🔽',
+                      }[header.column.getIsSorted() as string] ?? null}
                     </TableHead>
                   );
                 })}

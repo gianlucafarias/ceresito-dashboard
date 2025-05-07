@@ -3,10 +3,17 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { Heading } from "@/components/ui/heading";
 import { Separator } from "@/components/ui/separator";
-import { User } from "@/constants/data";
+// import { User } from "@/constants/data"; // Eliminada importación problemática
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { columns } from "./columns";
+
+// Definición temporal de User para evitar errores hasta que se defina correctamente
+interface User {
+  id: string; // O el tipo que corresponda
+  name: string; // O el tipo que corresponda
+  // Agrega otros campos necesarios para User
+}
 
 interface ProductsClientProps {
   data: User[];

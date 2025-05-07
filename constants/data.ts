@@ -58,6 +58,10 @@ export const navItems = {
         title: "Mensajes de bienvenida",
         url: "/dashboard/ceresito/mensajes-bienvenida",
       },
+      {
+        title: "Contactos",
+        url: "/dashboard/contacts",
+      },
     ],
    },
     /*
