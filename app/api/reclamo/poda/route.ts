@@ -21,14 +21,17 @@ export async function GET() {
   try {
     await doc.loadInfo();
     const sheet = doc.sheetsByIndex[7];
+    await sheet.loadHeaderRow();
     const rows = await sheet.getRows();
     const data = rows.map(row => ({
-        fecha: row._rawData[0],
-        nombre: row._rawData[1],
-        telefono: row._rawData[2],
-        ubicacion: row._rawData[3],
-        barrio: row._rawData[4],
-        imagen: row._rawData[5],
+        fecha: row.get('Fecha'),
+        seccion: row.get('seccion'),
+        nombre: row.get('Nombre'),
+        telefono: row.get('Telefono'),
+        ubicacion: row.get('Ubicacion'),
+        barrio: row.get('Barrio'),
+        imagenURL: row.get('Imagen'),
+        estado: row.get('Estado'),
       }));
       return NextResponse.json(data);
   } catch (error) {

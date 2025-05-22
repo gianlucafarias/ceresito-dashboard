@@ -16,7 +16,7 @@ export interface IndexPageProps {
   searchParams: SearchParams
 }
 
-export const revalidate = 60; // Revalidate this page every 60 seconds
+export const dynamic = 'force-dynamic'; // Changed from revalidate = 60
 
 export default async function IndexPage({ searchParams }: IndexPageProps) {
   const search = searchParamsSchema.parse(searchParams)

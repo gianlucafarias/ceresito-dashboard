@@ -7,12 +7,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MapPin  } from "lucide-react";
-import { Reclamo } from "@/types";
+import { Reclamo } from "@/types"; // Importar Reclamo global
 import Image from "next/image";
+
 interface ReclamoDetailsDialogProps {
   open: boolean;
   onClose: () => void;
-  reclamo: Reclamo | null;
+  reclamo: Reclamo | null; // Usar Reclamo global
 }
 
 export const DetallesReclamoDialog: React.FC<ReclamoDetailsDialogProps> = ({
@@ -22,18 +23,21 @@ export const DetallesReclamoDialog: React.FC<ReclamoDetailsDialogProps> = ({
 }) => {
   if (!reclamo) return null;
 
-
   const getGoogleMapsLink = (lat: number, lng: number) => {
     return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
   };
+
+  // Parsear latitud y longitud si existen y son válidas
+  const lat = parseFloat(reclamo.latitud);
+  const lng = parseFloat(reclamo.longitud);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Detalles del Reclamo</DialogTitle>
+          <DialogTitle>Detalles del Reclamo de Poda</DialogTitle>
           <DialogDescription>
-            Información detallada del reclamo seleccionado
+            Información detallada del reclamo de poda seleccionado
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
@@ -48,14 +52,16 @@ export const DetallesReclamoDialog: React.FC<ReclamoDetailsDialogProps> = ({
           </div>
           <div>
             <strong>Ubicación:</strong> {reclamo.ubicacion}
-            {reclamo.latitud && reclamo.longitud && (
+            {/* Usar lat y lng parseadas y verificar que no sean NaN */}
+            {!isNaN(lat) && !isNaN(lng) && (
               <a
-                href={getGoogleMapsLink(reclamo.latitud, reclamo.longitud)}
+                href={getGoogleMapsLink(lat, lng)}
                 target="_blank"
                 rel="noopener noreferrer"
+                className="ml-2"
               >
-                <Button variant="outline">
-                  <MapPin /> Ver en Mapa
+                <Button variant="outline" size="sm">
+                  <MapPin className="mr-1 h-4 w-4" /> Ver en Mapa
                 </Button>
               </a>
             )}
@@ -65,13 +71,17 @@ export const DetallesReclamoDialog: React.FC<ReclamoDetailsDialogProps> = ({
           </div>
           <div>
             <strong>Imagen:</strong>
-            <Image
-              src={reclamo.imagen}
-              alt="Imagen del reclamo"
-              width={128}
-              height={128}
-              className="mt-2 h-32 w-32 object-cover"
-            />
+            {reclamo.imagen ? (
+              <Image
+                src={reclamo.imagen}
+                alt="Imagen del reclamo de poda"
+                width={128}
+                height={128}
+                className="mt-2 h-32 w-32 rounded-md object-cover"
+              />
+            ) : (
+              <span className="text-sm text-muted-foreground">No hay imagen disponible</span>
+            )}
           </div>
         </div>
         <div className="flex justify-end mt-4">

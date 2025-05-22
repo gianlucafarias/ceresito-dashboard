@@ -34,6 +34,10 @@ export const navItems = {
           title: "Mapa",
           url: "/dashboard/mapa",
         },
+        {
+          title: "Poda",
+          url: "/dashboard/reclamos/poda",
+        }
       ]
     },
     

@@ -33,7 +33,7 @@ export type SidebarNavItem = NavItemWithChildren;
 
 
 export interface Reclamo {
-  id: number;
+  id: string | number;
   fecha: string;
   nombre: string;
   reclamo: string;
@@ -45,6 +45,7 @@ export interface Reclamo {
   prioridad: string | null;
   latitud: string;
   longitud: string;
+  imagen?: string;
   cuadrillaId: number | null;
 }
 

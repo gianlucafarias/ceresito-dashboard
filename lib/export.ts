@@ -1,6 +1,6 @@
 import { type Table } from "@tanstack/react-table";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 export function formatDate(
   date: Date | string | number,
@@ -26,7 +26,7 @@ export function exportTableToCSV<TData>(
   const headers = table
     .getAllLeafColumns()
     .map((column) => column.id)
-    .filter((id) => !excludeColumns.includes(id) || id === "detalle");
+    .filter((id) => !excludeColumns.includes(id as any) || id === "detalle");
 
   const csvContent = [
     headers.join(","),
@@ -38,7 +38,7 @@ export function exportTableToCSV<TData>(
         .map((header) => {
           const cellValue = row.getValue(header);
           const formattedValue =
-            header === "fecha" ? formatDate(cellValue) : cellValue;
+            header === "fecha" ? formatDate(cellValue as string | number | Date) : cellValue;
           return typeof formattedValue === "string"
             ? `"${formattedValue.replace(/"/g, '""')}"`
             : formattedValue;
@@ -63,17 +63,18 @@ export function exportToPDF<TData>(table: Table<TData>) {
   const headers = table
     .getAllLeafColumns()
     .map(column => column.id)
-    .filter(id => !excludeColumns.includes(id) || id === "detalle");
+    .filter(id => !excludeColumns.includes(id as any) || id === "detalle");
 
   const rows = table.getRowModel().rows.map(row =>
     headers.map(header => {
       const cellValue = row.getValue(header);
-      return header === "fecha" ? formatDate(cellValue) : cellValue;
+      const formattedValue = header === "fecha" ? formatDate(cellValue as string | number | Date) : cellValue;
+      return String(formattedValue);
     })
   );
 
   const doc = new jsPDF();
-  doc.autoTable({
+  autoTable(doc, {
     head: [headers],
     body: rows,
   });
@@ -89,22 +90,26 @@ export function exportTableToPDF<TData>(
     onlySelected?: boolean;
   } = {}
 ): void {
-  const { filename = "reclamos", excludeColumns = ["select", "actions", "estado"], onlySelected = false } = opts;
+  const { filename = "reclamos", excludeColumns = ["select", "actions", "estado"] } = opts;
+
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const hasSelectedRows = selectedRows.length > 0;
 
   const headers = table
     .getAllLeafColumns()
     .map(column => column.id)
-    .filter(id => !excludeColumns.includes(id) || id === "detalle");
+    .filter(id => !excludeColumns.includes(id as any) || id === "detalle");
 
-  const rows = (onlySelected ? table.getFilteredSelectedRowModel().rows : table.getRowModel().rows).map(row =>
+  const rows = (hasSelectedRows ? selectedRows : table.getRowModel().rows).map(row =>
     headers.map(header => {
       const cellValue = row.getValue(header);
-      return header === "fecha" ? formatDate(cellValue) : cellValue;
+      const formattedValue = header === "fecha" ? formatDate(cellValue as string | number | Date) : cellValue;
+      return String(formattedValue);
     })
   );
 
   const doc = new jsPDF();
-  doc.autoTable({
+  autoTable(doc, {
     head: [headers],
     body: rows,
   });
