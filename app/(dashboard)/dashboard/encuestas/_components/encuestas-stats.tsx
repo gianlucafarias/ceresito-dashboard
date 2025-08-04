@@ -5,6 +5,7 @@ import EncuestasStatsCards from "./encuestas-stats-cards"
 import ObrasUrgentesChart from "./obras-urgentes-chart"
 import ServiciosChart from "./servicios-chart"
 import BarriosChart from "./barrios-chart"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface EncuestasStatsProps {
   stats: {
