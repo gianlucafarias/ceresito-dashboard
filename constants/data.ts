@@ -6,7 +6,8 @@ import {
   LogOut,
   List,
   Building,
-  Settings
+  Settings,
+  ClipboardList
 } from "lucide-react";
 import { NavItem, SidebarNavItem } from "@/types";
 
@@ -37,6 +38,21 @@ export const navItems = {
         {
           title: "Poda",
           url: "/dashboard/reclamos/poda",
+        }
+      ]
+    },
+    {
+      title: "Encuestas",
+      url: "/dashboard/encuestas",
+      icon: ClipboardList,
+      items: [
+        {
+          title: "Estadísticas",
+          url: "/dashboard/encuestas",
+        },
+        {
+          title: "Todas las encuestas",
+          url: "/dashboard/encuestas",
         }
       ]
     },

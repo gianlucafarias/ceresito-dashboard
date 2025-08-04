@@ -3,6 +3,7 @@
 import { type Task } from "@/db/schema"
 import { DownloadIcon } from "@radix-ui/react-icons"
 import { type Table } from "@tanstack/react-table"
+import { useRouter } from 'next/navigation'
 
 import { exportTableToCSV, exportTableToPDF } from "@/lib/export"
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,7 @@ interface TasksTableToolbarActionsProps {
 export function TasksTableToolbarActions({
   table,
 }: TasksTableToolbarActionsProps) {
+  const router = useRouter()
   const selectedRowCount = table.getFilteredSelectedRowModel().rows.length;
 
   return (
@@ -26,7 +28,10 @@ export function TasksTableToolbarActions({
           tasks={table
             .getFilteredSelectedRowModel()
             .rows.map((row) => row.original)}
-          onSuccess={() => table.toggleAllRowsSelected(false)}
+          onSuccess={() => {
+            table.toggleAllRowsSelected(false)
+            router.refresh()
+          }}
         />
       ) : null}
       <CreateTaskDialog />

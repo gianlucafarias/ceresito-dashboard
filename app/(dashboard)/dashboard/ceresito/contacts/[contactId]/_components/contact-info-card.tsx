@@ -78,7 +78,7 @@ export function ContactInfoCard({ contact }: ContactInfoCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>General Information</CardTitle>
+        <CardTitle>Información General</CardTitle>
         {contact.phone && (
             <CardDescription>
                 Teléfono: {contact.phone}

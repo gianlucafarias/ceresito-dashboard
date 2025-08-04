@@ -87,3 +87,75 @@ export interface DataTableFilterOption<TData> {
   filterOperator?: string
   isMulti?: boolean
 }
+
+// Tipos para Encuestas Vecinales
+export interface EncuestaVecinal {
+  id: number;
+  dni: string;
+  barrio: string;
+  obrasUrgentes: string[];
+  obrasUrgentesOtro: string;
+  serviciosMejorar: string[];
+  serviciosMejorarOtro: string;
+  espacioMejorar: string;
+  propuesta: string;
+  quiereContacto: boolean;
+  nombreCompleto: string;
+  telefono: string;
+  email: string;
+  fechaCreacion: string;
+  fechaActualizacion: string;
+  estado: string;
+}
+
+export interface EncuestasResponse {
+  success: boolean;
+  data: {
+    encuestas: EncuestaVecinal[];
+    total: number;
+    page: number;
+    totalPages: number;
+  };
+}
+
+export interface EstadisticaItem {
+  nombre: string;
+  cantidad: number;
+  porcentaje?: number;
+}
+
+export interface EstadisticasEncuestas {
+  success: boolean;
+  data: {
+    totalEncuestas: number;
+    totalBarrios: number;
+    encuestasPorBarrio: EstadisticaItem[];
+    obrasUrgentesTop: EstadisticaItem[];
+    serviciosMejorarTop: EstadisticaItem[];
+    participacionContacto: {
+      quieren: number;
+      noQuieren: number;
+    };
+    ultimasEncuestas: EncuestaVecinal[];
+  };
+}
+
+// Tipos auxiliares para forms y validaciones
+export interface CreateEncuestaSchema {
+  dni: string;
+  barrio: string;
+  obrasUrgentes: string[];
+  obrasUrgentesOtro?: string;
+  serviciosMejorar: string[];
+  serviciosMejorarOtro?: string;
+  espacioMejorar?: string;
+  propuesta?: string;
+  quiereContacto: boolean;
+  nombreCompleto?: string;
+  telefono?: string;
+  email?: string;
+}
+
+export interface UpdateEncuestaSchema extends Partial<CreateEncuestaSchema> {
+  id: number;
+}
