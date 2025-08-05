@@ -20,6 +20,9 @@ const chartConfig = {
     label: "Encuestas",
     color: "hsl(var(--chart-3))",
   },
+  label: {
+    color: "hsl(var(--background))",
+  },
 } satisfies ChartConfig
 
 interface BarriosChartProps {
@@ -33,12 +36,9 @@ export default function BarriosChart({ data }: BarriosChartProps) {
   // Preparar datos para el gráfico - tomar top 10 barrios
   const chartData = validData.slice(0, 10).map((item, index) => {
     const nombreCompleto = item?.nombre || "Sin nombre"
-    // Truncar nombres de barrios muy largos pero mantener legibilidad
-    const nombreCorto = nombreCompleto.length > 12 ? `${nombreCompleto.substring(0, 9)}...` : nombreCompleto
     
     return {
-      barrio: nombreCorto,
-      barrioCompleto: nombreCompleto, // Para tooltip
+      barrio: nombreCompleto,
       cantidad: item?.cantidad || 0,
       fill: `hsl(var(--chart-${(index % 5) + 1}))`,
     }
@@ -71,28 +71,42 @@ export default function BarriosChart({ data }: BarriosChartProps) {
           <BarChart
             accessibilityLayer
             data={chartData}
+            layout="vertical"
             margin={{
-              top: 20,
+              right: 16,
             }}
           >
-            <CartesianGrid vertical={false} />
-            <XAxis
+            <CartesianGrid horizontal={false} />
+            <YAxis
               dataKey="barrio"
+              type="category"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
-              tickFormatter={(value) => value}
+              hide
             />
-            <YAxis hide />
+            <XAxis dataKey="cantidad" type="number" hide />
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent hideLabel nameKey="barrioCompleto" />}
+              content={<ChartTooltipContent indicator="line" />}
             />
-            <Bar dataKey="cantidad" radius={8}>
+            <Bar
+              dataKey="cantidad"
+              layout="vertical"
+              radius={4}
+            >
               <LabelList
-                position="top"
-                offset={12}
-                className="fill-foreground"
+                dataKey="barrio"
+                position="insideLeft"
+                offset={8}
+                className="fill-background font-medium"
+                fontSize={12}
+              />
+              <LabelList
+                dataKey="cantidad"
+                position="right"
+                offset={8}
+                className="fill-foreground font-medium"
                 fontSize={12}
               />
             </Bar>
