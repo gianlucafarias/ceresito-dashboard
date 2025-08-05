@@ -4,6 +4,7 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { toast } from "sonner"
 import { DownloadIcon } from "@radix-ui/react-icons"
+import { exportEncuestaToPDF } from "@/lib/export-encuesta-pdf"
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,7 @@ interface EncuestaDetailDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-const handleExportarPDF = async (encuesta: EncuestaVecinal) => {
+const handleExportarPDF = (encuesta: EncuestaVecinal) => {
   if (!encuesta || !encuesta.id) {
     toast.error("Error", {
       description: "No se pudo obtener el ID de la encuesta para exportar.",
@@ -32,70 +33,21 @@ const handleExportarPDF = async (encuesta: EncuestaVecinal) => {
     return;
   }
 
-  const idEncuesta = encuesta.id;
-  const apiUrl = `http://localhost:3001/api/encuestaobras/respuesta/${idEncuesta}/pdf`; 
-
-  toast.success("Exportando PDF...", {
-    description: "Solicitando el PDF al servidor.",
-  });
-
   try {
-    const response = await fetch(apiUrl);
+    toast.success("Generando PDF...", {
+      description: "Preparando el archivo para descarga.",
+    });
 
-    if (!response.ok) {
-      let errorDetails = `Error del servidor: ${response.status}`;
-      try {
-        const errorData = await response.json();
-        if (errorData && errorData.message) {
-          errorDetails += ` - ${errorData.message}`;
-        } else if (typeof errorData === 'string') {
-           errorDetails += ` - ${errorData}`;
-        }
-      } catch (e) { /* No hacer nada si el cuerpo del error no es JSON o está vacío */ }
-      throw new Error(errorDetails);
-    }
+    // Generar PDF desde el frontend
+    exportEncuestaToPDF(encuesta);
 
-    const blob = await response.blob();
-
-    if (blob.type === "application/json") {
-        const errorText = await blob.text();
-        let errorDetails = "La API devolvió un JSON en lugar de un PDF.";
-        try {
-            const errorData = JSON.parse(errorText);
-            if (errorData && errorData.message) {
-                errorDetails += ` Mensaje: ${errorData.message}`;
-            } else if (errorData && errorData.error) {
-                 errorDetails += ` Error: ${errorData.error}`;
-            }
-        } catch (e) {
-            errorDetails += ` Contenido: ${errorText}`;
-        }
-        toast.error("Error de API", {
-            description: errorDetails,
-        });
-        return;
-    }
-    
-    if (blob.type !== "application/pdf") {
-        // Nota: La API no devolvió un PDF como se esperaba
-    }
-
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `encuesta-${idEncuesta}.pdf`; 
-    document.body.appendChild(a); 
-    a.click();
-    a.remove(); 
-    window.URL.revokeObjectURL(url); 
-
-    toast.success("PDF Descargado", {
-      description: `El archivo encuesta-${idEncuesta}.pdf se ha descargado correctamente.`,
+    toast.success("PDF Generado", {
+      description: `El archivo encuesta-vecinal-${encuesta.id}.pdf se ha descargado correctamente.`,
     });
 
   } catch (error) {
-    toast.error("Error al exportar PDF", {
-      description: error instanceof Error ? error.message : "Ocurrió un error desconocido.",
+    toast.error("Error al generar PDF", {
+      description: error instanceof Error ? error.message : "Ocurrió un error desconocido al generar el PDF.",
     });
   }
 }

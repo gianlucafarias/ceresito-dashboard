@@ -1,9 +1,10 @@
 "use client"
 
-import { DotsHorizontalIcon } from "@radix-ui/react-icons"
+import { DotsHorizontalIcon, DownloadIcon } from "@radix-ui/react-icons"
 import { type ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -17,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { EncuestaVecinal } from "@/types"
+import { exportEncuestaToPDF } from "@/lib/export-encuesta-pdf"
 
 export interface EncuestaTableRowAction {
   label: string
@@ -240,6 +242,24 @@ export function getEncuestaColumns({
       cell: ({ row }) => {
         const encuesta = row.original
 
+        const handleExportPDF = () => {
+          try {
+            toast.success("Generando PDF...", {
+              description: "Preparando el archivo para descarga.",
+            });
+
+            exportEncuestaToPDF(encuesta);
+
+            toast.success("PDF Generado", {
+              description: `El archivo encuesta-vecinal-${encuesta.id}.pdf se ha descargado correctamente.`,
+            });
+          } catch (error) {
+            toast.error("Error al generar PDF", {
+              description: error instanceof Error ? error.message : "Ocurrió un error desconocido al generar el PDF.",
+            });
+          }
+        }
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -251,6 +271,11 @@ export function getEncuestaColumns({
             <DropdownMenuContent align="end" className="w-[160px]">
               <DropdownMenuItem onClick={() => onViewDetails(encuesta)}>
                 Ver detalles
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleExportPDF}>
+                <DownloadIcon className="mr-2 h-4 w-4" />
+                Exportar PDF
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {onEdit && (
