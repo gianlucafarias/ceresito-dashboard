@@ -52,7 +52,7 @@ export default function BarriosChart({ data }: BarriosChartProps) {
           <CardTitle>Participación por Barrio</CardTitle>
           <CardDescription>Encuestas recibidas por barrio</CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center justify-center h-48">
+        <CardContent className="flex items-center justify-center h-58">
           <p className="text-muted-foreground">No hay datos disponibles</p>
         </CardContent>
       </Card>
@@ -68,7 +68,7 @@ export default function BarriosChart({ data }: BarriosChartProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-96 w-full">
+        <ScrollArea className="h-136 w-full">
           <ChartContainer config={chartConfig}>
             <BarChart
               accessibilityLayer
