@@ -124,6 +124,15 @@ export async function getEstadisticasEncuestas() {
           quieren: apiData.contacto?.personasDejaronContacto || 0,
           noQuieren: (apiData.totalEncuestas || 0) - (apiData.contacto?.personasDejaronContacto || 0)
         },
+        // Mapear comentarios otros
+        otrosComentarios: {
+          obrasUrgentesOtro: apiData.otrosComentarios?.obrasUrgentesOtro || [],
+          serviciosMejorarOtro: apiData.otrosComentarios?.serviciosMejorarOtro || [],
+          espaciosYPropuestas: {
+            espacioMejorar: apiData.otrosComentarios?.espaciosYPropuestas?.espacioMejorar || [],
+            propuestas: apiData.otrosComentarios?.espaciosYPropuestas?.propuestas || []
+          }
+        },
         ultimasEncuestas: [] // TODO: Obtener las últimas encuestas
       }
       

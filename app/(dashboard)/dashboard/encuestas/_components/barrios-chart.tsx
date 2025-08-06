@@ -14,6 +14,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 const chartConfig = {
   cantidad: {
@@ -33,8 +34,8 @@ export default function BarriosChart({ data }: BarriosChartProps) {
   // Validar datos y usar valores por defecto
   const validData = data || []
   
-  // Preparar datos para el gráfico - tomar top 10 barrios
-  const chartData = validData.slice(0, 10).map((item, index) => {
+  // Preparar datos para el gráfico - mostrar todos los barrios
+  const chartData = validData.map((item, index) => {
     const nombreCompleto = item?.nombre || "Sin nombre"
     
     return {
@@ -63,55 +64,62 @@ export default function BarriosChart({ data }: BarriosChartProps) {
       <CardHeader>
         <CardTitle>Participación por Barrio</CardTitle>
         <CardDescription>
-          Top 10 barrios con mayor participación
+          Todos los barrios participantes
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
-          <BarChart
-            accessibilityLayer
-            data={chartData}
-            layout="vertical"
-            margin={{
-              right: 16,
-            }}
-          >
-            <CartesianGrid horizontal={false} />
-            <YAxis
-              dataKey="barrio"
-              type="category"
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-              hide
-            />
-            <XAxis dataKey="cantidad" type="number" hide />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="line" />}
-            />
-            <Bar
-              dataKey="cantidad"
+        <ScrollArea className="h-96 w-full">
+          <ChartContainer config={chartConfig}>
+            <BarChart
+              accessibilityLayer
+              data={chartData}
               layout="vertical"
-              radius={4}
+              height={Math.max(500, chartData.length * 100)}
+              barCategoryGap={10}
+              margin={{
+                right: 80,
+                left: 15,
+                top: 20,
+                bottom: 20,
+              }}
             >
-              <LabelList
+              <CartesianGrid horizontal={false} />
+              <YAxis
                 dataKey="barrio"
-                position="insideLeft"
-                offset={8}
-                className="fill-background font-medium"
-                fontSize={12}
+                type="category"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+                hide
               />
-              <LabelList
+              <XAxis dataKey="cantidad" type="number" hide />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent indicator="line" />}
+              />
+              <Bar
                 dataKey="cantidad"
-                position="right"
-                offset={8}
-                className="fill-foreground font-medium"
-                fontSize={12}
-              />
-            </Bar>
-          </BarChart>
-        </ChartContainer>
+                radius={10}
+                barSize={90}
+              >
+                <LabelList
+                  dataKey="barrio"
+                  position="insideLeft"
+                  offset={20}
+                  className="fill-background font-medium"
+                  fontSize={12}
+                />
+                <LabelList
+                  dataKey="cantidad"
+                  position="right"
+                  offset={20}
+                  className="fill-foreground font-medium"
+                  fontSize={12}
+                />
+              </Bar>
+            </BarChart>
+          </ChartContainer>
+        </ScrollArea>
       </CardContent>
     </Card>
   )

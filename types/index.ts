@@ -124,6 +124,11 @@ export interface EstadisticaItem {
   porcentaje?: number;
 }
 
+export interface ComentarioOtro {
+  comentario: string;
+  encuestaId: number;
+}
+
 export interface EstadisticasEncuestas {
   success: boolean;
   data: {
@@ -135,6 +140,14 @@ export interface EstadisticasEncuestas {
     participacionContacto: {
       quieren: number;
       noQuieren: number;
+    };
+    otrosComentarios: {
+      obrasUrgentesOtro: ComentarioOtro[];
+      serviciosMejorarOtro: ComentarioOtro[];
+      espaciosYPropuestas: {
+        espacioMejorar: ComentarioOtro[];
+        propuestas: ComentarioOtro[];
+      };
     };
     ultimasEncuestas: EncuestaVecinal[];
   };

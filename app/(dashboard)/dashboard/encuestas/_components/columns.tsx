@@ -5,6 +5,7 @@ import { type ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { toast } from "sonner"
+import { IconCircleCheckFilled, IconCircleX } from "@tabler/icons-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -228,8 +229,12 @@ export function getEncuestaColumns({
         const estado = row.getValue("estado") as string
         return (
           <Badge 
-            variant={estado === "completada" ? "default" : "secondary"}
-          >
+            variant="outline" className="text-muted-foreground px-1.5">
+            {estado === "completada" ? (
+              <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 w-4 h-4 mr-1" />
+            ) : (
+              <IconCircleX className="fill-red-500 dark:fill-red-400" />
+            )}
             {estado}
           </Badge>
         )
