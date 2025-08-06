@@ -50,12 +50,12 @@ export default function ComentariosOtrosCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <ScrollArea className={`${compact ? 'h-32' : 'h-48'} w-full`}>
+        <ScrollArea className={`${compact ? 'h-32' : 'h-64'} w-full`}>
           <div className="space-y-3 pr-3">
-            {comentarios.map((item, index) => (
+            {[...comentarios].reverse().map((item, index) => (
               <div
                 key={index}
-                className="group cursor-pointer rounded-lg border p-3 hover:bg-accent hover:border-accent-foreground/20 transition-all duration-200"
+                className="group cursor-pointer rounded-lg border p-3 bg-muted/30 hover:bg-accent hover:border-accent-foreground/20 transition-all duration-200"
                 onClick={() => onComentarioClick(item.encuestaId)}
               >
                 <div className="flex items-start justify-between gap-3">
