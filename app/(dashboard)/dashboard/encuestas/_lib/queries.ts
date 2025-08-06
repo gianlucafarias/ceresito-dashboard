@@ -119,10 +119,10 @@ export async function getEstadisticasEncuestas() {
           nombre: item.servicio || 'Sin nombre',
           cantidad: item.cantidad || 0
         })),
-        // Calcular participación de contacto basado en las encuestas
+        // Mapear datos de contacto desde la API
         participacionContacto: {
-          quieren: 0, // TODO: Calcular desde las encuestas
-          noQuieren: 0
+          quieren: apiData.contacto?.personasDejaronContacto || 0,
+          noQuieren: (apiData.totalEncuestas || 0) - (apiData.contacto?.personasDejaronContacto || 0)
         },
         ultimasEncuestas: [] // TODO: Obtener las últimas encuestas
       }
