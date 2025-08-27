@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { toast } from "sonner"
 import {
   type ColumnDef,
@@ -43,18 +43,21 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { deleteEncuesta } from "../_lib/actions"
 import { EncuestasTableToolbar } from "./encuestas-table-toolbar"
+import { useBarrioFilter } from "./barrio-filter-context"
+import type { ApiResponse } from "../_types/api"
 
 interface EncuestasTableClientProps {
-  initialData: EncuestaVecinal[]
-  pageCount: number
+  encuestasPromise: Promise<{ data: EncuestaVecinal[]; pageCount: number; total: number }>
   search: any
 }
 
 export default function EncuestasTableClient({ 
-  initialData, 
-  pageCount, 
+  encuestasPromise, 
   search 
 }: EncuestasTableClientProps) {
+  const [data, setData] = useState<EncuestaVecinal[]>([])
+  const [pageCount, setPageCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
   const [selectedEncuesta, setSelectedEncuesta] = useState<EncuestaVecinal | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -66,6 +69,139 @@ export default function EncuestasTableClient({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [sorting, setSorting] = useState<SortingState>([])
+
+  // Usar el filtro de barrio del contexto
+  const { selectedBarrio, isFiltered } = useBarrioFilter()
+
+  // Función para obtener encuestas filtradas desde la API
+  const getFilteredEncuestas = async (barrio?: string) => {
+    try {
+      // Construir la URL base de la API con los parámetros de paginación
+      let apiUrl = `https://api.ceres.gob.ar/api/api/encuestaobras/todas?page=${search.page}&per_page=${search.per_page}`
+
+      // Si no se especifica un orden, el backend aplicará el orden por defecto (ID descendente)
+      if (search.sort) {
+        const [column, order] = search.sort.split(".")
+        apiUrl += `&sort=${column}&order=${order}`
+      }
+
+      // Parámetros de búsqueda
+      if (search.search) {
+        apiUrl += `&search=${encodeURIComponent(search.search)}`
+      }
+      
+      // Filtro de barrio - NUEVO: usar el parámetro del backend
+      if (barrio && barrio !== "todos") {
+        apiUrl += `&barrio=${encodeURIComponent(barrio)}`
+      }
+      
+      // Filtro de estado
+      if (search.estado) {
+        apiUrl += `&estado=${encodeURIComponent(search.estado)}`
+      }
+      
+      // Fechas
+      if (search.desde) {
+        const fromDay = new Date(search.desde).toISOString()
+        apiUrl += `&desde=${fromDay}`
+      }
+      if (search.hasta) {
+        const toDay = new Date(search.hasta).toISOString()
+        apiUrl += `&hasta=${toDay}`
+      }
+
+      const response = await fetch(apiUrl, {
+        cache: 'no-store' // Siempre datos frescos
+      })
+      
+      if (!response.ok) {
+        throw new Error("Error al obtener las encuestas de la API externa")
+      }
+
+      const result: ApiResponse<{
+        encuestas: EncuestaVecinal[]
+        total: number
+        page: number
+        totalPages: number
+      }> = await response.json()
+      
+      if (!result.success) {
+        throw new Error("La API devolvió un error")
+      }
+
+      const { encuestas, total, page: currentPage, totalPages } = result.data
+      const pageCount = totalPages || Math.ceil(total / search.per_page)
+      
+      return { 
+        data: encuestas, 
+        pageCount: pageCount,
+        total: total 
+      }
+    } catch (error) {
+      console.error("Error al obtener encuestas:", error)
+      throw new Error("Error al obtener las encuestas de la API externa")
+    }
+  }
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const result = await encuestasPromise
+        setData(result.data)
+        setPageCount(result.pageCount)
+      } catch (error) {
+        toast.error("Error al cargar las encuestas")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadInitialData()
+  }, [encuestasPromise])
+
+  // Recargar datos cuando cambie el filtro de barrio
+  useEffect(() => {
+    const reloadDataWithFilter = async () => {
+      if (isFiltered) {
+        setIsLoading(true)
+        try {
+          // Crear nuevos parámetros de búsqueda con el filtro de barrio
+          const newSearch = {
+            ...search,
+            barrio: selectedBarrio,
+            page: "1" // Volver a la primera página cuando se cambie el filtro
+          }
+          
+          const result = await getFilteredEncuestas(selectedBarrio)
+          setData(result.data)
+          setPageCount(result.pageCount)
+          
+          toast.success("Datos filtrados cargados", {
+            description: `Mostrando encuestas del barrio ${selectedBarrio}`,
+          })
+        } catch (error) {
+          toast.error("Error al cargar datos filtrados")
+        } finally {
+          setIsLoading(false)
+        }
+      } else {
+        // Si se volvió a "todos", recargar datos originales
+        setIsLoading(true)
+        try {
+          const result = await encuestasPromise
+          setData(result.data)
+          setPageCount(result.pageCount)
+        } catch (error) {
+          toast.error("Error al cargar las encuestas")
+        } finally {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    reloadDataWithFilter()
+  }, [selectedBarrio, isFiltered, search, encuestasPromise])
 
   const handleEdit = (encuesta: EncuestaVecinal) => {
     setSelectedEncuesta(encuesta)
@@ -127,7 +263,7 @@ export default function EncuestasTableClient({
 
   // Crear la tabla
   const table = useReactTable({
-    data: initialData,
+    data,
     columns,
     state: {
       sorting,
@@ -148,6 +284,17 @@ export default function EncuestasTableClient({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-10 w-full bg-muted animate-pulse rounded" />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-16 w-full bg-muted animate-pulse rounded" />
+        ))}
+      </div>
+    )
+  }
+
   return (
     <>
       <div className="w-full space-y-4">
@@ -164,6 +311,11 @@ export default function EncuestasTableClient({
                 className="max-w-sm"
               />
             </div>
+            {isFiltered && (
+              <div className="text-sm text-muted-foreground">
+                Filtrado por: <span className="font-medium">{selectedBarrio}</span>
+              </div>
+            )}
           </div>
           <EncuestasTableToolbar table={table} />
         </div>
@@ -212,7 +364,10 @@ export default function EncuestasTableClient({
                     colSpan={columns.length}
                     className="h-24 text-center"
                   >
-                    No se encontraron encuestas.
+                    {isFiltered 
+                      ? `No se encontraron encuestas en el barrio ${selectedBarrio}.`
+                      : "No se encontraron encuestas."
+                    }
                   </TableCell>
                 </TableRow>
               )}

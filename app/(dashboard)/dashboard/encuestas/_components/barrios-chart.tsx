@@ -15,6 +15,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useBarrioFilter } from "./barrio-filter-context"
 
 const chartConfig = {
   cantidad: {
@@ -31,6 +32,8 @@ interface BarriosChartProps {
 }
 
 export default function BarriosChart({ data }: BarriosChartProps) {
+  const { isFiltered, selectedBarrio } = useBarrioFilter()
+  
   // Validar datos y usar valores por defecto
   const validData = data || []
   
@@ -64,7 +67,10 @@ export default function BarriosChart({ data }: BarriosChartProps) {
       <CardHeader>
         <CardTitle>Participación por Barrio</CardTitle>
         <CardDescription>
-          Todos los barrios participantes
+          {isFiltered ? 
+            `Todos los barrios participantes (filtro activo: ${selectedBarrio})` : 
+            "Todos los barrios participantes"
+          }
         </CardDescription>
       </CardHeader>
       <CardContent>

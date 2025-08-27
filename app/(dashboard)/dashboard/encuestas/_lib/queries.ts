@@ -33,8 +33,8 @@ export async function getEncuestas(input: GetEncuestasSchema) {
       apiUrl += `&search=${encodeURIComponent(search)}`
     }
     
-    // Filtro de barrio
-    if (barrio) {
+    // Filtro de barrio - NUEVO: usar el parámetro del backend
+    if (barrio && barrio !== "todos") {
       apiUrl += `&barrio=${encodeURIComponent(barrio)}`
     }
     
@@ -46,8 +46,6 @@ export async function getEncuestas(input: GetEncuestasSchema) {
     // Fechas
     if (fromDay) apiUrl += `&desde=${fromDay}`
     if (toDay) apiUrl += `&hasta=${toDay}`
-
-  
 
     // Sin caché para datos de tabla - deben ser instantáneos
     const fetchOptions: RequestInit = {
@@ -79,14 +77,20 @@ export async function getEncuestas(input: GetEncuestasSchema) {
   }
 }
 
-export async function getEstadisticasEncuestas() {
+export async function getEstadisticasEncuestas(barrio?: string) {
   try {
     // Sin caché para estadísticas - deben reflejar nuevas encuestas inmediatamente
     const fetchOptions: RequestInit = {
       cache: 'no-store' // Siempre datos frescos
     }
 
-    const response = await fetch("https://api.ceres.gob.ar/api/api/encuestaobras/estadisticas", fetchOptions)
+    // Construir URL con filtro de barrio si se especifica
+    let apiUrl = "https://api.ceres.gob.ar/api/api/encuestaobras/estadisticas"
+    if (barrio && barrio !== "todos") {
+      apiUrl += `?barrio=${encodeURIComponent(barrio)}`
+    }
+
+    const response = await fetch(apiUrl, fetchOptions)
     
     if (!response.ok) {
       const errorText = await response.text()
@@ -94,7 +98,7 @@ export async function getEstadisticasEncuestas() {
       throw new Error(`Error ${response.status}: ${response.statusText}`)
     }
 
-      const result = await response.json()
+    const result = await response.json()
     
     // Adaptar los datos al formato esperado por los componentes
     if (result.success && result.data) {
@@ -136,7 +140,7 @@ export async function getEstadisticasEncuestas() {
         ultimasEncuestas: [] // TODO: Obtener las últimas encuestas
       }
       
-          return mappedData
+      return mappedData
     } else {
       // Si no hay success, intentar usar los datos directamente
       console.warn("API no devuelve 'success: true', usando datos directamente")

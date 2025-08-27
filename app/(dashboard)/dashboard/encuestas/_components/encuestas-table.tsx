@@ -9,6 +9,18 @@ interface EncuestasTableProps {
 }
 
 export default function EncuestasTable({ searchParams }: EncuestasTableProps) {
+  return (
+    <Suspense fallback={<TableLoadingSkeleton />}>
+      <EncuestasTableContent searchParams={searchParams} />
+    </Suspense>
+  )
+}
+
+interface EncuestasTableContentProps {
+  searchParams?: { [key: string]: string | string[] | undefined }
+}
+
+async function EncuestasTableContent({ searchParams }: EncuestasTableContentProps) {
   // Parsear parámetros de búsqueda
   const search = getEncuestasSchema.parse({
     page: searchParams?.page ?? "1",
@@ -25,38 +37,11 @@ export default function EncuestasTable({ searchParams }: EncuestasTableProps) {
   const encuestasPromise = getEncuestas(search)
 
   return (
-    <Suspense fallback={<TableLoadingSkeleton />}>
-      <EncuestasTableContent 
-        encuestasPromise={encuestasPromise}
-        search={search}
-      />
-    </Suspense>
+    <EncuestasTableClient
+      encuestasPromise={encuestasPromise}
+      search={search}
+    />
   )
-}
-
-interface EncuestasTableContentProps {
-  encuestasPromise: Promise<{ data: EncuestaVecinal[]; pageCount: number; total: number }>
-  search: any
-}
-
-async function EncuestasTableContent({ encuestasPromise, search }: EncuestasTableContentProps) {
-  try {
-    const { data, pageCount } = await encuestasPromise
-
-    return (
-      <EncuestasTableClient
-        initialData={data}
-        pageCount={pageCount}
-        search={search}
-      />
-    )
-  } catch (error) {
-    return (
-      <div className="flex items-center justify-center h-48">
-        <p className="text-destructive">Error al cargar las encuestas</p>
-      </div>
-    )
-  }
 }
 
 function TableLoadingSkeleton() {
