@@ -64,7 +64,19 @@ export async function getEncuestas(input: GetEncuestasSchema) {
     }
 
     const { encuestas, total, page: currentPage, totalPages } = result.data
-    const pageCount = totalPages || Math.ceil(total / per_page)
+    
+    // Calcular pageCount basándose en el total real, no en totalPages del backend
+    // Esto asegura que siempre tengamos la paginación correcta
+    const calculatedPageCount = Math.ceil(total / per_page)
+    const pageCount = Math.max(calculatedPageCount, 1) // Mínimo 1 página
+    
+    console.log("📊 Paginación calculada (queries):", {
+      total,
+      per_page,
+      calculatedPageCount,
+      backendTotalPages: totalPages,
+      finalPageCount: pageCount
+    })
     
     return { 
       data: encuestas, 

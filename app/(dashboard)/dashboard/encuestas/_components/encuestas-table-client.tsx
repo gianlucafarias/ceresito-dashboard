@@ -56,7 +56,7 @@ export default function EncuestasTableClient({
   search 
 }: EncuestasTableClientProps) {
   const [data, setData] = useState<EncuestaVecinal[]>([])
-  const [pageCount, setPageCount] = useState(0)
+  const [pageCount, setPageCount] = useState(7) // Forzar 7 páginas como devuelve el backend
   const [isLoading, setIsLoading] = useState(true)
   const [selectedEncuesta, setSelectedEncuesta] = useState<EncuestaVecinal | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
@@ -69,25 +69,38 @@ export default function EncuestasTableClient({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [sorting, setSorting] = useState<SortingState>([])
+  
+  // Estado de paginación - Ajustado para 50 resultados por página
+  const [pagination, setPagination] = useState({
+    pageIndex: parseInt(search.page) - 1,
+    pageSize: 50, // Forzar 50 resultados por página para coincidir con el backend
+  })
 
   // Usar el filtro de barrio del contexto
   const { selectedBarrio, isFiltered } = useBarrioFilter()
 
   // Función para obtener encuestas filtradas desde la API
-  const getFilteredEncuestas = async (barrio?: string) => {
+  const getFilteredEncuestas = async (barrio?: string, customParams?: any) => {
     try {
+      // Usar parámetros personalizados o los de search por defecto
+      const params = customParams || search
+      
       // Construir la URL base de la API con los parámetros de paginación
-      let apiUrl = `https://api.ceres.gob.ar/api/api/encuestaobras/todas?page=${search.page}&per_page=${search.per_page}`
+      let apiUrl = `https://api.ceres.gob.ar/api/api/encuestaobras/todas?page=${params.page}&per_page=${params.per_page}`
 
-      // Si no se especifica un orden, el backend aplicará el orden por defecto (ID descendente)
-      if (search.sort) {
-        const [column, order] = search.sort.split(".")
-        apiUrl += `&sort=${column}&order=${order}`
+      // Forzar ordenamiento por ID ascendente para paginación correcta
+      // Esto asegura que la página 1 tenga los IDs más bajos (1-10), página 2 (11-20), etc.
+      apiUrl += `&sort=id&order=asc`
+      
+      // Si se especifica otro orden, sobrescribir
+      if (params.sort && params.sort !== 'id.asc') {
+        const [column, order] = params.sort.split(".")
+        apiUrl = apiUrl.replace('&sort=id&order=asc', `&sort=${column}&order=${order}`)
       }
 
       // Parámetros de búsqueda
-      if (search.search) {
-        apiUrl += `&search=${encodeURIComponent(search.search)}`
+      if (params.search) {
+        apiUrl += `&search=${encodeURIComponent(params.search)}`
       }
       
       // Filtro de barrio - NUEVO: usar el parámetro del backend
@@ -96,19 +109,28 @@ export default function EncuestasTableClient({
       }
       
       // Filtro de estado
-      if (search.estado) {
-        apiUrl += `&estado=${encodeURIComponent(search.estado)}`
+      if (params.estado) {
+        apiUrl += `&estado=${encodeURIComponent(params.estado)}`
       }
       
       // Fechas
-      if (search.desde) {
-        const fromDay = new Date(search.desde).toISOString()
+      if (params.desde) {
+        const fromDay = new Date(params.desde).toISOString()
         apiUrl += `&desde=${fromDay}`
       }
-      if (search.hasta) {
-        const toDay = new Date(search.hasta).toISOString()
+      if (params.hasta) {
+        const toDay = new Date(params.hasta).toISOString()
         apiUrl += `&hasta=${toDay}`
       }
+
+      console.log("🌐 Llamando a API:", {
+        url: apiUrl,
+        paginaSolicitada: params.page,
+        perPage: params.per_page,
+        perPageEsperado: 10,
+        params: params,
+        barrio: barrio
+      })
 
       const response = await fetch(apiUrl, {
         cache: 'no-store' // Siempre datos frescos
@@ -130,11 +152,24 @@ export default function EncuestasTableClient({
       }
 
       const { encuestas, total, page: currentPage, totalPages } = result.data
-      const pageCount = totalPages || Math.ceil(total / search.per_page)
+      
+      // USAR EXACTAMENTE lo que devuelve el backend para pageCount
+      // El backend devuelve 7 páginas, no 32
+      const pageCount = totalPages || Math.ceil(total / 50)
+      
+      console.log("📊 Paginación calculada (client):", {
+        total,
+        per_page: 50,
+        calculatedPageCount: Math.ceil(total / 50),
+        backendTotalPages: totalPages,
+        finalPageCount: pageCount,
+        encuestasEnPagina: encuestas.length,
+        decision: "USANDO BACKEND TOTALPAGES"
+      })
       
       return { 
         data: encuestas, 
-        pageCount: pageCount,
+        pageCount: pageCount, // Usar exactamente lo que devuelve el backend
         total: total 
       }
     } catch (error) {
@@ -150,6 +185,13 @@ export default function EncuestasTableClient({
         const result = await encuestasPromise
         setData(result.data)
         setPageCount(result.pageCount)
+        
+        // Debug: verificar cuántos resultados recibimos
+        console.log("📥 Datos iniciales cargados:", {
+          solicitados: 50, // Ajustado a 50 para coincidir con el backend
+          recibidos: result.data.length,
+          problema: result.data.length !== 50 ? "⚠️ Backend no devuelve 50!" : "✅ OK"
+        })
       } catch (error) {
         toast.error("Error al cargar las encuestas")
       } finally {
@@ -177,6 +219,9 @@ export default function EncuestasTableClient({
           setData(result.data)
           setPageCount(result.pageCount)
           
+          // Resetear paginación a la primera página
+          setPagination(prev => ({ ...prev, pageIndex: 0 }))
+          
           toast.success("Datos filtrados cargados", {
             description: `Mostrando encuestas del barrio ${selectedBarrio}`,
           })
@@ -192,6 +237,9 @@ export default function EncuestasTableClient({
           const result = await encuestasPromise
           setData(result.data)
           setPageCount(result.pageCount)
+          
+          // Resetear paginación a la primera página
+          setPagination(prev => ({ ...prev, pageIndex: 0 }))
         } catch (error) {
           toast.error("Error al cargar las encuestas")
         } finally {
@@ -202,6 +250,14 @@ export default function EncuestasTableClient({
 
     reloadDataWithFilter()
   }, [selectedBarrio, isFiltered, search, encuestasPromise])
+
+  // Sincronizar paginación cuando cambien los parámetros de búsqueda
+  useEffect(() => {
+    setPagination({
+      pageIndex: parseInt(search.page) - 1,
+      pageSize: 50, // Siempre usar 50 resultados por página
+    })
+  }, [search.page]) // Removido search.per_page ya que siempre usamos 50
 
   const handleEdit = (encuesta: EncuestaVecinal) => {
     setSelectedEncuesta(encuesta)
@@ -251,6 +307,97 @@ export default function EncuestasTableClient({
     window.location.reload()
   }
 
+  // Manejador para cambios de paginación
+  const handlePaginationChange = async (updater: any) => {
+    const newPagination = typeof updater === 'function' ? updater(pagination) : updater
+    
+    console.log("🔄 Cambio de paginación solicitado:", {
+      pageIndex: newPagination.pageIndex + 1,
+      pageSize: newPagination.pageSize,
+      totalPages: pageCount,
+      currentData: data.length
+    })
+    
+    // Actualizar el estado local primero
+    setPagination(newPagination)
+    
+    // Recargar datos con la nueva página
+    setIsLoading(true)
+    try {
+      let result
+      
+      // Crear parámetros para la nueva página - Siempre usar 50 por página
+      const newParams = {
+        page: String(newPagination.pageIndex + 1),
+        per_page: "50", // Forzar 50 resultados por página para coincidir con el backend
+        sort: search.sort,
+        barrio: search.barrio,
+        estado: search.estado,
+        desde: search.desde,
+        hasta: search.hasta,
+        search: search.search
+      }
+      
+      console.log("📋 Parámetros para nueva página:", newParams)
+      
+      if (isFiltered) {
+        // Si hay filtro de barrio, usar la función de filtrado
+        console.log("🎯 Llamando getFilteredEncuestas con filtro de barrio:", selectedBarrio)
+        result = await getFilteredEncuestas(selectedBarrio, newParams)
+      } else {
+        // Si no hay filtro, usar la función normal
+        console.log("🌍 Llamando getFilteredEncuestas sin filtro")
+        result = await getFilteredEncuestas(undefined, newParams)
+      }
+      
+      console.log("📊 Resultado de la API:", {
+        encuestasRecibidas: result.data.length,
+        perPageSolicitado: newParams.per_page,
+        perPageRecibido: result.data.length,
+        total: result.total,
+        pageCount: result.pageCount,
+        primeraEncuesta: result.data[0]?.id,
+        ultimaEncuesta: result.data[result.data.length - 1]?.id,
+        todasLasIds: result.data.map(e => e.id).join(', '),
+        problema: result.data.length !== parseInt(newParams.per_page) ? "⚠️ BACKEND IGNORA per_page!" : "✅ OK"
+      })
+      
+      // Actualizar datos y pageCount
+      setData(result.data)
+      setPageCount(result.pageCount)
+      
+      console.log("✅ Datos de página cargados:", {
+        pagina: newPagination.pageIndex + 1,
+        datos: result.data.length,
+        total: result.total,
+        pageCount: result.pageCount,
+        pageCountAnterior: pageCount
+      })
+      
+      console.log("🔄 Estado actualizado:", {
+        nuevaData: result.data.length,
+        nuevoPageCount: result.pageCount,
+        nuevaPaginacion: newPagination
+      })
+      
+    } catch (error) {
+      console.error("❌ Error al cargar página:", error)
+      toast.error("Error al cargar la página", {
+        description: "No se pudieron cargar los datos de la página solicitada"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+    
+    // Construir nueva URL con los parámetros de paginación
+    const url = new URL(window.location.href)
+    url.searchParams.set('page', String(newPagination.pageIndex + 1))
+    url.searchParams.set('per_page', String(newPagination.pageSize))
+    
+    // Navegar a la nueva URL
+    window.history.pushState({}, '', url.toString())
+  }
+
   // Definir columnas
   const columns = getEncuestaColumns({
     onViewDetails: (encuesta) => {
@@ -262,26 +409,52 @@ export default function EncuestasTableClient({
   })
 
   // Crear la tabla
+  console.log("🏗️ Configurando tabla con:", { 
+    data: data.length, 
+    pageCount, 
+    pagination,
+    totalEncuestas: data.length * pageCount // Debug: verificar cálculo
+  })
+  
   const table = useReactTable({
     data,
     columns,
+    pageCount, // Agregar el pageCount calculado
     state: {
       sorting,
       columnVisibility,
       rowSelection,
       columnFilters,
+      pagination,
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: (updater) => {
+      console.log("🚨 onPaginationChange interceptado por TanStack Table:", updater)
+      handlePaginationChange(updater)
+    },
+    manualPagination: true, // Habilitar paginación manual
+    manualFiltering: true, // Habilitar filtrado manual
+    manualSorting: true, // Habilitar ordenamiento manual
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    // NO usar getPaginationRowModel porque estamos manejando la paginación manualmente
+    // getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+  })
+  
+  // Verificar que la tabla use nuestro pageCount
+  console.log("✅ Tabla creada con:", {
+    pageCountConfigurado: table.getPageCount(),
+    pageCountEsperado: pageCount,
+    coinciden: table.getPageCount() === pageCount,
+    backendPages: 7,
+    frontendPages: pageCount
   })
 
   if (isLoading) {
@@ -321,7 +494,17 @@ export default function EncuestasTableClient({
         </div>
 
         {/* Tabla */}
-        <div className="rounded-md border">
+        <div className="rounded-md border relative">
+          {/* Indicador de carga */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                <span className="text-sm text-muted-foreground">Cargando datos...</span>
+              </div>
+            </div>
+          )}
+          
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -377,7 +560,18 @@ export default function EncuestasTableClient({
       </div>
       
       {/* Paginación */}
-      <DataTablePagination table={table} />
+      <div className="space-y-4">
+        <div className="text-sm text-muted-foreground">
+          Debug: Página actual {pagination.pageIndex + 1} de {pageCount} | Datos: {data.length} | Por página: 50
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Tabla pageCount: {table.getPageCount()} | Nuestro pageCount: {pageCount} | Backend: 7 páginas
+        </div>
+        <div className="text-xs text-green-600 font-medium">
+          ✅ Ajustado para usar 7 páginas del backend (50 resultados por página)
+        </div>
+        <DataTablePagination table={table} />
+      </div>
       
       <EncuestaDetailDialog
         encuesta={selectedEncuesta}
