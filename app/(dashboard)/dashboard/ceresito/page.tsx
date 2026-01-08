@@ -150,16 +150,11 @@ export default function CeresitoPage() {
       
       const simpleQueryParams = buildSimpleQueryParams(timeFilter);
       const reclamosRecibidosParams = buildReclamosQueryParams(timeFilter);
-      const reclamosResueltosParams = buildReclamosQueryParams(timeFilter, "COMPLETADO");
+      const reclamosResueltosParams = buildReclamosQueryParams(timeFilter, "ASIGNADO");
       const mensajesUrl = buildMensajesUrl(timeFilter);
 
       // URLs para debug
       const reclamosResueltosUrl = `https://api.ceres.gob.ar/api/api/reclamos${reclamosResueltosParams}`;
-      console.log('🔍 Filtro seleccionado:', timeFilter);
-      console.log('🔍 Parámetros simples:', simpleQueryParams);
-      console.log('🔍 Parámetros reclamos resueltos:', reclamosResueltosParams);
-      console.log('URL mensajes:', mensajesUrl);
-      console.log('URL reclamos resueltos:', reclamosResueltosUrl);
 
       // Ejecutar todas las llamadas en paralelo para que no se bloqueen entre sí
       const [usersResult, conversacionesResult, mensajesResult, reclamosRecibidosResult, reclamosResueltosResult] = await Promise.allSettled([
@@ -400,7 +395,7 @@ export default function CeresitoPage() {
                 <Skeleton className="h-[120px]" />
               ) : (
                 <Card
-                  label="Reclamos resueltos"
+                  label="Reclamos tratados"
                   amount={reclamosResueltos?.toString() || "0"}
                   description={getFilterLabel(timeFilter)}
                   icon={CheckCircle2}
