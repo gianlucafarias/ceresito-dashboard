@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast"
 import { RolesCard } from "./components/RolesCard";
 import ProfilePhotoCard from './components/ProfilePhotoCard';
+import { MenuPermissionsCard } from "./components/MenuPermissionsCard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,14 +43,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface Role {
   id: number,
-  name: string
+  name: string,
+  menuPermissions: string[]
 }
 
 interface User {
   id: number,
   username: string,
   email?: string,
-  role: Role[],
+  role: Role,
   roleId: number
 }
 
@@ -254,7 +256,7 @@ export default function Page() {
           prevUsers.map(user => {
             if (user.id === userId) {
               const newRole = roles.find(r => r.id === roleId);
-              return { ...user, role: newRole ? [newRole] : [] };
+              return { ...user, role: newRole!, roleId: roleId };
             }
             return user;
           })
@@ -501,6 +503,8 @@ export default function Page() {
             setUsers={setUsers}
             toast={toast}
         />
+
+        <MenuPermissionsCard roles={roles} />
       </div>
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>

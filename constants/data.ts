@@ -7,18 +7,21 @@ import {
   List,
   Building,
   Settings,
-  ClipboardList
+  ClipboardList,
+  Briefcase
 } from "lucide-react";
 import { NavItem, SidebarNavItem } from "@/types";
 
 export const navItems = {
   NavMain: [
     {
+      id: "panel",
       title: "Panel",
       url: "/dashboard",
       icon: LayoutDashboard,
     },
     {
+      id: "obras",
       title: "Obras",
       url: "/dashboard/obras",
       icon: Building,
@@ -42,6 +45,7 @@ export const navItems = {
       ]
     },
     {
+      id: "encuestas",
       title: "Encuestas",
       url: "/dashboard/encuestas",
       icon: ClipboardList,
@@ -56,6 +60,30 @@ export const navItems = {
         }
       ]
     },
+    {
+      id: "servicios",
+      title: "Plataforma de Servicios",
+      url: "/dashboard/servicios",
+      icon: Briefcase,
+      items: [
+        {
+          title: "Dashboard",
+          url: "/dashboard/servicios",
+        },
+        {
+          title: "Profesionales",
+          url: "/dashboard/servicios/profesionales",
+        },
+        {
+          title: "Categorías",
+          url: "/dashboard/servicios/categorias",
+        },
+        {
+          title: "Soporte",
+          url: "/dashboard/servicios/solicitudes",
+        }
+      ]
+    },
     
     /*
     {
@@ -66,6 +94,7 @@ export const navItems = {
     },
     */
    {
+    id: "ceresito",
     title: "Ceresito",
     url: "/dashboard/ceresito",
     icon: Bot,
@@ -92,11 +121,13 @@ export const navItems = {
     },
     */
    {
+    id: "ajustes",
     title: "Ajustes",
     url: "/dashboard/settings",
     icon: Settings
    },
     {
+      id: "salir",
       title: "Salir",
       url: "/",
       icon: LogOut,

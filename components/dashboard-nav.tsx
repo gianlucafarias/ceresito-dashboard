@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -32,12 +33,15 @@ export function NavMain({
   items,
 }: {
   items: {
+    id?: string
     title: string
     url: string
     icon?: LucideIcon
+    badge?: string | number
     items?: {
       title: string
       url: string
+      badge?: string | number
     }[]
   }[]
 }) {
@@ -72,6 +76,11 @@ export function NavMain({
                           <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
                             <Link href={subItem.url}>
                               <span>{subItem.title}</span>
+                              {subItem.badge !== undefined && (
+                                <Badge variant="secondary" className="ml-auto text-xs">
+                                  {subItem.badge}
+                                </Badge>
+                              )}
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

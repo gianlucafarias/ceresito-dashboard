@@ -53,13 +53,14 @@ import { useToast } from "@/components/ui/use-toast"
 interface Role {
   id: number;
   name: string;
+  menuPermissions: string[];
 }
 
 interface User {
   id: number;
   username: string;
   email?: string; // Assuming email might be available, make optional for now
-  role: Role[];
+  role: Role;
   roleId: number;
 }
 

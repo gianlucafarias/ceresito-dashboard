@@ -230,3 +230,14 @@ La funcionalidad de filtrado por barrio está **completamente implementada** y *
 
 El sistema es **escalable**, **mantenible** y **fácil de extender** para futuras funcionalidades de filtrado.
 
+
+
+
+
+
+
+
+
+
+
+

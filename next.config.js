@@ -18,6 +18,15 @@ const nextConfig = {
     }
     return config;
   },
+  // Proxy para evitar problemas de CORS en desarrollo
+  async rewrites() {
+    return [
+      {
+        source: '/api/servicios-externos/:path*',
+        destination: `${process.env.NEXT_PUBLIC_SERVICES_API_URL || 'http://localhost:3001'}/:path*`,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
