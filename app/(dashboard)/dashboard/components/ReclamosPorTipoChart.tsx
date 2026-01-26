@@ -46,7 +46,7 @@ const chartConfig = {
   // Los tipos específicos se agregarán dinámicamente
 } satisfies ChartConfig;
 
-export function ReclamosPorTipoChart() {
+export default function ReclamosPorTipoChart() {
     // Usar el tipo específico y la función de fetch correcta
     const { data: apiData, isLoading, error } = useQuery<CountByTypeData[]>('reclamosCountByType', fetchReclamosCountByType, {
         staleTime: 5 * 60 * 1000, // 5 minutos

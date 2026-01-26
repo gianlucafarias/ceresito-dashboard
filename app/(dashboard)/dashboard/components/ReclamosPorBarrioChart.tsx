@@ -46,7 +46,7 @@ const chartConfig = {
   // Los barrios específicos se agregarán dinámicamente
 } satisfies ChartConfig;
 
-export function ReclamosPorBarrioChart() {
+export default function ReclamosPorBarrioChart() {
     const { data: apiData, isLoading, error } = useQuery<CountByBarrioData[]>('reclamosCountByBarrio', fetchReclamosCountByBarrio, {
         staleTime: 5 * 60 * 1000, // 5 minutos
         refetchOnWindowFocus: false

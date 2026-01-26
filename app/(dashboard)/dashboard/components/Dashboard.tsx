@@ -34,15 +34,15 @@ interface ReclamosResponse {
 }
 
 // Cargar los gráficos de manera diferida para reducir JS inicial
-const LazyReclamosPorTipoChart = dynamic(
-  () => import("./ReclamosPorTipoChart").then((mod) => mod.ReclamosPorTipoChart),
-  { ssr: false, loading: () => <Skeleton className="h-48 w-full" /> }
-);
+const LazyReclamosPorTipoChart = dynamic(() => import("./ReclamosPorTipoChart"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-48 w-full" />,
+});
 
-const LazyReclamosPorBarrioChart = dynamic(
-  () => import("./ReclamosPorBarrioChart").then((mod) => mod.ReclamosPorBarrioChart),
-  { ssr: false, loading: () => <Skeleton className="h-48 w-full" /> }
-);
+const LazyReclamosPorBarrioChart = dynamic(() => import("./ReclamosPorBarrioChart"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-48 w-full" />,
+});
 
 // Fetch helpers con deduplicación por request
 const fetchCuadrillas = cache(async (): Promise<Cuadrilla[]> => {
