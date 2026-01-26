@@ -18,6 +18,16 @@ export async function middleware(req: any) {
     }
   }
 
-  return NextResponse.next();
+  // Crear respuesta y asegurar que los headers necesarios para Server Actions estén presentes
+  const response = NextResponse.next();
+  
+  // Si hay un proxy/load balancer delante, asegurar que el header origin esté presente
+  // Esto es necesario para Server Actions en producción
+  const origin = req.headers.get('origin') || req.headers.get('x-forwarded-host') || req.headers.get('host');
+  if (origin && !req.headers.get('origin')) {
+    response.headers.set('x-forwarded-origin', origin);
+  }
+
+  return response;
 }
 

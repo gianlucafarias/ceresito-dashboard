@@ -103,7 +103,7 @@ async function handleRequest(
 
     const serverApiKey = process.env.ADMIN_API_KEY;
     const clientApiKey = request.headers.get('x-admin-api-key');
-    const apiKey = serverApiKey || clientApiKey;
+    const apiKey = serverApiKey || clientApiKey || null;
     
     if (!apiKey) {
       console.error('[Proxy] ADMIN_API_KEY no está configurada en el servidor');
