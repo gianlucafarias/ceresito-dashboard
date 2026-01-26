@@ -1,14 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Filter, X, RefreshCw, FileDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import EncuestasStatsCards from "./encuestas-stats-cards"
-import ObrasUrgentesChart from "./obras-urgentes-chart"
-import ServiciosChart from "./servicios-chart"
-import BarriosChart from "./barrios-chart"
 import ComentariosOtrosCard from "./comentarios-otros-card"
 import EncuestaDetailDialog from "./encuesta-detail-dialog"
 import FilterInfoBanner from "./filter-info-banner"
@@ -19,6 +17,21 @@ import { useBarrioFilter } from "./barrio-filter-context"
 import { useBarrioFilterLogic } from "./use-barrio-filter"
 import type { EncuestaVecinal, ComentarioOtro } from "@/types"
 import { exportEncuestasFiltradasPDF } from "@/lib/export-encuesta-pdf"
+
+const LazyObrasUrgentesChart = dynamic(
+  () => import("./obras-urgentes-chart"),
+  { ssr: false, loading: () => <Skeleton className="h-[280px] w-full" /> }
+);
+
+const LazyServiciosChart = dynamic(
+  () => import("./servicios-chart"),
+  { ssr: false, loading: () => <Skeleton className="h-[280px] w-full" /> }
+);
+
+const LazyBarriosChart = dynamic(
+  () => import("./barrios-chart"),
+  { ssr: false, loading: () => <Skeleton className="h-[280px] w-full" /> }
+);
 
 interface EncuestasStatsProps {
   stats: {
@@ -61,14 +74,9 @@ export default function EncuestasStats({ stats: initialStats }: EncuestasStatsPr
   // Recargar datos cuando cambie el filtro
   useEffect(() => {
     const handleFilterChange = async () => {
-      console.log("🔄 Cambio de filtro detectado:", { selectedBarrio, isFiltered })
-      
       if (isFiltered) {
-        console.log("🎯 Aplicando filtro por barrio:", selectedBarrio)
-        
         try {
           const newStats = await reloadFilteredData()
-          console.log("📊 Nuevas estadísticas filtradas:", newStats)
           
           if (newStats) {
             // Mantener los datos de todos los barrios para el gráfico de barrios
@@ -76,7 +84,6 @@ export default function EncuestasStats({ stats: initialStats }: EncuestasStatsPr
               ...newStats,
               encuestasPorBarrio: initialStats.encuestasPorBarrio // Siempre mostrar todos los barrios
             }
-            console.log("🏘️ Estadísticas con todos los barrios:", statsWithAllBarrios)
             setStats(statsWithAllBarrios)
           } else {
             console.error("❌ No se pudieron cargar las estadísticas filtradas")
@@ -91,7 +98,6 @@ export default function EncuestasStats({ stats: initialStats }: EncuestasStatsPr
           })
         }
       } else {
-        console.log("🌍 Restaurando estadísticas globales")
         // Si se volvió a "todos", restaurar estadísticas iniciales
         setStats(initialStats)
       }
@@ -253,7 +259,7 @@ export default function EncuestasStats({ stats: initialStats }: EncuestasStatsPr
         {/* Obras Urgentes + Comentarios Otros - Solo mostrar cuando no esté cargando */}
         {!isLoading && (
           <div className="grid gap-6 lg:grid-cols-2">
-            <ObrasUrgentesChart data={stats.obrasUrgentesTop} />
+            <LazyObrasUrgentesChart data={stats.obrasUrgentesTop} />
             <ComentariosOtrosCard
               title="Otras Obras Mencionadas"
               comentarios={stats.otrosComentarios?.obrasUrgentesOtro || []}
@@ -265,7 +271,7 @@ export default function EncuestasStats({ stats: initialStats }: EncuestasStatsPr
         {/* Servicios a Mejorar + Comentarios Otros - Solo mostrar cuando no esté cargando */}
         {!isLoading && (
           <div className="grid gap-6 lg:grid-cols-2">
-            <ServiciosChart data={stats.serviciosMejorarTop} />
+            <LazyServiciosChart data={stats.serviciosMejorarTop} />
             <ComentariosOtrosCard
               title="Otros Servicios Mencionados"
               comentarios={stats.otrosComentarios?.serviciosMejorarOtro || []}
@@ -277,7 +283,7 @@ export default function EncuestasStats({ stats: initialStats }: EncuestasStatsPr
         {/* Barrios + Espacios y Propuestas - Solo mostrar cuando no esté cargando */}
         {!isLoading && (
           <div className="grid gap-6 lg:grid-cols-2">
-            <BarriosChart data={stats.encuestasPorBarrio} />
+            <LazyBarriosChart data={stats.encuestasPorBarrio} />
             <div className="grid gap-4 grid-rows-2">
               <ComentariosOtrosCard
                 title="Espacios a Mejorar"

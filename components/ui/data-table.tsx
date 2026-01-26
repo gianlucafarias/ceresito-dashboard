@@ -52,9 +52,6 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
   });
 
-  /* this can be used to get the selectedrows 
-  console.log("value", table.getFilteredSelectedRowModel()); */
-
   return (
     <>
       <Input

@@ -6,7 +6,7 @@ import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Crear una instancia de QueryClient
-const queryClient = new QueryClient();
+const createQueryClient = () => new QueryClient();
 
 export default function Providers({
   session,
@@ -15,6 +15,9 @@ export default function Providers({
   session: SessionProviderProps["session"];
   children: React.ReactNode;
 }) {
+  // Evita recrear el cliente en cada render
+  const [queryClient] = React.useState(createQueryClient);
+
   return (
     <QueryClientProvider client={queryClient}>
       <SessionProvider session={session}>

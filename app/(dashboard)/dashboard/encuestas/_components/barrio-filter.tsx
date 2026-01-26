@@ -29,7 +29,6 @@ export default function BarrioFilter({
   const [open, setOpen] = useState(false)
   const { selectedBarrio, setSelectedBarrio } = useBarrioFilter()
 
-  console.log("BarrioFilter render - selectedBarrio:", selectedBarrio, "barrios:", barrios)
 
   // Preparar opciones: "Todos los barrios" + barrios específicos
   const barrioOptions = [
@@ -44,15 +43,7 @@ export default function BarrioFilter({
   const selectedOption = barrioOptions.find(option => option.value === selectedBarrio) || barrioOptions[0]
 
   const handleBarrioChange = (barrio: string) => {
-    console.log("🔄 handleBarrioChange llamado con:", barrio)
-    console.log("🔄 Estado anterior - selectedBarrio:", selectedBarrio)
-    console.log("🔄 Estado anterior - isFiltered:", selectedBarrio !== "todos")
-    
     setSelectedBarrio(barrio)
-    
-    console.log("🔄 Estado nuevo - selectedBarrio:", barrio)
-    console.log("🔄 Estado nuevo - isFiltered:", barrio !== "todos")
-    
     setOpen(false)
   }
 
@@ -86,7 +77,6 @@ export default function BarrioFilter({
                     key={option.value}
                     className="flex items-center px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
                     onClick={() => {
-                      console.log("Click en opción:", option.value)
                       handleBarrioChange(option.value)
                     }}
                   >

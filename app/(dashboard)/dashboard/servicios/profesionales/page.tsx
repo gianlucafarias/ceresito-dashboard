@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,11 +43,15 @@ import {
   Loader2,
   AlertCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Mail,
+  Chrome,
+  Facebook
 } from "lucide-react";
 import { apiClient } from "../_lib/api-client";
 import { adaptProfessionals } from "../_lib/api-adapters";
 import { Professional } from "../_types";
+import { BulkUploadProfessionals } from "./_components/bulk-upload";
 
 export default function ProfesionalesPage() {
   const router = useRouter();
@@ -65,41 +69,42 @@ export default function ProfesionalesPage() {
     totalPages: 0,
   });
 
+  // Función para cargar profesionales
+  const fetchProfessionals = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const params: any = {
+        page: currentPage,
+        limit: 20,
+      };
+      
+      if (statusFilter !== "all") params.status = statusFilter;
+      if (categoryFilter !== "all") params.grupo = categoryFilter;
+      if (searchTerm) params.search = searchTerm;
+      
+      const response = await apiClient.listProfessionals(params);
+      
+      if (response.success && 'pagination' in response) {
+        const adaptedProfessionals = adaptProfessionals(response.data);
+        setProfessionals(adaptedProfessionals);
+        setPagination(response.pagination);
+      } else {
+        setError((response as any).message || 'Error al cargar profesionales');
+      }
+    } catch (err) {
+      console.error('Error fetching professionals:', err);
+      setError('Error de conexión al cargar profesionales');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, statusFilter, categoryFilter, searchTerm]);
+
   // Cargar profesionales desde la API
   useEffect(() => {
-    async function fetchProfessionals() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const params: any = {
-          page: currentPage,
-          limit: 20,
-        };
-        
-        if (statusFilter !== "all") params.status = statusFilter;
-        if (categoryFilter !== "all") params.grupo = categoryFilter;
-        if (searchTerm) params.search = searchTerm;
-        
-        const response = await apiClient.listProfessionals(params);
-        
-        if (response.success && 'pagination' in response) {
-          const adaptedProfessionals = adaptProfessionals(response.data);
-          setProfessionals(adaptedProfessionals);
-          setPagination(response.pagination);
-        } else {
-          setError((response as any).message || 'Error al cargar profesionales');
-        }
-      } catch (err) {
-        console.error('Error fetching professionals:', err);
-        setError('Error de conexión al cargar profesionales');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     fetchProfessionals();
-  }, [currentPage, statusFilter, categoryFilter, searchTerm]);
+  }, [fetchProfessionals]);
 
   const handleViewDetails = (professionalId: string) => {
     router.push(`/dashboard/servicios/profesionales/${professionalId}`);
@@ -137,6 +142,35 @@ export default function ProfesionalesPage() {
     );
   };
 
+  const getRegistrationTypeBadge = (registrationType?: string) => {
+    if (!registrationType) return null;
+    
+    switch (registrationType) {
+      case 'google':
+        return (
+          <Badge variant="outline" className="text-blue-600 border-blue-600">
+            <Chrome className="mr-1 h-3 w-3" />
+            Google
+          </Badge>
+        );
+      case 'facebook':
+        return (
+          <Badge variant="outline" className="text-blue-700 border-blue-700">
+            <Facebook className="mr-1 h-3 w-3" />
+            Facebook
+          </Badge>
+        );
+      case 'email':
+      default:
+        return (
+          <Badge variant="outline" className="text-gray-600 border-gray-600">
+            <Mail className="mr-1 h-3 w-3" />
+            Email
+          </Badge>
+        );
+    }
+  };
+
   if (error) {
     return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -164,6 +198,7 @@ export default function ProfesionalesPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
+          <BulkUploadProfessionals onUploadComplete={fetchProfessionals} />
           <Badge variant="outline" className="text-sm">
             {pagination.total} profesionales totales
           </Badge>
@@ -240,6 +275,7 @@ export default function ProfesionalesPage() {
                     <TableHead>Categorías</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Verificación</TableHead>
+                    <TableHead>Registro</TableHead>
                     <TableHead>Experiencia</TableHead>
                     <TableHead>Calificación</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
@@ -292,6 +328,9 @@ export default function ProfesionalesPage() {
                   </TableCell>
                   <TableCell>
                     {getVerifiedBadge(professional.verified)}
+                  </TableCell>
+                  <TableCell>
+                    {getRegistrationTypeBadge((professional as any).registrationType)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-1">

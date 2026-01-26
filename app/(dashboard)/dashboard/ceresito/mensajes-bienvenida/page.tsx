@@ -64,7 +64,6 @@ type FormSchemaType = z.infer<typeof formSchema>;
 
 // Función para obtener los mensajes de bienvenida
 async function fetchMensajesBienvenida(): Promise<MensajeBienvenida[]> {
-  console.log("Fetching configuraciones...");
   const response = await fetch('https://api.ceres.gob.ar/api/api/config');
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -92,8 +91,6 @@ async function createMensajeBienvenida(nuevoMensaje: {
     activo: boolean;
     fecha_expiracion: string | null; // La API espera string o null
 }): Promise<MensajeBienvenida> {
-    console.log("Creando config (API):", nuevoMensaje);
-    // Extraer clave para la URL, el resto va en el body
     const { clave, ...bodyData } = nuevoMensaje; 
     const response = await fetch(`https://api.ceres.gob.ar/api/api/config/${clave}`, {
         method: 'POST',
@@ -124,7 +121,6 @@ async function updateMensajeBienvenida(
         fecha_expiracion: string | null; 
     }
 ): Promise<MensajeBienvenida> {
-    console.log(`Actualizando config ${datosActualizados.clave}:`, datosActualizados);
     // Extraer clave para la URL, el resto va en el body
     const { clave, ...bodyData } = datosActualizados;
     const response = await fetch(`https://api.ceres.gob.ar/api/api/config/${clave}`, {
@@ -230,7 +226,6 @@ export default function MensajesBienvenidaPage() {
 
   // Función onSubmit ahora maneja creación y edición
   async function onSubmit(values: FormSchemaType) {
-    console.log("Datos validados:", values);
     const apiData = {
         clave: values.clave,
         valor: values.valor,
@@ -244,12 +239,10 @@ export default function MensajesBienvenidaPage() {
         const actualizado = await updateMensajeBienvenida(apiData);
         // Actualizar el estado local
         setMensajes(prev => prev.map(m => m.clave === actualizado.clave ? actualizado : m));
-        console.log("Configuración actualizada");
       } else {
         // --- Modo Creación ---
         const creado = await createMensajeBienvenida(apiData);
         setMensajes(prev => [creado, ...prev]);
-        console.log("Configuración creada");
       }
       setIsDialogOpen(false);
       setEditingMensaje(null); // Asegurar que se limpia el estado de edición

@@ -34,7 +34,9 @@ const chartConfig = {
 
 async function fetchVisitasFlujo() {
   try {
-    const response = await fetch("https://api.ceres.gob.ar/api/api/visitas-flujo");
+    const response = await fetch("https://api.ceres.gob.ar/api/api/visitas-flujo", {
+      cache: "no-store",
+    });
     const data = await response.json();
     
     // Asegurarnos que visitasFlujo existe y es un array

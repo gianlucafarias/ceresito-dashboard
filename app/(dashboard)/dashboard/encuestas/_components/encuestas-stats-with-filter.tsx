@@ -1,15 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Filter, X, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import EncuestasStatsCards from "./encuestas-stats-cards"
-import ObrasUrgentesChart from "./obras-urgentes-chart"
-import ServiciosChart from "./servicios-chart"
-import BarriosChart from "./barrios-chart"
 import ComentariosOtrosCard from "./comentarios-otros-card"
 import EncuestaDetailDialog from "./encuesta-detail-dialog"
 import FilterInfoBanner from "./filter-info-banner"
@@ -18,6 +16,21 @@ import { getEncuestaById } from "../_lib/actions"
 import { useBarrioFilter } from "./barrio-filter-context"
 import { useBarrioFilterLogic } from "./use-barrio-filter"
 import type { EncuestaVecinal, ComentarioOtro } from "@/types"
+
+const LazyObrasUrgentesChart = dynamic(
+  () => import("./obras-urgentes-chart"),
+  { ssr: false, loading: () => <Skeleton className="h-[240px] w-full" /> }
+);
+
+const LazyServiciosChart = dynamic(
+  () => import("./servicios-chart"),
+  { ssr: false, loading: () => <Skeleton className="h-[240px] w-full" /> }
+);
+
+const LazyBarriosChart = dynamic(
+  () => import("./barrios-chart"),
+  { ssr: false, loading: () => <Skeleton className="h-[240px] w-full" /> }
+);
 
 interface EncuestasStatsWithFilterProps {
   initialStats: {
@@ -176,7 +189,7 @@ export default function EncuestasStatsWithFilter({ initialStats }: EncuestasStat
 
         {/* Obras Urgentes + Comentarios Otros */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <ObrasUrgentesChart data={stats.obrasUrgentesTop} />
+          <LazyObrasUrgentesChart data={stats.obrasUrgentesTop} />
           <ComentariosOtrosCard
             title="Otras Obras Mencionadas"
             comentarios={stats.otrosComentarios?.obrasUrgentesOtro || []}
@@ -186,7 +199,7 @@ export default function EncuestasStatsWithFilter({ initialStats }: EncuestasStat
 
         {/* Servicios a Mejorar + Comentarios Otros */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <ServiciosChart data={stats.serviciosMejorarTop} />
+          <LazyServiciosChart data={stats.serviciosMejorarTop} />
           <ComentariosOtrosCard
             title="Otros Servicios Mencionados"
             comentarios={stats.otrosComentarios?.serviciosMejorarOtro || []}
@@ -196,7 +209,7 @@ export default function EncuestasStatsWithFilter({ initialStats }: EncuestasStat
 
         {/* Barrios + Espacios y Propuestas */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <BarriosChart data={stats.encuestasPorBarrio} />
+          <LazyBarriosChart data={stats.encuestasPorBarrio} />
           <div className="grid gap-4 grid-rows-2">
             <ComentariosOtrosCard
               title="Espacios a Mejorar"

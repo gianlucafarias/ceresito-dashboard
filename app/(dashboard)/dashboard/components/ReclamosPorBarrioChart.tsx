@@ -29,7 +29,9 @@ interface CountByBarrioData {
 
 // Función de fetching
 const fetchReclamosCountByBarrio = async (): Promise<CountByBarrioData[]> => {
-    const res = await fetch('https://api.ceres.gob.ar/api/api/reclamos/count-by-barrio');
+    const res = await fetch('https://api.ceres.gob.ar/api/api/reclamos/count-by-barrio', {
+      cache: 'no-store',
+    });
     if (!res.ok) throw new Error('Error al cargar conteo de reclamos por barrio');
     const data = await res.json();
     // La API devuelve el array directamente

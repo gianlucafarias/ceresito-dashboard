@@ -220,7 +220,6 @@ export async function updateReclamoEstado(id: string, estado: string, notificar:
         }
       ];
       
-      console.log("Componentes:", JSON.stringify(components, null, 2));
       
       // Llamar al endpoint de notificación
       try {
@@ -231,7 +230,6 @@ export async function updateReclamoEstado(id: string, estado: string, notificar:
           components: components
         };
         
-        console.log("Enviando notificación:", JSON.stringify(notificationPayload, null, 2));
         
         const notificationResponse = await fetch("https://api.ceres.gob.ar/v1/template", {
           method: "POST",
@@ -242,21 +240,16 @@ export async function updateReclamoEstado(id: string, estado: string, notificar:
           body: JSON.stringify(notificationPayload),
         });
 
-        console.log("Respuesta de notificación status:", notificationResponse.status);
         
         if (!notificationResponse.ok) {
           const errorText = await notificationResponse.text();
           console.error(`Error al enviar notificación: ${errorText}`);
-        } else {
-          console.log("Notificación enviada correctamente");
-        }
+        } 
       } catch (notifyError) {
         console.error("Error al enviar la notificación:", notifyError);
         // No interrumpimos el flujo si falla la notificación
       }
-    } else {
-      console.log("No se envió notificación porque el usuario no tiene teléfono registrado");
-    }
+    } 
 
     revalidatePath("/");
 

@@ -1,18 +1,39 @@
 "use client"
-import { Overview } from "@/components/overview";
-import { RecentSales } from "@/components/recent-sales";
+import dynamic from "next/dynamic";
 import Card, { CardContent } from "@/components/Card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { UserCheck, FileText, CheckCircle2, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton"
-import { MessagesPerDayChart } from "@/components/messages-per-day-chart";
 import { Badge } from "@/components/ui/badge";
-import { FeedbackChart } from "@/components/feedback-chart";
-import { FeedbackComments } from "@/components/feedback-comments";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, subMonths, subYears, startOfDay } from "date-fns";
+
+const MessagesPerDayChart = dynamic(
+  () => import("@/components/messages-per-day-chart").then((mod) => mod.MessagesPerDayChart),
+  { ssr: false, loading: () => <Skeleton className="h-[250px] w-full" /> }
+);
+
+const FeedbackChart = dynamic(
+  () => import("@/components/feedback-chart").then((mod) => mod.FeedbackChart),
+  { ssr: false, loading: () => <Skeleton className="h-[250px] w-full" /> }
+);
+
+const FeedbackComments = dynamic(
+  () => import("@/components/feedback-comments").then((mod) => mod.FeedbackComments),
+  { ssr: false, loading: () => <Skeleton className="h-[250px] w-full" /> }
+);
+
+const Overview = dynamic(
+  () => import("@/components/overview").then((mod) => mod.Overview),
+  { ssr: false, loading: () => <Skeleton className="h-[280px] w-full" /> }
+);
+
+const RecentSales = dynamic(
+  () => import("@/components/recent-sales").then((mod) => mod.RecentSales),
+  { ssr: false, loading: () => <Skeleton className="h-[280px] w-full" /> }
+);
 
 type TimeFilter = "today" | "3months" | "6months" | "1year" | "all";
 
@@ -94,7 +115,9 @@ export default function CeresitoPage() {
     async function fetchBotStatus() {
       setIsStatusLoading(true);
       try {
-        const responseBotStatus = await fetch('https://api.ceres.gob.ar/v1/health');
+        const responseBotStatus = await fetch('https://api.ceres.gob.ar/v1/health', {
+          cache: 'no-store',
+        });
         if (responseBotStatus.ok) {
           const data = await responseBotStatus.json();
           setBotStatus(data.status);
@@ -158,11 +181,11 @@ export default function CeresitoPage() {
 
       // Ejecutar todas las llamadas en paralelo para que no se bloqueen entre sí
       const [usersResult, conversacionesResult, mensajesResult, reclamosRecibidosResult, reclamosResueltosResult] = await Promise.allSettled([
-        fetch(`https://api.ceres.gob.ar/api/api/users/count${simpleQueryParams}`),
-        fetch(`https://api.ceres.gob.ar/api/api/conversaciones${simpleQueryParams}`),
-        fetch(mensajesUrl),
-        fetch(`https://api.ceres.gob.ar/api/api/reclamos${reclamosRecibidosParams}`),
-        fetch(reclamosResueltosUrl)
+        fetch(`https://api.ceres.gob.ar/api/api/users/count${simpleQueryParams}`, { cache: 'no-store' }),
+        fetch(`https://api.ceres.gob.ar/api/api/conversaciones${simpleQueryParams}`, { cache: 'no-store' }),
+        fetch(mensajesUrl, { cache: 'no-store' }),
+        fetch(`https://api.ceres.gob.ar/api/api/reclamos${reclamosRecibidosParams}`, { cache: 'no-store' }),
+        fetch(reclamosResueltosUrl, { cache: 'no-store' })
       ]);
 
       // Procesar resultado de usuarios únicos
@@ -197,7 +220,6 @@ export default function CeresitoPage() {
       if (mensajesResult.status === 'fulfilled' && mensajesResult.value.ok) {
         try {
           const data = await mensajesResult.value.json();
-          console.log('✅ Respuesta de mensajes:', data); // Debug
           // El endpoint puede devolver count directamente o un array que hay que sumar
           let count = 0;
           if (typeof data === 'number') {
@@ -213,7 +235,6 @@ export default function CeresitoPage() {
           } else if (data.total !== undefined) {
             count = data.total;
           }
-          console.log('✅ Total mensajes extraído:', count);
           setMensajesEnviados(count);
         } catch (error) {
           console.error('❌ Error al parsear respuesta de mensajes:', error);
@@ -254,10 +275,8 @@ export default function CeresitoPage() {
       if (reclamosResueltosResult.status === 'fulfilled' && reclamosResueltosResult.value.ok) {
         try {
           const data = await reclamosResueltosResult.value.json();
-          console.log('✅ Respuesta de reclamos resueltos:', data); // Debug
           // El endpoint devuelve { data: [], total: number }
           const count = data.total ?? data.count ?? (Array.isArray(data) ? data.length : 0);
-          console.log('✅ Total reclamos resueltos extraído:', count);
           setReclamosResueltos(count);
         } catch (error) {
           console.error('❌ Error al parsear respuesta de reclamos resueltos:', error);

@@ -56,24 +56,20 @@ export function useBarrioFilterLogic() {
         apiUrl += `?barrio=${encodeURIComponent(barrio)}`
       }
 
-      console.log("🔍 Llamando a la API:", apiUrl)
 
       const response = await fetch(apiUrl, {
         cache: 'no-store'
       })
 
-      console.log("📡 Respuesta de la API:", response.status, response.statusText)
 
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`)
       }
 
       const result: ApiResponse<EstadisticasApiData> = await response.json()
-      console.log("📊 Datos recibidos de la API:", result)
 
       if (result.success && result.data) {
         const apiData = result.data
-        console.log("📈 Datos procesados:", apiData)
 
         // Validar que los datos requeridos estén presentes
         if (!apiData.obrasMasVotadas || !apiData.serviciosMasVotados) {
@@ -82,8 +78,6 @@ export function useBarrioFilterLogic() {
 
         // Si estamos filtrando por barrio, solo mostrar datos de ese barrio
         if (barrio && barrio !== "todos") {
-          console.log("🔍 Procesando datos filtrados para barrio:", barrio)
-          console.log("🔍 obrasMasVotadas original:", (result as any))
           
           // El backend puede devolver dos formatos distintos según filtro:
           // - obrasUrgentesTop/serviciosMejorarTop/encuestasPorBarrio (ya mapeados)
@@ -122,13 +116,9 @@ export function useBarrioFilterLogic() {
             ultimasEncuestas: []
           }
           
-          console.log("🎯 Estadísticas filtradas por barrio (normalizadas):", filteredStats)
           return filteredStats
         } else {
           // Si no hay filtro, mostrar datos globales
-          console.log("🌍 Procesando datos globales")
-          console.log("🌍 obrasMasVotadas original:", apiData.obrasMasVotadas)
-          console.log("🌍 serviciosMasVotados original:", apiData.serviciosMasVotados)
           
           const globalStats = {
             totalEncuestas: apiData.totalEncuestas || 0,
@@ -138,14 +128,12 @@ export function useBarrioFilterLogic() {
               cantidad: typeof item.cantidad === 'string' ? parseInt(item.cantidad) || 0 : item.cantidad || 0
             })),
             obrasUrgentesTop: (apiData.obrasMasVotadas || []).map((item: any) => {
-              console.log("🔨 Procesando obra global:", item)
               return {
                 nombre: item.obra || 'Sin nombre',
                 cantidad: item.cantidad || 0
               }
             }).filter(item => item.cantidad > 0), // Solo obras con votos
             serviciosMejorarTop: (apiData.serviciosMasVotados || []).map((item: any) => {
-              console.log("🛠️ Procesando servicio global:", item)
               return {
                 nombre: item.servicio || 'Sin nombre',
                 cantidad: item.cantidad || 0
@@ -166,9 +154,6 @@ export function useBarrioFilterLogic() {
             ultimasEncuestas: []
           }
           
-          console.log("🌍 Estadísticas globales:", globalStats)
-          console.log("🔨 Obras procesadas globales:", globalStats.obrasUrgentesTop)
-          console.log("🛠️ Servicios procesados globales:", globalStats.serviciosMejorarTop)
           return globalStats
         }
       } else {
@@ -201,8 +186,6 @@ export function useBarrioFilterLogic() {
     try {
       // Llamar a la API con el filtro de barrio
       const stats = await getFilteredStats(selectedBarrio)
-      
-      console.log("✅ Datos filtrados cargados exitosamente:", stats)
       
       toast.success("Datos filtrados cargados", {
         description: `Mostrando estadísticas del barrio ${selectedBarrio}`,

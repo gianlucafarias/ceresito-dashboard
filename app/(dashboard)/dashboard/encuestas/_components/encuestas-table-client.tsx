@@ -123,15 +123,6 @@ export default function EncuestasTableClient({
         apiUrl += `&hasta=${toDay}`
       }
 
-      console.log("🌐 Llamando a API:", {
-        url: apiUrl,
-        paginaSolicitada: params.page,
-        perPage: params.per_page,
-        perPageEsperado: 10,
-        params: params,
-        barrio: barrio
-      })
-
       const response = await fetch(apiUrl, {
         cache: 'no-store' // Siempre datos frescos
       })
@@ -157,16 +148,6 @@ export default function EncuestasTableClient({
       // El backend devuelve 7 páginas, no 32
       const pageCount = totalPages || Math.ceil(total / 50)
       
-      console.log("📊 Paginación calculada (client):", {
-        total,
-        per_page: 50,
-        calculatedPageCount: Math.ceil(total / 50),
-        backendTotalPages: totalPages,
-        finalPageCount: pageCount,
-        encuestasEnPagina: encuestas.length,
-        decision: "USANDO BACKEND TOTALPAGES"
-      })
-      
       return { 
         data: encuestas, 
         pageCount: pageCount, // Usar exactamente lo que devuelve el backend
@@ -187,11 +168,6 @@ export default function EncuestasTableClient({
         setPageCount(result.pageCount)
         
         // Debug: verificar cuántos resultados recibimos
-        console.log("📥 Datos iniciales cargados:", {
-          solicitados: 50, // Ajustado a 50 para coincidir con el backend
-          recibidos: result.data.length,
-          problema: result.data.length !== 50 ? "⚠️ Backend no devuelve 50!" : "✅ OK"
-        })
       } catch (error) {
         toast.error("Error al cargar las encuestas")
       } finally {
@@ -311,13 +287,6 @@ export default function EncuestasTableClient({
   const handlePaginationChange = async (updater: any) => {
     const newPagination = typeof updater === 'function' ? updater(pagination) : updater
     
-    console.log("🔄 Cambio de paginación solicitado:", {
-      pageIndex: newPagination.pageIndex + 1,
-      pageSize: newPagination.pageSize,
-      totalPages: pageCount,
-      currentData: data.length
-    })
-    
     // Actualizar el estado local primero
     setPagination(newPagination)
     
@@ -338,47 +307,17 @@ export default function EncuestasTableClient({
         search: search.search
       }
       
-      console.log("📋 Parámetros para nueva página:", newParams)
-      
       if (isFiltered) {
         // Si hay filtro de barrio, usar la función de filtrado
-        console.log("🎯 Llamando getFilteredEncuestas con filtro de barrio:", selectedBarrio)
         result = await getFilteredEncuestas(selectedBarrio, newParams)
       } else {
         // Si no hay filtro, usar la función normal
-        console.log("🌍 Llamando getFilteredEncuestas sin filtro")
         result = await getFilteredEncuestas(undefined, newParams)
       }
-      
-      console.log("📊 Resultado de la API:", {
-        encuestasRecibidas: result.data.length,
-        perPageSolicitado: newParams.per_page,
-        perPageRecibido: result.data.length,
-        total: result.total,
-        pageCount: result.pageCount,
-        primeraEncuesta: result.data[0]?.id,
-        ultimaEncuesta: result.data[result.data.length - 1]?.id,
-        todasLasIds: result.data.map(e => e.id).join(', '),
-        problema: result.data.length !== parseInt(newParams.per_page) ? "⚠️ BACKEND IGNORA per_page!" : "✅ OK"
-      })
       
       // Actualizar datos y pageCount
       setData(result.data)
       setPageCount(result.pageCount)
-      
-      console.log("✅ Datos de página cargados:", {
-        pagina: newPagination.pageIndex + 1,
-        datos: result.data.length,
-        total: result.total,
-        pageCount: result.pageCount,
-        pageCountAnterior: pageCount
-      })
-      
-      console.log("🔄 Estado actualizado:", {
-        nuevaData: result.data.length,
-        nuevoPageCount: result.pageCount,
-        nuevaPaginacion: newPagination
-      })
       
     } catch (error) {
       console.error("❌ Error al cargar página:", error)
@@ -409,12 +348,6 @@ export default function EncuestasTableClient({
   })
 
   // Crear la tabla
-  console.log("🏗️ Configurando tabla con:", { 
-    data: data.length, 
-    pageCount, 
-    pagination,
-    totalEncuestas: data.length * pageCount // Debug: verificar cálculo
-  })
   
   const table = useReactTable({
     data,
@@ -433,7 +366,6 @@ export default function EncuestasTableClient({
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: (updater) => {
-      console.log("🚨 onPaginationChange interceptado por TanStack Table:", updater)
       handlePaginationChange(updater)
     },
     manualPagination: true, // Habilitar paginación manual
@@ -449,13 +381,7 @@ export default function EncuestasTableClient({
   })
   
   // Verificar que la tabla use nuestro pageCount
-  console.log("✅ Tabla creada con:", {
-    pageCountConfigurado: table.getPageCount(),
-    pageCountEsperado: pageCount,
-    coinciden: table.getPageCount() === pageCount,
-    backendPages: 7,
-    frontendPages: pageCount
-  })
+
 
   if (isLoading) {
     return (

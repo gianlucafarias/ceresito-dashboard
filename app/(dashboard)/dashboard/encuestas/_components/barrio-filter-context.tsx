@@ -19,13 +19,10 @@ export function BarrioFilterProvider({ children }: BarrioFilterProviderProps) {
 
   const isFiltered = selectedBarrio !== "todos"
 
-  // Logging para debug
-  console.log("🏗️ BarrioFilterProvider render - selectedBarrio:", selectedBarrio, "isFiltered:", isFiltered)
 
   const value = {
     selectedBarrio,
     setSelectedBarrio: (barrio: string) => {
-      console.log("🏗️ setSelectedBarrio llamado con:", barrio)
       setSelectedBarrio(barrio)
     },
     isFiltered

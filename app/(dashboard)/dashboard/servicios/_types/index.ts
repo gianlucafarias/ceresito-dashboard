@@ -207,6 +207,7 @@ export interface Professional {
   status: 'pending' | 'active' | 'suspended';
   rating: number;
   reviewCount: number;
+  registrationType?: 'email' | 'google' | 'facebook'; // Cómo se registró el profesional
   createdAt: Date;
   updatedAt: Date;
   services?: Service[]; // para vistas que incluyen servicios
@@ -358,6 +359,24 @@ export interface SupportTicket {
   createdAt: Date;
   updatedAt: Date;
   resolvedAt?: Date;
+}
+
+// Certificaciones de profesionales
+export interface Certification {
+  id: string;
+  professionalId: string;
+  professional?: Professional;
+  certificationType: string;
+  certificationNumber?: string | null;
+  issuingOrganization?: string | null;
+  issuedAt?: Date | null;
+  expiresAt?: Date | null;
+  status: 'pending' | 'approved' | 'rejected' | 'suspended';
+  adminNotes?: string | null;
+  reviewedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  category?: Category | null;
 }
 
 export const SUPPORT_TYPES = [

@@ -75,8 +75,20 @@ export const navItems = {
           url: "/dashboard/servicios/profesionales",
         },
         {
+          title: "Certificaciones",
+          url: "/dashboard/servicios/certificaciones",
+        },
+        {
+          title: "Usuarios",
+          url: "/dashboard/servicios/usuarios",
+        },
+        {
           title: "Categorías",
           url: "/dashboard/servicios/categorias",
+        },
+        {
+          title: "Bug Reports",
+          url: "/dashboard/servicios/bug-reports",
         },
         {
           title: "Soporte",

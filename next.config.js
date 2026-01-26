@@ -18,15 +18,8 @@ const nextConfig = {
     }
     return config;
   },
-  // Proxy para evitar problemas de CORS en desarrollo
-  async rewrites() {
-    return [
-      {
-        source: '/api/servicios-externos/:path*',
-        destination: `${process.env.NEXT_PUBLIC_SERVICES_API_URL || 'http://localhost:3001'}/:path*`,
-      },
-    ];
-  },
+  // NOTA: El proxy ahora se maneja mediante la ruta API en app/api/servicios-externos/[...path]/route.ts
+  // Los rewrites tienen prioridad sobre las rutas API, por lo que se eliminó el rewrite anterior
 };
 
 module.exports = nextConfig;

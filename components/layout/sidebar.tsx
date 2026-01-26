@@ -43,11 +43,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     async function loadMenuPermissions() {
       try {
         const response = await fetch('/api/user/menu-permissions');
-        console.log('🔍 Response status:', response.status);
         if (response.ok) {
           const data = await response.json();
-          console.log('📋 Data recibida:', data);
-          console.log('🔑 Menu permissions:', data.menuPermissions);
           setMenuPermissions(data.menuPermissions || []);
         } else {
           const errorText = await response.text();
@@ -65,8 +62,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Filtrar menú según permisos y actualizar con badges
   const filteredNavItems = React.useMemo(() => {
-    console.log('🔄 Filtrando items. isLoadingPermissions:', isLoadingPermissions);
-    console.log('🔄 menuPermissions:', menuPermissions);
     
     // Si aún está cargando permisos, mostrar todos los items temporalmente
     if (isLoadingPermissions) {
@@ -77,16 +72,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const filtered = navItems.NavMain.filter(item => {
       // Si no tiene id, permitir acceso (aunque todos deberían tener id ahora)
       if (!item.id) {
-        console.log('⚠️  Item sin ID:', item.title);
         return true;
       }
       // Verificar si el item está en los permisos
       const hasPermission = menuPermissions.includes(item.id);
-      console.log(`${hasPermission ? '✅' : '❌'} Item "${item.title}" (${item.id}):`, hasPermission);
       return hasPermission;
     });
     
-    console.log('📊 Total items filtrados:', filtered.length);
 
     // Actualizar con badges de profesionales
     return filtered.map(item => {

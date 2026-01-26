@@ -111,6 +111,7 @@ export function adaptProfessional(apiProfessional: APIProfessionalResponse): Pro
     createdAt: parseDate(apiProfessional.createdAt),
     updatedAt: parseDate(apiProfessional.updatedAt),
     services: services,
+    registrationType: apiProfessional.registrationType, // Preservar el tipo de registro
   };
 }
 

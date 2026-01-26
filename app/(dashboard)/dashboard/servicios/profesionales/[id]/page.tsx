@@ -6,6 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   ArrowLeft,
   User, 
@@ -30,11 +38,13 @@ import {
   AlertCircle,
   CheckCircle2,
   MessageSquare as WhatsApp,
-  Loader2
+  Loader2,
+  Chrome,
+  UserPlus
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiClient } from "../../_lib/api-client";
+import { apiClient, APICertificationResponse } from "../../_lib/api-client";
 import { adaptProfessional } from "../../_lib/api-adapters";
 import { mockReviews } from "../../_lib/mock-data";
 import { Professional } from "../../_types";
@@ -48,6 +58,11 @@ interface ProfessionalDetailPageProps {
 export default function ProfessionalDetailPage({ params }: ProfessionalDetailPageProps) {
   const router = useRouter();
   const [professional, setProfessional] = useState<Professional | undefined>();
+  const [certifications, setCertifications] = useState<APICertificationResponse[]>([]);
+  const [isLoadingCertifications, setIsLoadingCertifications] = useState(false);
+  const [updatingCertificationId, setUpdatingCertificationId] = useState<string | null>(null);
+  const [selectedCertification, setSelectedCertification] = useState<APICertificationResponse | null>(null);
+  const [certificationAdminNotes, setCertificationAdminNotes] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approvalNotes, setApprovalNotes] = useState("");
@@ -77,6 +92,33 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
 
     fetchProfessional();
   }, [params.id]);
+
+  // Cargar certificaciones del profesional
+  useEffect(() => {
+    async function fetchCertifications() {
+      if (!professional?.id) return;
+      
+      try {
+        setIsLoadingCertifications(true);
+        const response = await apiClient.listCertifications({
+          professionalId: professional.id,
+          limit: 100, // Obtener todas las certificaciones del profesional
+        });
+        
+        if (response.success && 'pagination' in response) {
+          setCertifications(response.data);
+        }
+      } catch (err) {
+        console.error('Error fetching certifications:', err);
+      } finally {
+        setIsLoadingCertifications(false);
+      }
+    }
+
+    if (professional?.id) {
+      fetchCertifications();
+    }
+  }, [professional?.id]);
 
   if (isLoading) {
     return (
@@ -170,6 +212,35 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
     );
   };
 
+  const getRegistrationTypeBadge = (registrationType?: string) => {
+    if (!registrationType) return null;
+    
+    switch (registrationType) {
+      case 'google':
+        return (
+          <Badge variant="outline" className="text-blue-600 border-blue-600">
+            <Chrome className="mr-1 h-3 w-3" />
+            Registrado con Google
+          </Badge>
+        );
+      case 'facebook':
+        return (
+          <Badge variant="outline" className="text-blue-700 border-blue-700">
+            <Facebook className="mr-1 h-3 w-3" />
+            Registrado con Facebook
+          </Badge>
+        );
+      case 'email':
+      default:
+        return (
+          <Badge variant="outline" className="text-gray-600 border-gray-600">
+            <Mail className="mr-1 h-3 w-3" />
+            Registrado con Email
+          </Badge>
+        );
+    }
+  };
+
 
   const handleApprove = async () => {
     if (!professional) return;
@@ -241,6 +312,52 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
     }
   };
 
+  const handleOpenCertificationModal = (cert: APICertificationResponse) => {
+    setSelectedCertification(cert);
+    setCertificationAdminNotes(cert.adminNotes || "");
+  };
+
+  const handleCloseCertificationModal = () => {
+    setSelectedCertification(null);
+    setCertificationAdminNotes("");
+    setUpdatingCertificationId(null);
+  };
+
+  const handleUpdateCertification = async (status: 'approved' | 'rejected' | 'suspended') => {
+    if (!selectedCertification) return;
+
+    try {
+      setUpdatingCertificationId(selectedCertification.id);
+      const response = await apiClient.updateCertification(selectedCertification.id, {
+        status,
+        adminNotes: certificationAdminNotes || undefined,
+      });
+
+      if (response.success) {
+        // Actualizar certificaciones en memoria
+        setCertifications((prev) =>
+          prev.map((c) => (c.id === selectedCertification.id ? response.data : c))
+        );
+        
+        const statusMessages = {
+          approved: "Certificación aprobada correctamente",
+          rejected: "Certificación rechazada",
+          suspended: "Certificación suspendida",
+        };
+        
+        alert(statusMessages[status]);
+        handleCloseCertificationModal();
+      } else {
+        alert(response.message || `Error al ${status === 'approved' ? 'aprobar' : status === 'rejected' ? 'rechazar' : 'suspender'} la certificación`);
+      }
+    } catch (err) {
+      console.error(`Error updating certification:`, err);
+      alert(`Error al ${status === 'approved' ? 'aprobar' : status === 'rejected' ? 'rechazar' : 'suspender'} la certificación`);
+    } finally {
+      setUpdatingCertificationId(null);
+    }
+  };
+
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -305,6 +422,17 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
                     </p>
                   </div>
                 </div>
+                {(professional as any).registrationType && (
+                  <div className="flex items-center space-x-3">
+                    <UserPlus className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Método de Registro</p>
+                      <div className="mt-1">
+                        {getRegistrationTypeBadge((professional as any).registrationType)}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center space-x-3">
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   <div>
@@ -593,23 +721,121 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
             <CardHeader>
               <CardTitle>Certificación de Servicios</CardTitle>
               <CardDescription>
-                Certifica los servicios del profesional después de verificar su calidad
+                {certifications.length > 0 
+                  ? "Certificaciones enviadas por el profesional"
+                  : "Certifica los servicios del profesional después de verificar su calidad"
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Estado de certificación</span>
-                {getCertifiedBadge(professional.certified)}
-              </div>
-              {!professional.certified && (
-                <Button 
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  onClick={handleCertify}
-                  disabled={isProcessing}
-                >
-                  <Award className="mr-2 h-4 w-4" />
-                  Certificar Servicios
-                </Button>
+              {isLoadingCertifications ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="ml-2 text-sm text-muted-foreground">Cargando certificaciones...</span>
+                </div>
+              ) : certifications.length > 0 ? (
+                <div className="space-y-3">
+                  {certifications.map((cert) => {
+                    const getCertStatusBadge = (status: string) => {
+                      switch (status) {
+                        case "approved":
+                          return <Badge className="bg-green-500">Aprobada</Badge>;
+                        case "pending":
+                          return <Badge className="bg-yellow-500">Pendiente</Badge>;
+                        case "rejected":
+                          return <Badge className="bg-red-500">Rechazada</Badge>;
+                        case "suspended":
+                          return <Badge className="bg-orange-500">Suspendida</Badge>;
+                        default:
+                          return <Badge variant="secondary">{status}</Badge>;
+                      }
+                    };
+
+                    return (
+                      <div key={cert.id} className="p-3 border rounded-lg space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{cert.certificationType}</p>
+                            {cert.issuingOrganization && (
+                              <p className="text-xs text-muted-foreground">
+                                {cert.issuingOrganization}
+                              </p>
+                            )}
+                            {cert.certificationNumber && (
+                              <p className="text-xs text-muted-foreground font-mono">
+                                N° {cert.certificationNumber}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {getCertStatusBadge(cert.status)}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-3"
+                              onClick={() => handleOpenCertificationModal(cert)}
+                            >
+                              <FileText className="h-3 w-3 mr-1" />
+                              Revisar
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                          {cert.issuedAt && (
+                            <div>
+                              <span className="font-medium">Emitida:</span>{" "}
+                              {new Date(cert.issuedAt).toLocaleDateString('es-AR')}
+                            </div>
+                          )}
+                          {cert.expiresAt && (
+                            <div>
+                              <span className="font-medium">Vence:</span>{" "}
+                              {new Date(cert.expiresAt).toLocaleDateString('es-AR')}
+                            </div>
+                          )}
+                        </div>
+                        {cert.adminNotes && (
+                          <div className="pt-2 border-t">
+                            <p className="text-xs text-muted-foreground">
+                              <span className="font-medium">Notas:</span> {cert.adminNotes}
+                            </p>
+                          </div>
+                        )}
+                        {cert.category && (
+                          <div className="pt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {cert.category.name}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => router.push(`/dashboard/servicios/certificaciones?professionalId=${professional.id}`)}
+                  >
+                    Ver todas las certificaciones
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Estado de certificación</span>
+                    {getCertifiedBadge(professional.certified)}
+                  </div>
+                  {!professional.certified && (
+                    <Button 
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      onClick={handleCertify}
+                      disabled={isProcessing}
+                    >
+                      <Award className="mr-2 h-4 w-4" />
+                      Certificar Servicios
+                    </Button>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -642,6 +868,225 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
           </Card>
         </div>
       </div>
+
+      {/* Modal de revisión de certificación */}
+      <Dialog open={!!selectedCertification} onOpenChange={(open) => !open && handleCloseCertificationModal()}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Revisar Certificación</DialogTitle>
+            <DialogDescription>
+              Detalles completos de la certificación enviada por el profesional
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedCertification && (
+            <div className="space-y-4">
+              {/* Información básica */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Tipo de Certificación</p>
+                  <p className="text-sm font-semibold">{selectedCertification.certificationType}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Estado</p>
+                  <div className="mt-1">
+                    {(() => {
+                      switch (selectedCertification.status) {
+                        case "approved":
+                          return <Badge className="bg-green-500">Aprobada</Badge>;
+                        case "pending":
+                          return <Badge className="bg-yellow-500">Pendiente</Badge>;
+                        case "rejected":
+                          return <Badge className="bg-red-500">Rechazada</Badge>;
+                        case "suspended":
+                          return <Badge className="bg-orange-500">Suspendida</Badge>;
+                        default:
+                          return <Badge variant="secondary">{selectedCertification.status}</Badge>;
+                      }
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {selectedCertification.certificationNumber && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Número de Certificación</p>
+                  <p className="text-sm font-mono">{selectedCertification.certificationNumber}</p>
+                </div>
+              )}
+
+              {selectedCertification.issuingOrganization && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Organización Emisora</p>
+                  <p className="text-sm">{selectedCertification.issuingOrganization}</p>
+                </div>
+              )}
+
+              {/* Fechas */}
+              <div className="grid grid-cols-2 gap-4">
+                {selectedCertification.issuedAt && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Fecha de Emisión</p>
+                    <p className="text-sm">
+                      {new Date(selectedCertification.issuedAt).toLocaleDateString('es-AR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                )}
+                {selectedCertification.expiresAt && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Fecha de Vencimiento</p>
+                    <p className="text-sm">
+                      {new Date(selectedCertification.expiresAt).toLocaleDateString('es-AR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Categoría */}
+              {selectedCertification.category && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Categoría</p>
+                  <Badge variant="outline">{selectedCertification.category.name}</Badge>
+                </div>
+              )}
+
+              {/* Información del profesional */}
+              {selectedCertification.professional && (
+                <div className="pt-2 border-t">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Profesional</p>
+                  <p className="text-sm">
+                    {selectedCertification.professional.user.firstName}{' '}
+                    {selectedCertification.professional.user.lastName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedCertification.professional.user.email}
+                  </p>
+                </div>
+              )}
+
+              {/* Fechas del sistema */}
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Fecha de Creación</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(selectedCertification.createdAt).toLocaleDateString('es-AR', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+                {selectedCertification.reviewedAt && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Última Revisión</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(selectedCertification.reviewedAt).toLocaleDateString('es-AR', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Notas del administrador */}
+              <div>
+                <label className="text-sm font-medium">Notas del Administrador</label>
+                <Textarea
+                  value={certificationAdminNotes}
+                  onChange={(e) => setCertificationAdminNotes(e.target.value)}
+                  placeholder="Agregar notas sobre esta certificación..."
+                  className="mt-1 min-h-[100px]"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Estas notas serán visibles para el administrador y pueden incluir razones de aprobación, rechazo o suspensión.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCloseCertificationModal}
+              disabled={updatingCertificationId !== null}
+            >
+              Cancelar
+            </Button>
+            {selectedCertification?.status !== 'rejected' && (
+              <Button
+                variant="destructive"
+                onClick={() => handleUpdateCertification('rejected')}
+                disabled={updatingCertificationId !== null}
+              >
+                {updatingCertificationId === selectedCertification?.id ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Rechazar
+                  </>
+                )}
+              </Button>
+            )}
+            {selectedCertification?.status !== 'suspended' && (
+              <Button
+                variant="outline"
+                className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                onClick={() => handleUpdateCertification('suspended')}
+                disabled={updatingCertificationId !== null}
+              >
+                {updatingCertificationId === selectedCertification?.id ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="mr-2 h-4 w-4" />
+                    Suspender
+                  </>
+                )}
+              </Button>
+            )}
+            {selectedCertification?.status !== 'approved' && (
+              <Button
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => handleUpdateCertification('approved')}
+                disabled={updatingCertificationId !== null}
+              >
+                {updatingCertificationId === selectedCertification?.id ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Aprobar
+                  </>
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

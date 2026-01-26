@@ -41,7 +41,7 @@ export function RecentSales() {
   useEffect(() => {
     setIsLoading(true);
     setError(null);
-    fetch('https://api.ceres.gob.ar/api/api/last-interactions')
+    fetch('https://api.ceres.gob.ar/api/api/last-interactions', { cache: 'no-store' })
       .then(response => {
         if (!response.ok) {
           throw new Error('Error al obtener las últimas interacciones');
@@ -89,8 +89,6 @@ export function RecentSales() {
       setDisplayNameForModal(interaction.contact_name || interaction.phone);
       setIsModalOpen(true);
     } else {
-      // Opcional: manejar casos donde no hay una conversación clickeable (ej. mostrar un tooltip, o no hacer nada)
-      console.log("Esta interacción no tiene una conversación detallada para mostrar.", interaction);
     }
   };
 
