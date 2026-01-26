@@ -858,7 +858,7 @@ export default function CategoriasPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción desactivará la categoría "{selectedItem?.name}". 
+              Esta acción desactivará la categoría &quot;{selectedItem?.name}&quot;. 
               Los profesionales asociados no se verán afectados, pero la categoría dejará de estar visible en la plataforma pública.
             </AlertDialogDescription>
           </AlertDialogHeader>
