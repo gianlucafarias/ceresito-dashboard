@@ -5,18 +5,53 @@ const DEFAULT_V1_BASE_URL = 'https://api.ceres.gob.ar/api/v1';
 const USERS_COUNT_PATH = '/users/count';
 
 type Target = 'legacy' | 'v1';
+type RuntimeMode = 'development' | 'production';
+
+function resolveRuntimeMode(): RuntimeMode {
+  return process.env.NODE_ENV === 'production' ? 'production' : 'development';
+}
 
 function normalizeBaseUrl(value: string): string {
   return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
-function resolveTarget(value: string | undefined): Target {
-  return value === 'v1' ? 'v1' : 'legacy';
+function pickEnvValue(baseKey: string, runtime: RuntimeMode): string | undefined {
+  const keys =
+    runtime === 'production'
+      ? [`${baseKey}_PROD`, `${baseKey}_PRODUCTION`, baseKey]
+      : [`${baseKey}_DEV`, `${baseKey}_DEVELOPMENT`, `${baseKey}_LOCAL`, baseKey];
+
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value && value.trim().length > 0) return value.trim();
+  }
+  return undefined;
 }
 
-function shouldFailover(value: string | undefined): boolean {
-  if (value === undefined) return true;
-  return value.toLowerCase() !== 'false';
+function resolveTarget(runtime: RuntimeMode): Target {
+  const targetValue = pickEnvValue('CORE_API_TARGET_USERS_COUNT', runtime);
+  return targetValue === 'v1' ? 'v1' : 'legacy';
+}
+
+function shouldFailover(runtime: RuntimeMode): boolean {
+  const flag = pickEnvValue('CORE_API_FAILOVER_TO_LEGACY', runtime);
+  if (flag === undefined) return true;
+  return flag.toLowerCase() !== 'false';
+}
+
+function resolveLegacyBaseUrl(runtime: RuntimeMode): string {
+  return pickEnvValue('CORE_API_LEGACY_BASE_URL', runtime) || DEFAULT_LEGACY_BASE_URL;
+}
+
+function resolveV1BaseUrl(runtime: RuntimeMode): string {
+  return pickEnvValue('CORE_API_V1_BASE_URL', runtime) || DEFAULT_V1_BASE_URL;
+}
+
+function resolveCoreAdminKey(runtime: RuntimeMode): string | undefined {
+  return (
+    pickEnvValue('CORE_API_ADMIN_KEY', runtime) ||
+    pickEnvValue('ADMIN_API_KEY', runtime)
+  );
 }
 
 function buildUrl(baseUrl: string, request: NextRequest): string {
@@ -39,10 +74,11 @@ function normalizeCountPayload(payload: any): { count: number } | null {
   return { count };
 }
 
-async function fetchLegacyUsersCount(request: NextRequest): Promise<Response> {
-  const legacyBaseUrl =
-    process.env.CORE_API_LEGACY_BASE_URL || DEFAULT_LEGACY_BASE_URL;
-  const url = buildUrl(legacyBaseUrl, request);
+async function fetchLegacyUsersCount(
+  request: NextRequest,
+  runtime: RuntimeMode
+): Promise<Response> {
+  const url = buildUrl(resolveLegacyBaseUrl(runtime), request);
 
   return fetch(url, {
     method: 'GET',
@@ -53,12 +89,14 @@ async function fetchLegacyUsersCount(request: NextRequest): Promise<Response> {
   });
 }
 
-async function fetchV1UsersCount(request: NextRequest): Promise<Response | null> {
-  const adminKey = process.env.CORE_API_ADMIN_KEY || process.env.ADMIN_API_KEY;
+async function fetchV1UsersCount(
+  request: NextRequest,
+  runtime: RuntimeMode
+): Promise<Response | null> {
+  const adminKey = resolveCoreAdminKey(runtime);
   if (!adminKey) return null;
 
-  const v1BaseUrl = process.env.CORE_API_V1_BASE_URL || DEFAULT_V1_BASE_URL;
-  const url = buildUrl(v1BaseUrl, request);
+  const url = buildUrl(resolveV1BaseUrl(runtime), request);
 
   return fetch(url, {
     method: 'GET',
@@ -71,11 +109,12 @@ async function fetchV1UsersCount(request: NextRequest): Promise<Response | null>
 }
 
 export async function GET(request: NextRequest) {
-  const target = resolveTarget(process.env.CORE_API_TARGET_USERS_COUNT);
-  const failoverToLegacy = shouldFailover(process.env.CORE_API_FAILOVER_TO_LEGACY);
+  const runtime = resolveRuntimeMode();
+  const target = resolveTarget(runtime);
+  const failoverToLegacy = shouldFailover(runtime);
 
   if (target === 'legacy') {
-    const legacyResponse = await fetchLegacyUsersCount(request);
+    const legacyResponse = await fetchLegacyUsersCount(request, runtime);
     const legacyPayload = await safeJson(legacyResponse);
 
     if (!legacyResponse.ok) {
@@ -88,7 +127,10 @@ export async function GET(request: NextRequest) {
     const normalized = normalizeCountPayload(legacyPayload);
     if (!normalized) {
       return NextResponse.json(
-        { error: 'invalid_legacy_payload', message: 'Legacy payload does not contain a valid count' },
+        {
+          error: 'invalid_legacy_payload',
+          message: 'Legacy payload does not contain a valid count',
+        },
         { status: 502 }
       );
     }
@@ -96,12 +138,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(normalized, { status: 200 });
   }
 
-  const v1Response = await fetchV1UsersCount(request);
+  const v1Response = await fetchV1UsersCount(request, runtime);
   if (!v1Response) {
     return NextResponse.json(
       {
         error: 'configuration_error',
-        message: 'CORE_API_ADMIN_KEY or ADMIN_API_KEY is required for v1 users/count',
+        message:
+          'CORE_API_ADMIN_KEY or ADMIN_API_KEY is required for v1 users/count',
       },
       { status: 500 }
     );
@@ -129,7 +172,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const legacyResponse = await fetchLegacyUsersCount(request);
+  const legacyResponse = await fetchLegacyUsersCount(request, runtime);
   const legacyPayload = await safeJson(legacyResponse);
 
   if (!legacyResponse.ok) {
