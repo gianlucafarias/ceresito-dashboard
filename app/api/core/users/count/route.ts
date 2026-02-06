@@ -1,57 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const USERS_COUNT_PATH = '/users/count';
 const DEFAULT_LEGACY_BASE_URL = 'https://api.ceres.gob.ar/api/api';
 const DEFAULT_V1_BASE_URL = 'https://api.ceres.gob.ar/api/v1';
-const USERS_COUNT_PATH = '/users/count';
 
 type Target = 'legacy' | 'v1';
-type RuntimeMode = 'development' | 'production';
-
-function resolveRuntimeMode(): RuntimeMode {
-  return process.env.NODE_ENV === 'production' ? 'production' : 'development';
-}
 
 function normalizeBaseUrl(value: string): string {
   return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
-function pickEnvValue(baseKey: string, runtime: RuntimeMode): string | undefined {
-  const keys =
-    runtime === 'production'
-      ? [`${baseKey}_PROD`, `${baseKey}_PRODUCTION`, baseKey]
-      : [`${baseKey}_DEV`, `${baseKey}_DEVELOPMENT`, `${baseKey}_LOCAL`, baseKey];
+function resolveTarget(): Target {
+  const value = (process.env.CORE_API_TARGET || 'legacy').toLowerCase();
 
-  for (const key of keys) {
-    const value = process.env[key];
-    if (value && value.trim().length > 0) return value.trim();
-  }
-  return undefined;
+  return value === 'v1' ? 'v1' : 'legacy';
 }
 
-function resolveTarget(runtime: RuntimeMode): Target {
-  const targetValue = pickEnvValue('CORE_API_TARGET_USERS_COUNT', runtime);
-  return targetValue === 'v1' ? 'v1' : 'legacy';
+function shouldFailover(): boolean {
+  if (process.env.CORE_API_FAILOVER_TO_LEGACY === undefined) return true;
+  return process.env.CORE_API_FAILOVER_TO_LEGACY.toLowerCase() !== 'false';
 }
 
-function shouldFailover(runtime: RuntimeMode): boolean {
-  const flag = pickEnvValue('CORE_API_FAILOVER_TO_LEGACY', runtime);
-  if (flag === undefined) return true;
-  return flag.toLowerCase() !== 'false';
+function resolveLegacyBaseUrl(): string {
+  return process.env.CORE_API_LEGACY_BASE_URL || DEFAULT_LEGACY_BASE_URL;
 }
 
-function resolveLegacyBaseUrl(runtime: RuntimeMode): string {
-  return pickEnvValue('CORE_API_LEGACY_BASE_URL', runtime) || DEFAULT_LEGACY_BASE_URL;
+function resolveV1BaseUrl(): string {
+  return process.env.CORE_API_V1_BASE_URL || DEFAULT_V1_BASE_URL;
 }
 
-function resolveV1BaseUrl(runtime: RuntimeMode): string {
-  return pickEnvValue('CORE_API_V1_BASE_URL', runtime) || DEFAULT_V1_BASE_URL;
-}
-
-function resolveCoreAdminKey(runtime: RuntimeMode): string | undefined {
-  return (
-    pickEnvValue('CORE_API_ADMIN_KEY', runtime) ||
-    pickEnvValue('ADMIN_API_KEY', runtime)
-  );
+function resolveCoreAdminKey(): string | undefined {
+  return process.env.CORE_API_ADMIN_KEY || process.env.ADMIN_API_KEY;
 }
 
 function buildUrl(baseUrl: string, request: NextRequest): string {
@@ -74,11 +53,8 @@ function normalizeCountPayload(payload: any): { count: number } | null {
   return { count };
 }
 
-async function fetchLegacyUsersCount(
-  request: NextRequest,
-  runtime: RuntimeMode
-): Promise<Response> {
-  const url = buildUrl(resolveLegacyBaseUrl(runtime), request);
+async function fetchLegacyUsersCount(request: NextRequest): Promise<Response> {
+  const url = buildUrl(resolveLegacyBaseUrl(), request);
 
   return fetch(url, {
     method: 'GET',
@@ -89,14 +65,11 @@ async function fetchLegacyUsersCount(
   });
 }
 
-async function fetchV1UsersCount(
-  request: NextRequest,
-  runtime: RuntimeMode
-): Promise<Response | null> {
-  const adminKey = resolveCoreAdminKey(runtime);
+async function fetchV1UsersCount(request: NextRequest): Promise<Response | null> {
+  const adminKey = resolveCoreAdminKey();
   if (!adminKey) return null;
 
-  const url = buildUrl(resolveV1BaseUrl(runtime), request);
+  const url = buildUrl(resolveV1BaseUrl(), request);
 
   return fetch(url, {
     method: 'GET',
@@ -109,12 +82,11 @@ async function fetchV1UsersCount(
 }
 
 export async function GET(request: NextRequest) {
-  const runtime = resolveRuntimeMode();
-  const target = resolveTarget(runtime);
-  const failoverToLegacy = shouldFailover(runtime);
+  const target = resolveTarget();
+  const failoverToLegacy = shouldFailover();
 
   if (target === 'legacy') {
-    const legacyResponse = await fetchLegacyUsersCount(request, runtime);
+    const legacyResponse = await fetchLegacyUsersCount(request);
     const legacyPayload = await safeJson(legacyResponse);
 
     if (!legacyResponse.ok) {
@@ -138,13 +110,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(normalized, { status: 200 });
   }
 
-  const v1Response = await fetchV1UsersCount(request, runtime);
+  const v1Response = await fetchV1UsersCount(request);
   if (!v1Response) {
     return NextResponse.json(
       {
         error: 'configuration_error',
-        message:
-          'CORE_API_ADMIN_KEY or ADMIN_API_KEY is required for v1 users/count',
+        message: 'CORE_API_ADMIN_KEY or ADMIN_API_KEY is required for v1 users/count',
       },
       { status: 500 }
     );
@@ -162,17 +133,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(normalized, { status: 200 });
   }
 
-  const shouldFallback =
+  const canFallback =
     failoverToLegacy && (v1Response.status === 404 || v1Response.status === 501);
 
-  if (!shouldFallback) {
-    return NextResponse.json(
-      v1Payload || { error: 'v1_request_failed' },
-      { status: v1Response.status }
-    );
+  if (!canFallback) {
+    return NextResponse.json(v1Payload || { error: 'v1_request_failed' }, { status: v1Response.status });
   }
 
-  const legacyResponse = await fetchLegacyUsersCount(request, runtime);
+  const legacyResponse = await fetchLegacyUsersCount(request);
   const legacyPayload = await safeJson(legacyResponse);
 
   if (!legacyResponse.ok) {
