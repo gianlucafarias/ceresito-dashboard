@@ -86,7 +86,7 @@ export default function EncuestasTableClient({
       const params = customParams || search
       
       // Construir la URL base de la API con los parámetros de paginación
-      let apiUrl = `https://api.ceres.gob.ar/api/api/encuestaobras/todas?page=${params.page}&per_page=${params.per_page}`
+      let apiUrl = `/api/core/encuestaobras/todas?page=${params.page}&per_page=${params.per_page}`
 
       // Forzar ordenamiento por ID ascendente para paginación correcta
       // Esto asegura que la página 1 tenga los IDs más bajos (1-10), página 2 (11-20), etc.

@@ -51,7 +51,7 @@ export function useBarrioFilterLogic() {
   // Función para obtener estadísticas filtradas desde la API (client-side)
   const getFilteredStats = useCallback(async (barrio?: string) => {
     try {
-      let apiUrl = "https://api.ceres.gob.ar/api/api/encuestaobras/estadisticas"
+      let apiUrl = "/api/core/encuestaobras/estadisticas"
       if (barrio && barrio !== "todos") {
         apiUrl += `?barrio=${encodeURIComponent(barrio)}`
       }
