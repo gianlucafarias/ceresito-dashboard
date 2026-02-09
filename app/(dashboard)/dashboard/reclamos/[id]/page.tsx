@@ -35,7 +35,7 @@ export default async function ReclamoPage({ params }: ReclamoPageProps) {
   let historialReclamos: Reclamo[] = []
   
   try {
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${params.id}`, {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/${params.id}`, {
       next: { revalidate: 60 } // Revalidar cada minuto
     })
     
