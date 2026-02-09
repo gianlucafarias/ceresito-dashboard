@@ -235,7 +235,7 @@ export function ReclamoDetalles({ reclamo, historial }: ReclamoDetallesProps) {
     }
 
     const idreclamo = reclamo.id;
-    const apiUrl = `https://api.ceres.gob.ar/api/api/reclamo/${idreclamo}/pdf`; 
+    const apiUrl = `/api/core/reclamos/${idreclamo}/pdf`;
 
     toast({
       title: "Exportando PDF...",
