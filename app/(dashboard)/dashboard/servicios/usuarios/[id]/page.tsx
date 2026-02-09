@@ -140,7 +140,10 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
             </p>
           </div>
         </div>
-        <Button variant="outline">
+        <Button 
+          variant="outline"
+          onClick={() => router.push(`/dashboard/servicios/usuarios/${params.id}/edit`)}
+        >
           <Edit className="mr-2 h-4 w-4" />
           Editar Usuario
         </Button>

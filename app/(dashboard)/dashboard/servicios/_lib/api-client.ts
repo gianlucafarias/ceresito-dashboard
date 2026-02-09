@@ -95,6 +95,19 @@ export interface APIProfessionalResponse {
     createdAt?: string;
     updatedAt?: string;
   }>;
+}
+
+export interface APIServiceResponse {
+  id: string;
+  professionalId: string;
+  categoryId: string;
+  title: string;
+  description: string;
+  priceRange: string;
+  available: boolean;
+  categoryGroup?: 'oficios' | 'profesiones';
+  createdAt: string;
+  updatedAt: string;
   user?: {
     id: string;
     firstName: string;
@@ -196,6 +209,7 @@ export interface ListUsersParams {
 export interface UpdateUserData {
   role?: 'citizen' | 'professional' | 'admin';
   verified?: boolean;
+  suspended?: boolean; // Suspender/reactivar usuario (si tiene Professional, actualiza su status)
   firstName?: string;
   lastName?: string;
   email?: string;
@@ -624,6 +638,8 @@ class ServicesAPIClient {
 
   /**
    * Actualiza la información de un usuario
+   * Incluye soporte para suspender usuarios (suspended: true/false)
+   * Si el usuario tiene un Professional, se actualiza su status a 'suspended' o 'active'
    */
   async updateUser(
     id: string,
@@ -641,6 +657,30 @@ class ServicesAPIClient {
       };
     }
     return result as APIResponse<APIUserResponse> | APIError;
+  }
+
+  /**
+   * Elimina un usuario permanentemente
+   * Elimina en cascada: Professional, servicios, reviews, contactRequests, etc.
+   * Retorna información sobre lo que se eliminó para auditoría
+   */
+  async deleteUser(
+    id: string
+  ): Promise<APIResponse<{ id: string; deleted?: { services?: number; reviews?: number; contactRequests?: number } }> | APIError> {
+    const result = await this.request<{ id: string; deleted?: { services?: number; reviews?: number; contactRequests?: number } }>(
+      `/api/admin/users/${id}`,
+      {
+        method: 'DELETE',
+      }
+    );
+    if ('pagination' in result) {
+      return {
+        success: false,
+        error: 'unexpected_response',
+        message: 'Se esperaba una respuesta simple, se recibió una respuesta paginada'
+      };
+    }
+    return result as APIResponse<{ id: string; deleted?: { services?: number; reviews?: number; contactRequests?: number } }> | APIError;
   }
 
   // ==================== CATEGORÍAS ====================
@@ -887,6 +927,92 @@ class ServicesAPIClient {
       };
     }
     return result as APIResponse<APIBugReportResponse> | APIError;
+  }
+
+  // ==================== SERVICIOS ====================
+
+  /**
+   * Crea un nuevo servicio para un profesional
+   */
+  async createService(
+    professionalId: string,
+    data: {
+      categoryId: string;
+      title: string;
+      description: string;
+      priceRange?: string;
+      available?: boolean;
+    }
+  ): Promise<APIResponse<APIServiceResponse> | APIError> {
+    const result = await this.request<APIServiceResponse>(
+      `/api/admin/professionals/${professionalId}/services`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    if ('pagination' in result) {
+      return {
+        success: false,
+        error: 'unexpected_response',
+        message: 'Se esperaba una respuesta simple, se recibió una respuesta paginada'
+      };
+    }
+    return result as APIResponse<APIServiceResponse> | APIError;
+  }
+
+  /**
+   * Actualiza un servicio existente
+   */
+  async updateService(
+    professionalId: string,
+    serviceId: string,
+    data: {
+      categoryId?: string;
+      title?: string;
+      description?: string;
+      priceRange?: string;
+      available?: boolean;
+    }
+  ): Promise<APIResponse<APIServiceResponse> | APIError> {
+    const result = await this.request<APIServiceResponse>(
+      `/api/admin/professionals/${professionalId}/services/${serviceId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    );
+    if ('pagination' in result) {
+      return {
+        success: false,
+        error: 'unexpected_response',
+        message: 'Se esperaba una respuesta simple, se recibió una respuesta paginada'
+      };
+    }
+    return result as APIResponse<APIServiceResponse> | APIError;
+  }
+
+  /**
+   * Elimina un servicio
+   */
+  async deleteService(
+    professionalId: string,
+    serviceId: string
+  ): Promise<APIResponse<{ id: string }> | APIError> {
+    const result = await this.request<{ id: string }>(
+      `/api/admin/professionals/${professionalId}/services/${serviceId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+    if ('pagination' in result) {
+      return {
+        success: false,
+        error: 'unexpected_response',
+        message: 'Se esperaba una respuesta simple, se recibió una respuesta paginada'
+      };
+    }
+    return result as APIResponse<{ id: string }> | APIError;
   }
 }
 

@@ -8,6 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -33,13 +42,17 @@ import {
   MessageSquare as WhatsApp,
   AlertCircle,
   MessageSquare,
-  CheckCircle2
+  CheckCircle2,
+  Plus,
+  Edit,
+  Trash2,
+  Briefcase
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiClient } from "../../../_lib/api-client";
+import { apiClient, APICategoryResponse, CategoriesListResponse } from "../../../_lib/api-client";
 import { adaptProfessional, prepareUpdateProfessionalData } from "../../../_lib/api-adapters";
-import { Professional } from "../../../_types";
+import { Professional, Service } from "../../../_types";
 
 interface EditProfessionalPageProps {
   params: {
@@ -52,6 +65,25 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
   const [professional, setProfessional] = useState<Professional | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showVisibilityDialog, setShowVisibilityDialog] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  
+  // Estados para servicios
+  const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<APICategoryResponse[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [showServiceDialog, setShowServiceDialog] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [showDeleteServiceDialog, setShowDeleteServiceDialog] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
+  
+  const [serviceFormData, setServiceFormData] = useState({
+    categoryId: "",
+    title: "",
+    description: "",
+    priceRange: "A consultar",
+    available: true
+  });
   
   // Estado del formulario
   const [formData, setFormData] = useState({
@@ -92,6 +124,7 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
         if (response.success) {
           const foundProfessional = adaptProfessional(response.data);
           setProfessional(foundProfessional);
+          setServices(foundProfessional.services || []);
           setFormData({
             firstName: foundProfessional.user?.firstName || "",
             lastName: foundProfessional.user?.lastName || "",
@@ -126,6 +159,31 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
     fetchProfessional();
   }, [params.id]);
 
+  // Cargar categorías disponibles
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        setIsLoadingCategories(true);
+        const response = await apiClient.listCategories();
+        
+        if (response.success) {
+          // Combinar subcategorías de oficios y profesiones según la estructura de la API
+          const allSubcategories = [
+            ...(response.data.subcategoriesOficios || []),
+            ...(response.data.subcategoriesProfesiones || [])
+          ];
+          setCategories(allSubcategories);
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    }
+
+    fetchCategories();
+  }, []);
+
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -134,21 +192,94 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
   };
 
   const handleSave = async () => {
+    if (!professional) return;
+    
     setIsSaving(true);
     try {
       // Preparar datos para enviar a la API
       const updateData = prepareUpdateProfessionalData(formData);
       
-      // Enviar actualización a la API
+      // Enviar actualización del profesional a la API
       const response = await apiClient.updateProfessional(params.id, updateData);
       
-      if (response.success) {
-        alert('Cambios guardados correctamente');
-        // Redirigir de vuelta a la página de detalles
-        router.push(`/dashboard/servicios/profesionales/${params.id}`);
-      } else {
+      if (!response.success) {
         alert(`Error al guardar: ${response.message}`);
+        setIsSaving(false);
+        return;
       }
+
+      // Procesar cambios en servicios
+      const originalServices = professional.services || [];
+      
+      // Identificar servicios a crear, actualizar y eliminar
+      const servicesToCreate = services.filter(s => s.id.startsWith('temp-'));
+      const servicesToUpdate = services.filter(s => 
+        !s.id.startsWith('temp-') && 
+        originalServices.some(os => os.id === s.id)
+      );
+      const servicesToDelete = originalServices.filter(os => 
+        !services.some(s => s.id === os.id)
+      );
+
+      // Crear nuevos servicios
+      for (const service of servicesToCreate) {
+        const createResponse = await apiClient.createService(professional.id, {
+          categoryId: service.categoryId,
+          title: service.title,
+          description: service.description,
+          priceRange: service.priceRange,
+          available: service.available
+        });
+        
+        if (!createResponse.success) {
+          console.error(`Error al crear servicio ${service.title}:`, createResponse.message);
+        }
+      }
+
+      // Actualizar servicios existentes
+      for (const service of servicesToUpdate) {
+        const originalService = originalServices.find(os => os.id === service.id);
+        if (!originalService) continue;
+
+        // Solo actualizar si hay cambios
+        const hasChanges = 
+          service.categoryId !== originalService.categoryId ||
+          service.title !== originalService.title ||
+          service.description !== originalService.description ||
+          service.priceRange !== originalService.priceRange ||
+          service.available !== originalService.available;
+
+        if (hasChanges) {
+          const updateResponse = await apiClient.updateService(
+            professional.id,
+            service.id,
+            {
+              categoryId: service.categoryId,
+              title: service.title,
+              description: service.description,
+              priceRange: service.priceRange,
+              available: service.available
+            }
+          );
+          
+          if (!updateResponse.success) {
+            console.error(`Error al actualizar servicio ${service.title}:`, updateResponse.message);
+          }
+        }
+      }
+
+      // Eliminar servicios
+      for (const service of servicesToDelete) {
+        const deleteResponse = await apiClient.deleteService(professional.id, service.id);
+        
+        if (!deleteResponse.success) {
+          console.error(`Error al eliminar servicio ${service.title}:`, deleteResponse.message);
+        }
+      }
+
+      alert('Cambios guardados correctamente');
+      // Redirigir de vuelta a la página de detalles
+      router.push(`/dashboard/servicios/profesionales/${params.id}`);
     } catch (error) {
       console.error("Error al guardar cambios:", error);
       alert('Error de conexión al guardar los cambios');
@@ -159,6 +290,138 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
 
   const handleCancel = () => {
     router.push(`/dashboard/servicios/profesionales/${params.id}`);
+  };
+
+  const handleVisibilityChange = (checked: boolean) => {
+    if (checked) {
+      // Activar: cambiar de pending a active (aprobar)
+      handleUpdateStatus('active', true);
+    } else {
+      // Desactivar: mostrar dialog de confirmación para cambiar de active a pending
+      setShowVisibilityDialog(true);
+    }
+  };
+
+  const handleConfirmVisibilityDeactivation = async () => {
+    setShowVisibilityDialog(false);
+    await handleUpdateStatus('pending', false);
+  };
+
+  const handleUpdateStatus = async (status: 'active' | 'pending', verified: boolean) => {
+    if (!professional) return;
+    
+    setIsUpdatingStatus(true);
+    try {
+      const response = await apiClient.updateProfessionalStatus(professional.id, status, verified);
+      
+      if (response.success) {
+        const updatedProfessional = adaptProfessional(response.data);
+        setProfessional(updatedProfessional);
+        setFormData(prev => ({
+          ...prev,
+          status: updatedProfessional.status
+        }));
+        alert(status === 'active' 
+          ? 'Profesional aprobado y visible en la plataforma' 
+          : 'Profesional desactivado. Volverá a estar pendiente de aprobación.');
+      } else {
+        alert(`Error: ${response.message}`);
+      }
+    } catch (error) {
+      console.error("Error al actualizar estado:", error);
+      alert('Error de conexión al actualizar el estado');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  // Funciones para gestionar servicios
+  const handleOpenServiceDialog = (service?: Service) => {
+    if (service) {
+      setEditingService(service);
+      setServiceFormData({
+        categoryId: service.categoryId,
+        title: service.title,
+        description: service.description,
+        priceRange: service.priceRange,
+        available: service.available
+      });
+    } else {
+      setEditingService(null);
+      setServiceFormData({
+        categoryId: "",
+        title: "",
+        description: "",
+        priceRange: "A consultar",
+        available: true
+      });
+    }
+    setShowServiceDialog(true);
+  };
+
+  const handleCloseServiceDialog = () => {
+    setShowServiceDialog(false);
+    setEditingService(null);
+    setServiceFormData({
+      categoryId: "",
+      title: "",
+      description: "",
+      priceRange: "A consultar",
+      available: true
+    });
+  };
+
+  const handleSaveService = () => {
+    if (!serviceFormData.categoryId || !serviceFormData.title || !serviceFormData.description) {
+      alert('Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    if (editingService) {
+      // Actualizar servicio existente en el estado local
+      setServices(prev => prev.map(service => 
+        service.id === editingService.id
+          ? {
+              ...service,
+              categoryId: serviceFormData.categoryId,
+              title: serviceFormData.title,
+              description: serviceFormData.description,
+              priceRange: serviceFormData.priceRange,
+              available: serviceFormData.available
+            }
+          : service
+      ));
+    } else {
+      // Crear nuevo servicio en el estado local (con ID temporal)
+      const newService: Service = {
+        id: `temp-${Date.now()}`,
+        professionalId: professional?.id || '',
+        categoryId: serviceFormData.categoryId,
+        title: serviceFormData.title,
+        description: serviceFormData.description,
+        priceRange: serviceFormData.priceRange,
+        available: serviceFormData.available,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setServices(prev => [...prev, newService]);
+    }
+    
+    handleCloseServiceDialog();
+  };
+
+  const handleDeleteService = (service: Service) => {
+    setServiceToDelete(service);
+    setShowDeleteServiceDialog(true);
+  };
+
+  const handleConfirmDeleteService = () => {
+    if (!serviceToDelete) return;
+
+    // Eliminar servicio del estado local (se guardará cuando se presione Guardar Cambios)
+    setServices(prev => prev.filter(service => service.id !== serviceToDelete.id));
+    setShowDeleteServiceDialog(false);
+    setServiceToDelete(null);
   };
 
   if (isLoading) {
@@ -345,6 +608,106 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
           </CardContent>
         </Card>
 
+        {/* Servicios del Profesional */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center space-x-2">
+                  <Briefcase className="h-5 w-5" />
+                  <span>Servicios Ofrecidos</span>
+                </CardTitle>
+                <CardDescription>
+                  Gestiona los servicios que este profesional ofrece en la plataforma
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                onClick={() => handleOpenServiceDialog()}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Agregar Servicio
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {services.length === 0 ? (
+              <div className="text-center py-8">
+                <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  Este profesional no tiene servicios registrados aún.
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => handleOpenServiceDialog()}
+                  variant="outline"
+                  className="mt-4"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar Primer Servicio
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {services.map((service) => (
+                  <div
+                    key={service.id}
+                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-medium">{service.title}</h4>
+                          <Badge
+                            variant={service.available ? "default" : "secondary"}
+                            className={service.available ? "bg-green-500" : ""}
+                          >
+                            {service.available ? "Disponible" : "No disponible"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {service.description}
+                        </p>
+                        <div className="flex items-center space-x-4">
+                          <span className="text-sm font-medium text-green-600">
+                            {service.priceRange}
+                          </span>
+                          {service.category && (
+                            <Badge variant="outline">
+                              {service.category.name}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 ml-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenServiceDialog(service)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteService(service)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Información de Contacto */}
         <Card>
           <CardHeader>
@@ -474,10 +837,30 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
                 </Label>
               </div>
             </div>
+            <Separator />
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+              <div className="space-y-1">
+                <Label htmlFor="visibleInPlatform" className="text-base font-medium">
+                  Visible en la plataforma
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {formData.status === 'active' 
+                    ? 'El profesional está aprobado y visible en la plataforma pública'
+                    : 'El profesional está pendiente de aprobación y no es visible'}
+                </p>
+              </div>
+              <Switch
+                id="visibleInPlatform"
+                checked={formData.status === 'active'}
+                onCheckedChange={handleVisibilityChange}
+                disabled={isUpdatingStatus}
+              />
+            </div>
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">
                 <strong>Verificado:</strong> El profesional ha sido aprobado para aparecer en la plataforma.<br/>
-                <strong>Certificado:</strong> Los servicios del profesional han sido validados y certificados por su calidad.
+                <strong>Certificado:</strong> Los servicios del profesional han sido validados y certificados por su calidad.<br/>
+                <strong>Visible en la plataforma:</strong> Controla si el profesional está aprobado (active) y visible en la plataforma pública, o pendiente de aprobación.
               </p>
             </div>
           </CardContent>
@@ -508,6 +891,182 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
           </CardContent>
         </Card>
       </form>
+
+      {/* Dialog de confirmación para desactivar visibilidad */}
+      <Dialog open={showVisibilityDialog} onOpenChange={setShowVisibilityDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-orange-600" />
+              <span>Desactivar visibilidad del profesional</span>
+            </DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas desactivar la visibilidad de este profesional en la plataforma?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Al desactivar la visibilidad, el profesional cambiará su estado de <strong>activo</strong> a <strong>pendiente</strong> y dejará de ser visible en la plataforma pública. 
+              El profesional volverá a estar disponible para su aprobación.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowVisibilityDialog(false)}
+              disabled={isUpdatingStatus}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmVisibilityDeactivation}
+              disabled={isUpdatingStatus}
+            >
+              {isUpdatingStatus ? "Procesando..." : "Desactivar visibilidad"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para crear/editar servicio */}
+      <Dialog open={showServiceDialog} onOpenChange={setShowServiceDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingService ? "Editar Servicio" : "Agregar Nuevo Servicio"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingService 
+                ? "Modifica la información del servicio"
+                : "Completa la información del nuevo servicio que ofrecerá el profesional"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="serviceCategory">Categoría *</Label>
+              <Select
+                value={serviceFormData.categoryId}
+                onValueChange={(value) => setServiceFormData(prev => ({ ...prev, categoryId: value }))}
+                disabled={isLoadingCategories}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name} ({category.group === 'oficios' ? 'Oficios' : 'Profesiones'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="serviceTitle">Título del Servicio *</Label>
+              <Input
+                id="serviceTitle"
+                value={serviceFormData.title}
+                onChange={(e) => setServiceFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Ej: Reparación de cañerías"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="serviceDescription">Descripción *</Label>
+              <Textarea
+                id="serviceDescription"
+                value={serviceFormData.description}
+                onChange={(e) => setServiceFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Describe el servicio que ofrece el profesional..."
+                className="min-h-[100px]"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="servicePriceRange">Rango de Precio</Label>
+                <Input
+                  id="servicePriceRange"
+                  value={serviceFormData.priceRange}
+                  onChange={(e) => setServiceFormData(prev => ({ ...prev, priceRange: e.target.value }))}
+                  placeholder="A consultar"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="serviceAvailable">Disponibilidad</Label>
+                <div className="flex items-center space-x-3 pt-2">
+                  <Switch
+                    id="serviceAvailable"
+                    checked={serviceFormData.available}
+                    onCheckedChange={(checked) => setServiceFormData(prev => ({ ...prev, available: checked }))}
+                  />
+                  <Label htmlFor="serviceAvailable" className="cursor-pointer">
+                    {serviceFormData.available ? "Disponible" : "No disponible"}
+                  </Label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCloseServiceDialog}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveService}
+              disabled={!serviceFormData.categoryId || !serviceFormData.title || !serviceFormData.description}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {editingService ? "Actualizar" : "Agregar Servicio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmación para eliminar servicio */}
+      <Dialog open={showDeleteServiceDialog} onOpenChange={setShowDeleteServiceDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <span>Eliminar Servicio</span>
+            </DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar este servicio?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {serviceToDelete && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{serviceToDelete.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  Esta acción no se puede deshacer. El servicio será eliminado permanentemente.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteServiceDialog(false);
+                setServiceToDelete(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDeleteService}
+            >
+              Eliminar Servicio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
