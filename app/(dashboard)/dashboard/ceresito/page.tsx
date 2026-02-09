@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, subMonths, subYears, startOfDay } from "date-fns";
+import { subMonths, subYears, startOfDay } from "date-fns";
 
 const MessagesPerDayChart = dynamic(
   () => import("@/components/messages-per-day-chart").then((mod) => mod.MessagesPerDayChart),
@@ -156,25 +156,10 @@ export default function CeresitoPage() {
         }
         return `?${params.toString()}`;
       };
-
-      // Función para construir URL de mensajes/interacciones
-      const buildMensajesUrl = (filter: TimeFilter): string => {
-        if (filter === "all") {
-          return 'https://api.ceres.gob.ar/api/api/interactions/count';
-        }
-        const { startDate, endDate } = getDateRange(filter);
-        if (startDate) {
-          const startDateString = format(startDate, "yyyy-MM-dd");
-          const endDateString = format(endDate, "yyyy-MM-dd");
-          return `https://api.ceres.gob.ar/api/api/interactions/count/${startDateString}/${endDateString}`;
-        }
-        return 'https://api.ceres.gob.ar/api/api/interactions/count';
-      };
-      
       const simpleQueryParams = buildSimpleQueryParams(timeFilter);
       const reclamosRecibidosParams = buildReclamosQueryParams(timeFilter);
       const reclamosResueltosParams = buildReclamosQueryParams(timeFilter, "ASIGNADO");
-      const mensajesUrl = buildMensajesUrl(timeFilter);
+      const mensajesUrl = `/api/core/interactions/count${simpleQueryParams}`;
 
       // URLs para debug
       const reclamosResueltosUrl = `https://api.ceres.gob.ar/api/api/reclamos${reclamosResueltosParams}`;
@@ -444,3 +429,4 @@ export default function CeresitoPage() {
     </ScrollArea>
   );
 }
+
