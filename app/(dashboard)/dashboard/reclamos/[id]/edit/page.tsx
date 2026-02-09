@@ -2,6 +2,7 @@ import { Metadata } from "next"
 import { Reclamo } from "../../_components/tasks-table-columns"
 import { EditarReclamoForm } from "./_components/editar-reclamo-form"
 import { notFound } from "next/navigation"
+import { headers } from "next/headers"
 
 export const metadata: Metadata = {
   title: "Editar Reclamo",
@@ -14,12 +15,26 @@ interface EditarReclamoPageProps {
   }
 }
 
+function resolveInternalOrigin() {
+  const requestHeaders = headers()
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")
+  const protocol =
+    requestHeaders.get("x-forwarded-proto") ??
+    (process.env.NODE_ENV === "production" ? "https" : "http")
+
+  if (!host) {
+    return "http://localhost:3000"
+  }
+
+  return `${protocol}://${host}`
+}
+
 export default async function EditarReclamoPage({ params }: EditarReclamoPageProps) {
   // Intentar obtener los datos del reclamo
   let reclamo: Reclamo | null = null
   
   try {
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${params.id}`, {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/${params.id}`, {
       next: { revalidate: 60 } // Revalidar cada minuto
     })
     
