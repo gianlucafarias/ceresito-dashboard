@@ -36,6 +36,16 @@ const RecentSales = dynamic(
 );
 
 type TimeFilter = "today" | "3months" | "6months" | "1year" | "all";
+const ALL_TIME_FROM = new Date("2000-01-01T00:00:00.000Z");
+
+interface CeresitoSummaryResponse {
+  uniqueUsers: number;
+  conversations: number;
+  sentMessages: number;
+  claimsReceived: number;
+  claimsHandled: number;
+  generatedAt: string;
+}
 
 export default function CeresitoPage() {
   const [uniqueUsers, setUniqueUsers] = useState<number | null>(null);
@@ -49,7 +59,7 @@ export default function CeresitoPage() {
   const [isDataLoading, setIsDataLoading] = useState(false);
 
   // Función helper para calcular fechas según el filtro
-  const getDateRange = (filter: TimeFilter): { startDate: Date | null; endDate: Date } => {
+  const getDateRange = (filter: TimeFilter): { startDate: Date; endDate: Date } => {
     const endDate = new Date();
     
     switch (filter) {
@@ -76,38 +86,10 @@ export default function CeresitoPage() {
       case "all":
       default:
         return {
-          startDate: null,
+          startDate: ALL_TIME_FROM,
           endDate: endDate
         };
     }
-  };
-
-  // Función para construir parámetros de query string para reclamos
-  const buildReclamosQueryParams = (filter: TimeFilter, estado?: string): string => {
-    const params = new URLSearchParams();
-    
-    // Parámetros de paginación (necesarios para obtener el total)
-    params.append("page", "1");
-    params.append("per_page", "1"); // Solo necesitamos el total, no los datos
-    
-    // Filtro de estado si se especifica
-    if (estado) {
-      params.append("estado", estado);
-    }
-    
-    // Filtros de fecha
-    if (filter !== "all") {
-      const { startDate, endDate } = getDateRange(filter);
-      if (startDate) {
-        // Convertir a ISO string como espera el backend
-        params.append("from", startDate.toISOString());
-      }
-      if (endDate) {
-        params.append("to", endDate.toISOString());
-      }
-    }
-    
-    return `?${params.toString()}`;
   };
 
   // Efecto para el estado del bot (solo se ejecuta una vez)
@@ -140,152 +122,52 @@ export default function CeresitoPage() {
   useEffect(() => {
     async function fetchData() {
       setIsDataLoading(true);
-      
-      // Construir parámetros de query para las APIs que usan formato ISO (como el backend espera)
+
       const buildSimpleQueryParams = (filter: TimeFilter): string => {
-        if (filter === "all") {
-          return "";
-        }
         const { startDate, endDate } = getDateRange(filter);
         const params = new URLSearchParams();
-        if (startDate) {
-          params.append("from", startDate.toISOString());
-        }
-        if (endDate) {
-          params.append("to", endDate.toISOString());
-        }
+        params.append("from", startDate.toISOString());
+        params.append("to", endDate.toISOString());
         return `?${params.toString()}`;
       };
-      const simpleQueryParams = buildSimpleQueryParams(timeFilter);
-      const reclamosRecibidosParams = buildReclamosQueryParams(timeFilter);
-      const reclamosResueltosParams = buildReclamosQueryParams(timeFilter, "ASIGNADO");
-      const mensajesUrl = `/api/core/interactions/count${simpleQueryParams}`;
 
-      // URLs para debug
-      const reclamosResueltosUrl = `/api/core/reclamos${reclamosResueltosParams}`;
+      try {
+        const simpleQueryParams = buildSimpleQueryParams(timeFilter);
+        const response = await fetch(
+          `/api/core/dashboard/ceresito/summary${simpleQueryParams}`,
+          { cache: 'no-store' }
+        );
 
-      // Ejecutar todas las llamadas en paralelo para que no se bloqueen entre sí
-      const [usersResult, conversacionesResult, mensajesResult, reclamosRecibidosResult, reclamosResueltosResult] = await Promise.allSettled([
-        fetch(`/api/core/users/count${simpleQueryParams}`, { cache: 'no-store' }),
-        fetch(`/api/core/conversaciones${simpleQueryParams}`, { cache: 'no-store' }),
-        fetch(mensajesUrl, { cache: 'no-store' }),
-        fetch(`/api/core/reclamos${reclamosRecibidosParams}`, { cache: 'no-store' }),
-        fetch(reclamosResueltosUrl, { cache: 'no-store' })
-      ]);
-
-      // Procesar resultado de usuarios únicos
-      if (usersResult.status === 'fulfilled' && usersResult.value.ok) {
-        try {
-          const data = await usersResult.value.json();
-          setUniqueUsers(data.count);
-        } catch (error) {
-          console.error('Error al parsear respuesta de usuarios:', error);
-          setUniqueUsers(0);
+        if (!response.ok) {
+          throw new Error(`Status ${response.status}: ${response.statusText}`);
         }
-      } else {
-        console.error('Error al obtener el conteo de usuarios:', usersResult.status === 'rejected' ? usersResult.reason : usersResult.value.status);
+
+        const data: Partial<CeresitoSummaryResponse> = await response.json();
+
+        setUniqueUsers(Number.isFinite(Number(data.uniqueUsers)) ? Number(data.uniqueUsers) : 0);
+        setTotalConversaciones(
+          Number.isFinite(Number(data.conversations)) ? Number(data.conversations) : 0
+        );
+        setMensajesEnviados(
+          Number.isFinite(Number(data.sentMessages)) ? Number(data.sentMessages) : 0
+        );
+        setReclamosRecibidos(
+          Number.isFinite(Number(data.claimsReceived)) ? Number(data.claimsReceived) : 0
+        );
+        setReclamosResueltos(
+          Number.isFinite(Number(data.claimsHandled)) ? Number(data.claimsHandled) : 0
+        );
+      } catch (error) {
+        console.error('Error al obtener el resumen de Ceresito:', error);
         setUniqueUsers(0);
-      }
-
-      // Procesar resultado de conversaciones
-      if (conversacionesResult.status === 'fulfilled' && conversacionesResult.value.ok) {
-        try {
-          const data = await conversacionesResult.value.json();
-          setTotalConversaciones(Array.isArray(data) ? data.length : (data.count || data.length || 0));
-        } catch (error) {
-          console.error('Error al parsear respuesta de conversaciones:', error);
-          setTotalConversaciones(0);
-        }
-      } else {
-        console.error('Error al obtener el total de conversaciones:', conversacionesResult.status === 'rejected' ? conversacionesResult.reason : conversacionesResult.value.status);
         setTotalConversaciones(0);
-      }
-
-      // Procesar resultado de mensajes enviados
-      if (mensajesResult.status === 'fulfilled' && mensajesResult.value.ok) {
-        try {
-          const data = await mensajesResult.value.json();
-          // El endpoint puede devolver count directamente o un array que hay que sumar
-          let count = 0;
-          if (typeof data === 'number') {
-            count = data;
-          } else if (data.count !== undefined) {
-            count = data.count;
-          } else if (Array.isArray(data)) {
-            // Si es un array, sumar todos los counts
-            count = data.reduce((sum: number, item: any) => {
-              const itemCount = typeof item === 'number' ? item : (item.count ? parseInt(item.count, 10) : 0);
-              return sum + itemCount;
-            }, 0);
-          } else if (data.total !== undefined) {
-            count = data.total;
-          }
-          setMensajesEnviados(count);
-        } catch (error) {
-          console.error('❌ Error al parsear respuesta de mensajes:', error);
-          setMensajesEnviados(0);
-        }
-      } else {
-        const errorMsg = mensajesResult.status === 'rejected' 
-          ? mensajesResult.reason 
-          : `Status ${mensajesResult.value.status}: ${mensajesResult.value.statusText}`;
-        console.error('❌ Error al obtener el total de mensajes enviados:', errorMsg);
-        if (mensajesResult.status === 'fulfilled') {
-          try {
-            const errorData = await mensajesResult.value.text();
-            console.error('❌ Respuesta de error de mensajes:', errorData);
-          } catch (e) {
-            // Ignorar si no se puede leer el error
-          }
-        }
         setMensajesEnviados(0);
-      }
-
-      // Procesar resultado de reclamos recibidos
-      if (reclamosRecibidosResult.status === 'fulfilled' && reclamosRecibidosResult.value.ok) {
-        try {
-          const data = await reclamosRecibidosResult.value.json();
-          // El endpoint devuelve { data: [], total: number }
-          setReclamosRecibidos(data.total || 0);
-        } catch (error) {
-          console.error('Error al parsear respuesta de reclamos recibidos:', error);
-          setReclamosRecibidos(0);
-        }
-      } else {
-        console.error('Error al obtener el conteo de reclamos recibidos:', reclamosRecibidosResult.status === 'rejected' ? reclamosRecibidosResult.reason : reclamosRecibidosResult.value.status);
         setReclamosRecibidos(0);
-      }
-
-      // Procesar resultado de reclamos resueltos
-      if (reclamosResueltosResult.status === 'fulfilled' && reclamosResueltosResult.value.ok) {
-        try {
-          const data = await reclamosResueltosResult.value.json();
-          // El endpoint devuelve { data: [], total: number }
-          const count = data.total ?? data.count ?? (Array.isArray(data) ? data.length : 0);
-          setReclamosResueltos(count);
-        } catch (error) {
-          console.error('❌ Error al parsear respuesta de reclamos resueltos:', error);
-          setReclamosResueltos(0);
-        }
-      } else {
-        const errorMsg = reclamosResueltosResult.status === 'rejected' 
-          ? reclamosResueltosResult.reason 
-          : `Status ${reclamosResueltosResult.value.status}: ${reclamosResueltosResult.value.statusText}`;
-        console.error('❌ Error al obtener el conteo de reclamos resueltos:', errorMsg);
-        if (reclamosResueltosResult.status === 'fulfilled') {
-          try {
-            const errorData = await reclamosResueltosResult.value.text();
-            console.error('❌ Respuesta de error de reclamos resueltos:', errorData);
-          } catch (e) {
-            // Ignorar si no se puede leer el error
-          }
-        }
         setReclamosResueltos(0);
+      } finally {
+        setIsDataLoading(false);
       }
-
-      setIsDataLoading(false);
     }
-
     fetchData();
   }, [timeFilter]);
 
