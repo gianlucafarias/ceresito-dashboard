@@ -92,7 +92,7 @@ async function createMensajeBienvenida(nuevoMensaje: {
     fecha_expiracion: string | null; // La API espera string o null
 }): Promise<MensajeBienvenida> {
     const { clave, ...bodyData } = nuevoMensaje; 
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/config/${clave}`, {
+    const response = await fetch(`/api/core/config/${clave}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
