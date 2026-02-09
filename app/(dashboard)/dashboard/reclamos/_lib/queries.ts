@@ -92,7 +92,7 @@ export async function getTasks(input: GetTasksSchema) {
 export async function getTaskCountByStatus() {
   // Usamos caché para esta función ya que no necesita actualizarse tan frecuentemente
   try {
-    const response = await fetch("https://api.ceres.gob.ar/api/api/reclamos/count-by-status", {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/count-by-status`, {
       next: { revalidate: CACHE_TIME * 5 } // Revalidar cada 5 minutos
     })
     if (!response.ok) {
@@ -108,7 +108,7 @@ export async function getTaskCountByStatus() {
 export async function getTaskCountByPriority() {
   // Usamos caché para esta función ya que no necesita actualizarse tan frecuentemente
   try {
-    const response = await fetch("https://api.ceres.gob.ar/api/api/reclamos/count-by-priority", {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/count-by-priority`, {
       next: { revalidate: CACHE_TIME * 5 } // Revalidar cada 5 minutos
     })
     if (!response.ok) {
