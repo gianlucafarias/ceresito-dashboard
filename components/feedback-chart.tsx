@@ -61,7 +61,7 @@ export function FeedbackChart() {
       setIsLoading(true);
       setError(null);
       try {
-        const apiUrl = `https://api.ceres.gob.ar/api/api/feedback`; // Asegúrate que la URL es correcta
+        const apiUrl = `/api/core/feedback`; // Asegúrate que la URL es correcta
         const response = await fetch(apiUrl, { cache: "no-store" });
         if (!response.ok) {
           throw new Error(`Error al obtener feedback: ${response.statusText}`);
@@ -168,3 +168,4 @@ export function FeedbackChart() {
     </Card>
   )
 } 
+
