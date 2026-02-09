@@ -308,3 +308,10 @@ export async function POST(
 ) {
   return handleMutation(request, params, 'POST');
 }
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: RouteParams }
+) {
+  return handleMutation(request, params, 'PUT');
+}

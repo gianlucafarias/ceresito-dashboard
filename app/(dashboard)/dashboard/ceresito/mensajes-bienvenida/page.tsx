@@ -123,7 +123,7 @@ async function updateMensajeBienvenida(
 ): Promise<MensajeBienvenida> {
     // Extraer clave para la URL, el resto va en el body
     const { clave, ...bodyData } = datosActualizados;
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/config/${clave}`, {
+    const response = await fetch(`/api/core/config/${clave}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
