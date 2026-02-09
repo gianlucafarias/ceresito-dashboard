@@ -17,7 +17,7 @@ export function CardsStats() {
   useEffect(() => {
     async function fetchReclamosData() {
       try {
-        const response = await fetch('https://api.ceres.gob.ar/api/api/reclamos');
+        const response = await fetch('/api/core/reclamos');
         const data = await response.json();
 
         // Transformar datos para el gráfico de pastel
