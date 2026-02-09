@@ -162,14 +162,14 @@ export default function CeresitoPage() {
       const mensajesUrl = `/api/core/interactions/count${simpleQueryParams}`;
 
       // URLs para debug
-      const reclamosResueltosUrl = `https://api.ceres.gob.ar/api/api/reclamos${reclamosResueltosParams}`;
+      const reclamosResueltosUrl = `/api/core/reclamos${reclamosResueltosParams}`;
 
       // Ejecutar todas las llamadas en paralelo para que no se bloqueen entre sí
       const [usersResult, conversacionesResult, mensajesResult, reclamosRecibidosResult, reclamosResueltosResult] = await Promise.allSettled([
         fetch(`/api/core/users/count${simpleQueryParams}`, { cache: 'no-store' }),
         fetch(`/api/core/conversaciones${simpleQueryParams}`, { cache: 'no-store' }),
         fetch(mensajesUrl, { cache: 'no-store' }),
-        fetch(`https://api.ceres.gob.ar/api/api/reclamos${reclamosRecibidosParams}`, { cache: 'no-store' }),
+        fetch(`/api/core/reclamos${reclamosRecibidosParams}`, { cache: 'no-store' }),
         fetch(reclamosResueltosUrl, { cache: 'no-store' })
       ]);
 
