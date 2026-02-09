@@ -64,7 +64,7 @@ type FormSchemaType = z.infer<typeof formSchema>;
 
 // Función para obtener los mensajes de bienvenida
 async function fetchMensajesBienvenida(): Promise<MensajeBienvenida[]> {
-  const response = await fetch('https://api.ceres.gob.ar/api/api/config');
+  const response = await fetch('/api/core/config');
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
