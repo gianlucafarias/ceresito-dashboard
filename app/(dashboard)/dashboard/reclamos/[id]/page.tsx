@@ -2,6 +2,7 @@ import { Metadata } from "next"
 import { Reclamo } from "../_components/tasks-table-columns"
 import { ReclamoDetalles } from "./_components/reclamo-detalles"
 import { notFound } from "next/navigation"
+import { headers } from "next/headers"
 
 export const metadata: Metadata = {
   title: "Detalles del Reclamo",
@@ -12,6 +13,20 @@ interface ReclamoPageProps {
   params: {
     id: string
   }
+}
+
+function resolveInternalOrigin() {
+  const requestHeaders = headers()
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")
+  const protocol =
+    requestHeaders.get("x-forwarded-proto") ??
+    (process.env.NODE_ENV === "production" ? "https" : "http")
+
+  if (!host) {
+    return "http://localhost:3000"
+  }
+
+  return `${protocol}://${host}`
 }
 
 export default async function ReclamoPage({ params }: ReclamoPageProps) {
@@ -36,7 +51,7 @@ export default async function ReclamoPage({ params }: ReclamoPageProps) {
     // Si obtuvimos el reclamo y tiene un número de teléfono, buscar historial
     if (reclamo && reclamo.telefono) {
       try {
-        const responseHistorial = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/telefono/${reclamo.telefono}`, {
+        const responseHistorial = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/telefono/${encodeURIComponent(reclamo.telefono)}`, {
           next: { revalidate: 60 } // Revalidar cada minuto también para el historial
         })
 
