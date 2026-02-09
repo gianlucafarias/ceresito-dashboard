@@ -83,7 +83,7 @@ export default function ContactDetailPage() {
     if (!contactId || (pageToFetch > convCurrentPage && pageToFetch > convTotalPages && pageToFetch !== 1)) return;
     setLoadingConv(true);
     try {
-      const response = await fetch(`https://api.ceres.gob.ar/api/api/contacts/${contactId}/conversations?page=${pageToFetch}&limit=${CONVERSATIONS_PAGE_SIZE}`);
+      const response = await fetch(`/api/core/contacts/${contactId}/conversations?page=${pageToFetch}&limit=${CONVERSATIONS_PAGE_SIZE}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
