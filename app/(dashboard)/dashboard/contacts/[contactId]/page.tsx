@@ -60,7 +60,7 @@ export default function ContactDetailPage() {
     const fetchDetails = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`https://api.ceres.gob.ar/api/api/contacts/${contactId}`);
+        const response = await fetch(`/api/core/contacts/${contactId}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
