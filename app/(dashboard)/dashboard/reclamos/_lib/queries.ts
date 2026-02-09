@@ -1,10 +1,29 @@
 import "server-only"
 
 import { unstable_noStore as noStore } from "next/cache"
+import { headers } from "next/headers"
 import type { GetTasksSchema } from "./validations"
 
 // Constante para el tiempo de caché en segundos
 const CACHE_TIME = 60 // 1 minuto
+
+function resolveInternalOrigin() {
+  try {
+    const requestHeaders = headers()
+    const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")
+    const protocol =
+      requestHeaders.get("x-forwarded-proto") ??
+      (process.env.NODE_ENV === "production" ? "https" : "http")
+
+    if (host) {
+      return `${protocol}://${host}`
+    }
+  } catch {
+    // Fallback for contexts without request headers
+  }
+
+  return "http://localhost:3000"
+}
 
 export async function getTasks(input: GetTasksSchema) {
   // Solo desactivamos el caché si se solicita explícitamente
@@ -18,8 +37,8 @@ export async function getTasks(input: GetTasksSchema) {
     const fromDay = from ? new Date(from).toISOString() : undefined
     const toDay = to ? new Date(to).toISOString() : undefined
 
-    // Construir la URL base de la API con los parámetros de paginación
-    let apiUrl = `https://api.ceres.gob.ar/api/api/reclamos?page=${page}&per_page=${per_page}`
+    // Construir la URL al proxy interno con los parámetros de paginación
+    let apiUrl = `${resolveInternalOrigin()}/api/core/reclamos?page=${page}&per_page=${per_page}`
 
     // Si no se especifica un orden, el backend aplicará el orden por defecto (ID descendente)
     if (sort) {
