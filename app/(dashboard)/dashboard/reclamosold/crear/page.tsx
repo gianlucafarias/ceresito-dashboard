@@ -39,7 +39,7 @@ export default function Dashboard() {
 
   const handleSubmit = async () => {
     try {
-      const response = await fetch('https://api.ceres.gob.ar/api/api/reclamos/crear', {
+      const response = await fetch('/api/core/reclamos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

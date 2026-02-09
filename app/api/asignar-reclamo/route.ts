@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const { reclamoId, cuadrillaId, reclamoDetalles, notificar = false } = await request.json();
+    const origin = new URL(request.url).origin;
 
     if (!reclamoId) {
       console.error('reclamoId es nulo o indefinido');
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
     });
 
     // Actualizar el reclamo en la API externa
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${reclamoId}`, {
+    const response = await fetch(`${origin}/api/core/reclamos/${reclamoId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

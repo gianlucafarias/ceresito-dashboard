@@ -34,7 +34,7 @@ export async function PATCH(request: Request) {
     }
 
     // Actualizar el estado del reclamo en la API externa
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${reclamoId}`, {
+    const response = await fetch(`${url.origin}/api/core/reclamos/${reclamoId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -46,7 +46,7 @@ export async function PATCH(request: Request) {
     if (notificar) {
       try {
         // Obtener los detalles completos del reclamo incluyendo el número de teléfono
-        const reclamoResponse = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${reclamoId}`, {
+        const reclamoResponse = await fetch(`${url.origin}/api/core/reclamos/${reclamoId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

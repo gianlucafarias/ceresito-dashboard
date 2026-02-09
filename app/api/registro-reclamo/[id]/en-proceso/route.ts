@@ -7,6 +7,7 @@ type Params = {
 
 export async function PATCH(request: Request, context: { params: Params }) {
   try {
+    const origin = new URL(request.url).origin;
     const { id } = context.params;
     const { estado, notificar = false } = await request.json();
 
@@ -30,7 +31,7 @@ export async function PATCH(request: Request, context: { params: Params }) {
         },
       });
 
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${updatedReclamo.reclamoId}`, {
+    const response = await fetch(`${origin}/api/core/reclamos/${updatedReclamo.reclamoId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -42,7 +43,7 @@ export async function PATCH(request: Request, context: { params: Params }) {
     if (notificar) {
       try {
         // Obtener los detalles completos del reclamo incluyendo el número de teléfono
-        const reclamoResponse = await fetch(`https://api.ceres.gob.ar/api/api/reclamos/${updatedReclamo.reclamoId}`, {
+        const reclamoResponse = await fetch(`${origin}/api/core/reclamos/${updatedReclamo.reclamoId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
