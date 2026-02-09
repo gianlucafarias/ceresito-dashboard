@@ -1,15 +1,33 @@
 "use server"
 
 import { unstable_noStore as noStore, revalidatePath } from "next/cache"
+import { headers } from "next/headers"
 import { getErrorMessage } from "@/lib/handle-error"
 import type { UpdateEncuestaSchema } from "./validations"
 import type { EncuestaVecinal } from "@/types"
 
+function resolveInternalOrigin() {
+  try {
+    const requestHeaders = headers()
+    const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")
+    const protocol =
+      requestHeaders.get("x-forwarded-proto") ??
+      (process.env.NODE_ENV === "production" ? "https" : "http")
+
+    if (host) {
+      return `${protocol}://${host}`
+    }
+  } catch {
+    // Fallback for contexts without request headers
+  }
+
+  return "http://localhost:3000"
+}
 // Función para obtener una respuesta específica de encuesta
 export async function getEncuestaById(id: number) {
   noStore()
   try {
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/encuestaobras/respuesta/${id}`, {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/encuestaobras/respuesta/${id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -42,7 +60,7 @@ export async function getEncuestaById(id: number) {
 export async function updateEncuesta(input: UpdateEncuestaSchema) {
   noStore()
   try {
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/encuestaobras/editar/${input.id}`, {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/encuestaobras/editar/${input.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -81,7 +99,7 @@ export async function updateEncuesta(input: UpdateEncuestaSchema) {
 export async function deleteEncuesta(id: number) {
   noStore()
   try {
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/encuestaobras/eliminar/${id}`, {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/encuestaobras/eliminar/${id}`, {
       method: "DELETE",
     })
 
@@ -108,3 +126,5 @@ export async function deleteEncuesta(id: number) {
     }
   }
 }
+
+

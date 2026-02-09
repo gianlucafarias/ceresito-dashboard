@@ -52,7 +52,7 @@ const fetchCuadrillas = cache(async (): Promise<Cuadrilla[]> => {
 });
 
 const fetchReclamos = cache(async (): Promise<ReclamosResponse> => {
-  const res = await fetch("https://api.ceres.gob.ar/api/api/reclamos", {
+  const res = await fetch("/api/core/reclamos", {
     cache: "no-store",
   });
   if (!res.ok) throw new Error("Error al cargar reclamos");

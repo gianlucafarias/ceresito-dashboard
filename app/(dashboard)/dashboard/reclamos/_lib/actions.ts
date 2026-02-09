@@ -1,14 +1,32 @@
 "use server"
 
 import { unstable_noStore as noStore, revalidatePath } from "next/cache"
+import { headers } from "next/headers"
 import { getErrorMessage } from "@/lib/handle-error"
 import type { CreateTaskSchema, UpdateTaskSchema } from "./validations"
 
+function resolveInternalOrigin() {
+  try {
+    const requestHeaders = headers()
+    const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")
+    const protocol =
+      requestHeaders.get("x-forwarded-proto") ??
+      (process.env.NODE_ENV === "production" ? "https" : "http")
+
+    if (host) {
+      return `${protocol}://${host}`
+    }
+  } catch {
+    // Fallback for contexts without request headers
+  }
+
+  return "http://localhost:3000"
+}
 // Función para crear una nueva tarea en la API externa
 export async function createTask(input: CreateTaskSchema) {
   noStore()
   try {
-    const response = await fetch("https://api.ceres.gob.ar/api/api/reclamo/crear", {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/reclamos`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -47,7 +65,7 @@ export async function createTask(input: CreateTaskSchema) {
 export async function updateTask(input: UpdateTaskSchema & { id: string }) {
   noStore();
   try {
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${input.id}`, {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/${input.id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -93,7 +111,7 @@ export async function updateTasks(input: {
   try {
     await Promise.all(
       input.ids.map(async (id) => {
-        const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${id}`, {
+        const response = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/${id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -129,7 +147,7 @@ export async function updateReclamoEstado(id: string, estado: string, notificar:
   noStore();
   try {
     // Primero obtenemos los datos del reclamo para tener el teléfono del usuario y otros detalles
-    const reclamoResponse = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${id}`, {
+    const reclamoResponse = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/${id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -143,7 +161,7 @@ export async function updateReclamoEstado(id: string, estado: string, notificar:
     const reclamoData = await reclamoResponse.json();
     
     // Actualizamos el estado del reclamo
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${id}`, {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/${id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -270,7 +288,7 @@ export async function updateReclamoEstado(id: string, estado: string, notificar:
 export async function deleteTask(input: { id: string }) {
   noStore()
   try {
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${input.id}`, {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/${input.id}`, {
       method: "DELETE",
     })
 
@@ -297,7 +315,7 @@ export async function deleteTasks(input: { ids: string[] }) {
   try {
     await Promise.all(
       input.ids.map(async (id) => {
-        const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${id}`, {
+        const response = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/${id}`, {
           method: "DELETE",
         })
         if (!response.ok) {
@@ -319,3 +337,5 @@ export async function deleteTasks(input: { ids: string[] }) {
     }
   }
 }
+
+

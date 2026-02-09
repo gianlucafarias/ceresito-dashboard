@@ -2,6 +2,7 @@ import { Metadata } from "next"
 import { Reclamo } from "../_components/tasks-table-columns"
 import { ReclamoDetalles } from "./_components/reclamo-detalles"
 import { notFound } from "next/navigation"
+import { headers } from "next/headers"
 
 export const metadata: Metadata = {
   title: "Detalles del Reclamo",
@@ -14,13 +15,27 @@ interface ReclamoPageProps {
   }
 }
 
+function resolveInternalOrigin() {
+  const requestHeaders = headers()
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")
+  const protocol =
+    requestHeaders.get("x-forwarded-proto") ??
+    (process.env.NODE_ENV === "production" ? "https" : "http")
+
+  if (!host) {
+    return "http://localhost:3000"
+  }
+
+  return `${protocol}://${host}`
+}
+
 export default async function ReclamoPage({ params }: ReclamoPageProps) {
   // Intentar obtener los datos del reclamo
   let reclamo: Reclamo | null = null
   let historialReclamos: Reclamo[] = []
   
   try {
-    const response = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/${params.id}`, {
+    const response = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/${params.id}`, {
       next: { revalidate: 60 } // Revalidar cada minuto
     })
     
@@ -33,23 +48,28 @@ export default async function ReclamoPage({ params }: ReclamoPageProps) {
     
     reclamo = await response.json()
 
-    // Si obtuvimos el reclamo y tiene un número de teléfono, buscar historial
-    if (reclamo && reclamo.telefono) {
+    // Si obtuvimos el reclamo, buscar reclamos relacionados
+    if (reclamo) {
       try {
-        const responseHistorial = await fetch(`https://api.ceres.gob.ar/api/api/reclamo/telefono/${reclamo.telefono}`, {
+        const responseHistorial = await fetch(`${resolveInternalOrigin()}/api/core/reclamos/${params.id}/relacionados`, {
           next: { revalidate: 60 } // Revalidar cada minuto también para el historial
         })
 
         if (responseHistorial.ok) {
-          historialReclamos = await responseHistorial.json()
-          // Filtrar el reclamo actual del historial si viene incluido
-          historialReclamos = historialReclamos.filter(r => r.id !== reclamo?.id);
+          const relatedPayload = await responseHistorial.json()
+          const relatedItems = Array.isArray(relatedPayload)
+            ? relatedPayload
+            : Array.isArray(relatedPayload?.data)
+              ? relatedPayload.data
+              : []
+
+          historialReclamos = relatedItems.filter((r) => r?.id !== reclamo?.id)
         } else {
-          // Si no se encuentra historial (404) o hay otro error, simplemente no mostramos historial
-          console.warn(`No se pudo obtener el historial para el teléfono ${reclamo.telefono}: ${responseHistorial.statusText}`)
+          // Si no se encuentra relacionados (404) o hay otro error, simplemente no mostramos historial
+          console.warn(`No se pudo obtener reclamos relacionados para ${params.id}: ${responseHistorial.statusText}`)
         }
       } catch (errorHistorial) {
-        console.error("Error al cargar el historial de reclamos:", errorHistorial)
+        console.error("Error al cargar reclamos relacionados:", errorHistorial)
         // Continuamos sin historial si falla esta llamada
       }
     }
@@ -76,4 +96,4 @@ export default async function ReclamoPage({ params }: ReclamoPageProps) {
       <ReclamoDetalles reclamo={reclamo} historial={historialReclamos} />
     </div>
   )
-} 
+}

@@ -41,7 +41,7 @@ export function RecentSales() {
   useEffect(() => {
     setIsLoading(true);
     setError(null);
-    fetch('https://api.ceres.gob.ar/api/api/last-interactions', { cache: 'no-store' })
+    fetch('/api/core/contacts/last-interactions', { cache: 'no-store' })
       .then(response => {
         if (!response.ok) {
           throw new Error('Error al obtener las últimas interacciones');
