@@ -107,7 +107,7 @@ export default function ContactDetailPage() {
     if (!contactDetail?.phone || (pageToFetch > historyCurrentPage && pageToFetch > historyTotalPages && pageToFetch !== 1)) return;
     setLoadingHistory(true);
     try {
-      const response = await fetch(`https://api.ceres.gob.ar/api/api/history?phone=${contactDetail.phone}&page=${pageToFetch}&limit=${HISTORY_PAGE_SIZE}`);
+      const response = await fetch(`/api/core/history?phone=${contactDetail.phone}&page=${pageToFetch}&limit=${HISTORY_PAGE_SIZE}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
