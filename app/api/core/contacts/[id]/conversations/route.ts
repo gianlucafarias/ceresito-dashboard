@@ -87,8 +87,13 @@ function buildV1Url(request: NextRequest, params: RouteParams): string {
 
   const from = requestParams.get('from');
   const to = requestParams.get('to');
+  const page = requestParams.get('page');
+  const limit = requestParams.get('limit');
+
   if (from) paramsForV1.set('from', from);
   if (to) paramsForV1.set('to', to);
+  if (page) paramsForV1.set('page', page);
+  if (limit) paramsForV1.set('limit', limit);
 
   const query = paramsForV1.toString();
   if (!query) return `${baseUrl}${buildPath(params)}`;
@@ -123,6 +128,33 @@ function toPaginatedResponseFromArray(
     total,
     pageCount,
     currentPage: page,
+  };
+}
+
+function toPaginatedResponse(
+  data: unknown[],
+  totalValue: unknown,
+  pageValue: unknown,
+  pageSizeValue: unknown,
+  request: NextRequest
+): PaginatedConversationSummaries {
+  const totalParsed = Number(totalValue);
+  const pageParsed = Number(pageValue);
+  const pageSizeParsed = Number(pageSizeValue);
+
+  const fallbackPage = parsePositiveInt(request.nextUrl.searchParams.get('page'), 1, 10_000);
+  const fallbackPageSize = parsePositiveInt(request.nextUrl.searchParams.get('limit'), 10, 100);
+
+  const total = Number.isFinite(totalParsed) && totalParsed >= 0 ? totalParsed : data.length;
+  const currentPage = Number.isFinite(pageParsed) && pageParsed > 0 ? pageParsed : fallbackPage;
+  const pageSize = Number.isFinite(pageSizeParsed) && pageSizeParsed > 0 ? pageSizeParsed : fallbackPageSize;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  return {
+    data,
+    total,
+    pageCount,
+    currentPage,
   };
 }
 
@@ -181,14 +213,34 @@ async function fetchV1ContactConversations(
 function normalizeConversationsPayload(
   payload: unknown,
   request: NextRequest
-): unknown | null {
+): PaginatedConversationSummaries | null {
   if (payload === null || payload === undefined) return null;
 
   if (Array.isArray(payload)) {
     return toPaginatedResponseFromArray(payload, request);
   }
 
-  return payload;
+  if (typeof payload !== 'object') return null;
+
+  const obj = payload as Record<string, unknown>;
+
+  // Legacy normalized shape already used by UI.
+  if (Array.isArray(obj.data)) {
+    return toPaginatedResponse(
+      obj.data,
+      obj.total,
+      obj.currentPage,
+      obj.pageSize,
+      request
+    );
+  }
+
+  // New v1 shape: { items, total, page, pageSize }.
+  if (Array.isArray(obj.items)) {
+    return toPaginatedResponse(obj.items, obj.total, obj.page, obj.pageSize, request);
+  }
+
+  return null;
 }
 
 export async function GET(
