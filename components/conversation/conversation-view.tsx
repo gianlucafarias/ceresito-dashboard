@@ -88,7 +88,54 @@ export const ConversationView = ({ details }: ConversationViewProps) => {
       if (!response.ok) {
         throw new Error(`Error cargando mensajes (status: ${response.status})`);
       }
-      return response.json() as Promise<ConversationMessagesApiResponse>;
+
+      const rawPayload = await response.text();
+      if (!rawPayload) {
+        return {
+          messages: [],
+          totalMessages: 0,
+          currentPage: 1,
+          totalPages: 1,
+        } satisfies ConversationMessagesApiResponse;
+      }
+
+      let parsedPayload: unknown;
+      try {
+        parsedPayload = JSON.parse(rawPayload);
+      } catch {
+        throw new Error('La API devolvió una respuesta inválida para la conversación.');
+      }
+
+      if (!parsedPayload) {
+        return {
+          messages: [],
+          totalMessages: 0,
+          currentPage: 1,
+          totalPages: 1,
+        } satisfies ConversationMessagesApiResponse;
+      }
+
+      if (Array.isArray(parsedPayload)) {
+        return {
+          messages: parsedPayload,
+          totalMessages: parsedPayload.length,
+          currentPage: 1,
+          totalPages: 1,
+        } satisfies ConversationMessagesApiResponse;
+      }
+
+      const payload = parsedPayload as Partial<ConversationMessagesApiResponse>;
+      return {
+        messages: Array.isArray(payload.messages) ? payload.messages : [],
+        totalMessages:
+          typeof payload.totalMessages === 'number'
+            ? payload.totalMessages
+            : Array.isArray(payload.messages)
+              ? payload.messages.length
+              : 0,
+        currentPage: typeof payload.currentPage === 'number' ? payload.currentPage : 1,
+        totalPages: typeof payload.totalPages === 'number' ? payload.totalPages : 1,
+      } satisfies ConversationMessagesApiResponse;
     },
     []
   );
