@@ -31,7 +31,7 @@ interface FeedbackData {
   comentario: string | null
   timestamp: string
   conversation_id?: string | null
-  contact_id?: number | null
+  contact_id?: number | string | null
 }
 
 const getInitials = (name: string | null): string => {
@@ -47,6 +47,15 @@ const hasLinkedConversation = (comment: FeedbackData): boolean =>
   typeof comment.conversation_id === "string" &&
   comment.conversation_id.trim().length > 0
 
+const parseContactId = (value: FeedbackData["contact_id"]): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value === "string") {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return null
+}
+
 export function FeedbackComments() {
   const [comments, setComments] = React.useState<FeedbackData[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
@@ -61,7 +70,7 @@ export function FeedbackComments() {
     if (!hasLinkedConversation(comment)) return
 
     setConversationDetailsForModal({
-      contactId: typeof comment.contact_id === "number" ? comment.contact_id : null,
+      contactId: parseContactId(comment.contact_id),
       conversationId: comment.conversation_id!.trim(),
     })
     setDisplayNameForModal(comment.nombre || "Anonimo")
