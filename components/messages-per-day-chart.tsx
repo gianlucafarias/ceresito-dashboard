@@ -221,11 +221,17 @@ export function MessagesPerDayChart() {
                 }
               />
               <ChartLegend content={<ChartLegendContent />} />
-              <Bar dataKey="sentMessages" fill="var(--color-sentMessages)" radius={4} />
               <Bar
                 dataKey="receivedMessages"
+                stackId="messages"
                 fill="var(--color-receivedMessages)"
-                radius={4}
+                radius={[0, 0, 4, 4]}
+              />
+              <Bar
+                dataKey="sentMessages"
+                stackId="messages"
+                fill="var(--color-sentMessages)"
+                radius={[4, 4, 0, 0]}
               />
             </BarChart>
           </ChartContainer>
