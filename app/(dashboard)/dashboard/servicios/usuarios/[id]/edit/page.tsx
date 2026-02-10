@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,19 +29,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
+import {
   ArrowLeft,
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Calendar, 
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
   Save,
   X,
   AlertCircle,
   CheckCircle2,
   Shield,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -55,7 +61,7 @@ export default function EditUserPage({ params }: EditUserPageProps) {
   const [showSuspendDialog, setShowSuspendDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  
+
   // Estado del formulario
   const [formData, setFormData] = useState({
     firstName: "",
@@ -66,7 +72,7 @@ export default function EditUserPage({ params }: EditUserPageProps) {
     location: "",
     role: "citizen" as "citizen" | "professional" | "admin",
     verified: false,
-    suspended: false
+    suspended: false,
   });
 
   // Cargar datos del usuario desde la API
@@ -75,7 +81,7 @@ export default function EditUserPage({ params }: EditUserPageProps) {
       try {
         setIsLoading(true);
         const response = await apiClient.getUser(params.id);
-        
+
         if (response.success) {
           setUser(response.data);
           setFormData({
@@ -83,18 +89,20 @@ export default function EditUserPage({ params }: EditUserPageProps) {
             lastName: response.data.lastName || "",
             email: response.data.email || "",
             phone: response.data.phone || "",
-            birthDate: response.data.birthDate ? 
-              new Date(response.data.birthDate).toISOString().split('T')[0] : "",
+            birthDate: response.data.birthDate
+              ? new Date(response.data.birthDate).toISOString().split("T")[0]
+              : "",
             location: response.data.location || "",
             role: response.data.role,
             verified: response.data.verified || false,
-            suspended: response.data.professional?.status === 'suspended' || false
+            suspended:
+              response.data.professional?.status === "suspended" || false,
           });
         } else {
-          console.error('Error loading user:', response.message);
+          console.error("Error loading user:", response.message);
         }
       } catch (err) {
-        console.error('Error fetching user:', err);
+        console.error("Error fetching user:", err);
       } finally {
         setIsLoading(false);
       }
@@ -104,9 +112,9 @@ export default function EditUserPage({ params }: EditUserPageProps) {
   }, [params.id]);
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -122,19 +130,19 @@ export default function EditUserPage({ params }: EditUserPageProps) {
         birthDate: formData.birthDate || undefined,
         location: formData.location || undefined,
         role: formData.role,
-        verified: formData.verified
+        verified: formData.verified,
       };
 
       // Solo incluir suspended si cambió
-      if (formData.suspended !== (user?.professional?.status === 'suspended')) {
+      if (formData.suspended !== (user?.professional?.status === "suspended")) {
         updateData.suspended = formData.suspended;
       }
-      
+
       // Enviar actualización a la API
       const response = await apiClient.updateUser(params.id, updateData);
-      
+
       if (response.success) {
-        alert('Cambios guardados correctamente');
+        alert("Cambios guardados correctamente");
         // Redirigir de vuelta a la página de detalles
         router.push(`/dashboard/servicios/usuarios/${params.id}`);
       } else {
@@ -142,7 +150,7 @@ export default function EditUserPage({ params }: EditUserPageProps) {
       }
     } catch (error) {
       console.error("Error al guardar cambios:", error);
-      alert('Error de conexión al guardar los cambios');
+      alert("Error de conexión al guardar los cambios");
     } finally {
       setIsSaving(false);
     }
@@ -158,32 +166,32 @@ export default function EditUserPage({ params }: EditUserPageProps) {
       setShowSuspendDialog(true);
     } else {
       // Reactivar: cambiar directamente
-      handleInputChange("suspended", false);
+      handleInputChange(suspended, false);
     }
   };
 
   const handleConfirmSuspend = () => {
     setShowSuspendDialog(false);
-    handleInputChange("suspended", true);
+    handleInputChange(suspended, true);
   };
 
   const handleDeleteUser = async () => {
     if (!user) return;
-    
+
     setIsUpdatingStatus(true);
     try {
       const response = await apiClient.deleteUser(user.id);
-      
+
       if (response.success) {
-        alert('Usuario eliminado correctamente');
+        alert("Usuario eliminado correctamente");
         // Redirigir a la lista de usuarios
-        router.push('/dashboard/servicios/usuarios');
+        router.push("/dashboard/servicios/usuarios");
       } else {
         alert(`Error: ${response.message}`);
       }
     } catch (error) {
       console.error("Error al eliminar usuario:", error);
-      alert('Error de conexión al eliminar el usuario');
+      alert("Error de conexión al eliminar el usuario");
     } finally {
       setIsUpdatingStatus(false);
       setShowDeleteDialog(false);
@@ -194,7 +202,9 @@ export default function EditUserPage({ params }: EditUserPageProps) {
     return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="text-center py-8">
-          <p className="text-muted-foreground">Cargando información del usuario...</p>
+          <p className="text-muted-foreground">
+            Cargando información del usuario...
+          </p>
         </div>
       </div>
     );
@@ -204,7 +214,9 @@ export default function EditUserPage({ params }: EditUserPageProps) {
     return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="text-center py-8">
-          <h2 className="text-2xl font-bold text-muted-foreground">Usuario no encontrado</h2>
+          <h2 className="text-2xl font-bold text-muted-foreground">
+            Usuario no encontrado
+          </h2>
           <p className="text-muted-foreground mt-2">
             El usuario que buscas no existe o ha sido eliminado.
           </p>
@@ -229,14 +241,15 @@ export default function EditUserPage({ params }: EditUserPageProps) {
             Volver a detalles
           </Button>
         </Link>
-        
+
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">
               Editar Usuario
             </h2>
             <p className="text-muted-foreground">
-              Modifica la información del usuario: {user.firstName} {user.lastName}
+              Modifica la información del usuario: {user.firstName}{" "}
+              {user.lastName}
             </p>
           </div>
           <div className="flex items-center space-x-2">
@@ -247,7 +260,13 @@ export default function EditUserPage({ params }: EditUserPageProps) {
         </div>
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+        className="space-y-6"
+      >
         {/* Información Personal */}
         <Card>
           <CardHeader>
@@ -266,7 +285,9 @@ export default function EditUserPage({ params }: EditUserPageProps) {
                 <Input
                   id="firstName"
                   value={formData.firstName}
-                  onChange={(e) => handleInputChange("firstName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("firstName", e.target.value)
+                  }
                   placeholder="Nombre del usuario"
                   required
                 />
@@ -276,7 +297,9 @@ export default function EditUserPage({ params }: EditUserPageProps) {
                 <Input
                   id="lastName"
                   value={formData.lastName}
-                  onChange={(e) => handleInputChange("lastName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("lastName", e.target.value)
+                  }
                   placeholder="Apellido del usuario"
                   required
                 />
@@ -307,7 +330,9 @@ export default function EditUserPage({ params }: EditUserPageProps) {
                   id="birthDate"
                   type="date"
                   value={formData.birthDate}
-                  onChange={(e) => handleInputChange("birthDate", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("birthDate", e.target.value)
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -315,7 +340,9 @@ export default function EditUserPage({ params }: EditUserPageProps) {
                 <Input
                   id="location"
                   value={formData.location}
-                  onChange={(e) => handleInputChange("location", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("location", e.target.value)
+                  }
                   placeholder="Ciudad, Provincia"
                 />
               </div>
@@ -338,7 +365,10 @@ export default function EditUserPage({ params }: EditUserPageProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="role">Rol</Label>
-                <Select value={formData.role} onValueChange={(value) => handleInputChange("role", value)}>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) => handleInputChange("role", value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar rol" />
                   </SelectTrigger>
@@ -354,10 +384,15 @@ export default function EditUserPage({ params }: EditUserPageProps) {
                   type="checkbox"
                   id="verified"
                   checked={formData.verified}
-                  onChange={(e) => handleInputChange("verified", e.target.checked)}
+                  onChange={(e) =>
+                    handleInputChange("verified", e.target.checked)
+                  }
                   className="h-4 w-4"
                 />
-                <Label htmlFor="verified" className="flex items-center space-x-2">
+                <Label
+                  htmlFor="verified"
+                  className="flex items-center space-x-2"
+                >
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                   <span>Usuario Verificado</span>
                 </Label>
@@ -370,9 +405,9 @@ export default function EditUserPage({ params }: EditUserPageProps) {
                   Suspender Usuario
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  {formData.suspended 
-                    ? 'El usuario está suspendido. Si tiene un Professional, su estado será "suspended" y no aparecerá en búsquedas públicas.'
-                    : 'El usuario está activo y puede usar la plataforma normalmente.'}
+                  {formData.suspended
+                    ? "El usuario está suspendido. Si tiene un Professional, su estado será suspended y no aparecerá en búsquedas públicas."
+                    : "El usuario está activo y puede usar la plataforma normalmente."}
                 </p>
               </div>
               <Switch
@@ -384,8 +419,13 @@ export default function EditUserPage({ params }: EditUserPageProps) {
             </div>
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">
-                <strong>Verificado:</strong> El usuario ha sido verificado y puede acceder a todas las funcionalidades.<br/>
-                <strong>Suspender:</strong> Al suspender un usuario, si tiene un Professional asociado, se actualizará su estado a "suspended" y dejará de aparecer en búsquedas públicas. Esta acción es reversible.
+                <strong>Verificado:</strong> El usuario ha sido verificado y
+                puede acceder a todas las funcionalidades.
+                <br />
+                <strong>Suspender:</strong> Al suspender un usuario, si tiene un
+                Professional asociado, se actualizará su estado a suspended y
+                dejará de aparecer en búsquedas públicas. Esta acción es
+                reversible.
               </p>
             </div>
           </CardContent>
@@ -407,9 +447,12 @@ export default function EditUserPage({ params }: EditUserPageProps) {
               <div className="p-4 bg-red-50 rounded-lg border border-red-200">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <h4 className="font-medium text-red-900">Eliminar Usuario</h4>
+                    <h4 className="font-medium text-red-900">
+                      Eliminar Usuario
+                    </h4>
                     <p className="text-sm text-red-700">
-                      Esta acción eliminará permanentemente el usuario y todos sus datos asociados:
+                      Esta acción eliminará permanentemente el usuario y todos
+                      sus datos asociados:
                       {user.professional && (
                         <>
                           <br />• Perfil profesional
@@ -482,9 +525,11 @@ export default function EditUserPage({ params }: EditUserPageProps) {
               Al suspender el usuario:
               {user.professional && (
                 <>
-                  <br />• El Professional asociado cambiará su estado a <strong>"suspended"</strong>
+                  <br />• El Professional asociado cambiará su estado a{" "}
+                  <strong>suspended</strong>
                   <br />• No aparecerá en búsquedas públicas de la plataforma
-                  <br />• Los servicios seguirán existiendo pero no serán visibles
+                  <br />• Los servicios seguirán existiendo pero no serán
+                  visibles
                 </>
               )}
               {!user.professional && (
@@ -494,7 +539,8 @@ export default function EditUserPage({ params }: EditUserPageProps) {
               )}
               <br />
               <br />
-              <strong>Esta acción es reversible:</strong> puedes reactivar al usuario cambiando el switch a "desactivado".
+              <strong>Esta acción es reversible:</strong> puedes reactivar al
+              usuario cambiando el switch a desactivado.
             </p>
           </div>
           <DialogFooter>
@@ -528,7 +574,9 @@ export default function EditUserPage({ params }: EditUserPageProps) {
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-2">
-              <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
+              <p className="text-sm font-medium">
+                {user.firstName} {user.lastName}
+              </p>
               <p className="text-sm text-muted-foreground">
                 Esta acción eliminará permanentemente:
               </p>
