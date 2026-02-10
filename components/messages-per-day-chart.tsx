@@ -2,8 +2,8 @@
 
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
-import { format, subDays, subMonths, subYears } from "date-fns";
-import { es } from "date-fns/locale";
+import { format, subMonths, subYears } from "date-fns"
+import { es } from "date-fns/locale"
 
 import {
   Card,
@@ -15,118 +15,152 @@ import {
 import {
   ChartConfig,
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-  } from "@/components/ui/select"
-import { Skeleton } from "@/components/ui/skeleton";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 
-// Interfaz para los datos procesados que usará el gráfico
 interface DailyMessageData {
-  date: string; // Mantener como string YYYY-MM-DD o similar para el eje X
-  count: number; // Convertir el count a número
+  date: string
+  count: number
+  sentMessages: number
+  receivedMessages: number
 }
 
-// Configuración básica del gráfico
+type InteractionsApiItem = {
+  date?: string
+  group?: string
+  count?: string | number
+  sentMessages?: string | number
+  receivedMessages?: string | number
+}
+
 const chartConfig = {
-  messages: {
-    label: "Mensajes",
-    color: "#009C69", // Usar el color directamente
+  sentMessages: {
+    label: "Mensajes enviados",
+    color: "#009C69",
+  },
+  receivedMessages: {
+    label: "Mensajes recibidos",
+    color: "#0EA5E9",
   },
 } satisfies ChartConfig
 
-// Función para obtener la fecha en formato YYYY-MM-DD
 const getFormattedDate = (date: Date): string => {
-  return format(date, "yyyy-MM-dd");
-};
+  return format(date, "yyyy-MM-dd")
+}
+
+const toSafeNumber = (value: string | number | undefined): number => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 0
+  return parsed
+}
+
+const getSafeDateKey = (item: InteractionsApiItem): string => {
+  return item.date || item.group || ""
+}
 
 export function MessagesPerDayChart() {
-  const [chartData, setChartData] = React.useState<DailyMessageData[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [timeRange, setTimeRange] = React.useState<string>("90d"); // Estado para el rango, default 3 meses
+  const [chartData, setChartData] = React.useState<DailyMessageData[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
+  const [timeRange, setTimeRange] = React.useState<string>("90d")
 
-  // Texto descriptivo basado en el rango
   const timeRangeDescription: { [key: string]: string } = {
-    "90d": "Últimos 3 meses",
-    "180d": "Últimos 6 meses",
-    "365d": "Último año",
-  };
+    "90d": "Ultimos 3 meses",
+    "180d": "Ultimos 6 meses",
+    "365d": "Ultimo ano",
+  }
 
   React.useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
+      setIsLoading(true)
+      setError(null)
       try {
-        // Calcular fechas basado en timeRange
-        const endDate = new Date();
-        let startDate: Date;
+        const endDate = new Date()
+        let startDate: Date
         switch (timeRange) {
           case "180d":
-            startDate = subMonths(endDate, 6);
-            break;
+            startDate = subMonths(endDate, 6)
+            break
           case "365d":
-            startDate = subYears(endDate, 1);
-            break;
+            startDate = subYears(endDate, 1)
+            break
           case "90d":
           default:
-            startDate = subMonths(endDate, 3); // Por defecto 3 meses
-            break;
+            startDate = subMonths(endDate, 3)
+            break
         }
-        
-        const startDateString = getFormattedDate(startDate);
-        const endDateString = getFormattedDate(endDate);
-        const groupBy = 'day'; // Agrupar por día
 
-        // Construir la URL de la API
-        // Asegúrate que la URL base sea la correcta (localhost:3001 o la URL de producción)
-        const apiUrl = `/api/core/interactions/last-week/count/${startDateString}/${endDateString}/${groupBy}`;
-        
-        const response = await fetch(apiUrl, { cache: "no-store" });
+        const startDateString = getFormattedDate(startDate)
+        const endDateString = getFormattedDate(endDate)
+        const groupBy = "day"
+
+        const apiUrl = `/api/core/interactions/last-week/count/${startDateString}/${endDateString}/${groupBy}`
+
+        const response = await fetch(apiUrl, { cache: "no-store" })
         if (!response.ok) {
-          throw new Error(`Error al obtener los datos: ${response.statusText}`);
+          throw new Error(`Error al obtener los datos: ${response.statusText}`)
         }
-        const data: { date: string; count: string }[] = await response.json();
+        const data: InteractionsApiItem[] = await response.json()
 
-        // Procesar los datos: convertir count a número
-        const processedData = data.map(item => ({
-          date: item.date, // La fecha ya viene como string de la API
-          count: parseInt(item.count, 10) || 0, // Convertir a número, default 0 si falla
-        })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Ordenar por fecha asc
+        const processedData = data
+          .map((item) => {
+            const date = getSafeDateKey(item)
+            const count = toSafeNumber(item.count)
+            const sentMessages =
+              item.sentMessages !== undefined ? toSafeNumber(item.sentMessages) : count
+            const receivedMessages =
+              item.receivedMessages !== undefined
+                ? toSafeNumber(item.receivedMessages)
+                : Math.max(0, count - sentMessages)
 
-        setChartData(processedData);
+            return {
+              date,
+              count,
+              sentMessages,
+              receivedMessages,
+            }
+          })
+          .filter((item) => item.date)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+        setChartData(processedData)
       } catch (err) {
         if (err instanceof Error) {
-          setError(err.message);
+          setError(err.message)
         } else {
-          setError("Ocurrió un error desconocido");
+          setError("Ocurrio un error desconocido")
         }
-        console.error("Error fetching daily messages:", err);
-        setChartData([]); // Limpiar datos en caso de error
+        console.error("Error fetching daily messages:", err)
+        setChartData([])
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    fetchData();
-  }, [timeRange]); // <-- Añadir timeRange como dependencia del useEffect
+    fetchData()
+  }, [timeRange])
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div>
-            <CardTitle>Mensajes Enviados por Día</CardTitle>
-            {/* Actualizar descripción dinámicamente */}
-            <CardDescription>{timeRangeDescription[timeRange] || "Seleccione un período"}</CardDescription>
+          <CardTitle>Mensajes por Dia</CardTitle>
+          <CardDescription>
+            {timeRangeDescription[timeRange] || "Seleccione un periodo"}
+          </CardDescription>
         </div>
-         {/* Añadir el Select para el rango de fechas */}
-         <Select value={timeRange} onValueChange={setTimeRange}>
+        <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger
             className="w-[180px] ml-auto"
             aria-label="Seleccionar rango de tiempo"
@@ -134,9 +168,9 @@ export function MessagesPerDayChart() {
             <SelectValue placeholder="Seleccionar rango" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="90d">Últimos 3 meses</SelectItem>
-            <SelectItem value="180d">Últimos 6 meses</SelectItem>
-            <SelectItem value="365d">Último año</SelectItem>
+            <SelectItem value="90d">Ultimos 3 meses</SelectItem>
+            <SelectItem value="180d">Ultimos 6 meses</SelectItem>
+            <SelectItem value="365d">Ultimo ano</SelectItem>
           </SelectContent>
         </Select>
       </CardHeader>
@@ -144,12 +178,12 @@ export function MessagesPerDayChart() {
         {isLoading ? (
           <Skeleton className="h-[250px] w-full" />
         ) : error ? (
-           <div className="flex h-[250px] w-full items-center justify-center text-destructive">
-             Error al cargar datos: {error}
-           </div>
+          <div className="flex h-[250px] w-full items-center justify-center text-destructive">
+            Error al cargar datos: {error}
+          </div>
         ) : chartData.length === 0 ? (
           <div className="flex h-[250px] w-full items-center justify-center text-muted-foreground">
-            No hay datos disponibles para el período seleccionado.
+            No hay datos disponibles para el periodo seleccionado.
           </div>
         ) : (
           <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
@@ -160,14 +194,13 @@ export function MessagesPerDayChart() {
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                minTickGap={10} // Ajusta el espacio mínimo entre ticks si hay muchas barras
+                minTickGap={10}
                 tickFormatter={(value) => {
-                  // Formatear la fecha para mostrar en el eje X (ej: 'Nov 26')
                   try {
-                    const date = new Date(value);
-                    return format(date, "d MMM", { locale: es });
-                  } catch (e) {
-                    return value; // Fallback si la fecha no es válida
+                    const date = new Date(value)
+                    return format(date, "d MMM", { locale: es })
+                  } catch {
+                    return value
                   }
                 }}
               />
@@ -175,24 +208,29 @@ export function MessagesPerDayChart() {
                 cursor={false}
                 content={
                   <ChartTooltipContent
-                    indicator="line"
+                    indicator="dot"
                     labelFormatter={(value) => {
-                       // Formatear la fecha en el tooltip (ej: '26 de Noviembre de 2024')
                       try {
-                        const date = new Date(value);
-                        return format(date, "PPP", { locale: es }); // Formato localizado largo
-                      } catch (e) {
-                        return value;
+                        const date = new Date(value)
+                        return format(date, "PPP", { locale: es })
+                      } catch {
+                        return value
                       }
                     }}
                   />
                 }
               />
-              <Bar dataKey="count" fill="#009C69" radius={4} />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Bar dataKey="sentMessages" fill="var(--color-sentMessages)" radius={4} />
+              <Bar
+                dataKey="receivedMessages"
+                fill="var(--color-receivedMessages)"
+                radius={4}
+              />
             </BarChart>
           </ChartContainer>
         )}
       </CardContent>
     </Card>
-  );
-} 
+  )
+}
