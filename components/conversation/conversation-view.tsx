@@ -72,7 +72,7 @@ export const ConversationView = ({ details }: ConversationViewProps) => {
       params.append('conversationId', convId);
     }
 
-    const API_ENDPOINT = `https://api.ceres.gob.ar/api/api/conversation-details?${params.toString()}`;
+    const API_ENDPOINT = `/api/core/history/conversation-details?${params.toString()}`;
     // console.log(`Fetching messages from: ${API_ENDPOINT}`);
 
     const response = await fetch(API_ENDPOINT);

@@ -66,7 +66,7 @@ export default function Page() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await fetch('https://api.ceres.gob.ar/api/api/reclamos');
+        const response = await fetch('/api/core/reclamos');
         const data = await response.json();
 
         const locationsWithNumbers = data.map(reclamo => ({

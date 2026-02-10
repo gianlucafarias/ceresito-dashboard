@@ -9,7 +9,7 @@ import { AsignarCuadrillaModal } from "./components/asignar-cuadrilla-modal";
 import { Toaster, toast } from 'sonner';
 
 async function getTasks() {
-  const response = await fetch('https://api.ceres.gob.ar/api/api/reclamos');
+  const response = await fetch('/api/core/reclamos');
   const data = await response.json();
   try {
     const tasks = z.array(reclamoSchema).parse(data);

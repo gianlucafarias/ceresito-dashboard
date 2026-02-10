@@ -3,6 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import prisma from "@/lib/prisma";
 
+// Esta ruta depende de cookies/headers de sesión, forzar modo dinámico
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * GET - Obtener permisos de menú del usuario actual
  * Devuelve los permisos basados en el rol del usuario en sesión

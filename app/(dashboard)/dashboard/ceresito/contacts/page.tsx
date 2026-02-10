@@ -39,7 +39,7 @@ export default function Page() {
           params.append("order", sortItem.desc ? "desc" : "asc");
         }
       }
-      const response = await fetch(`https://api.ceres.gob.ar/api/api/contacts?${params.toString()}`);
+      const response = await fetch(`/api/core/contacts?${params.toString()}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

@@ -60,7 +60,7 @@ export default function ContactDetailPage() {
     const fetchDetails = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`https://api.ceres.gob.ar/api/api/contacts/${contactId}`);
+        const response = await fetch(`/api/core/contacts/${contactId}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -84,7 +84,7 @@ export default function ContactDetailPage() {
     if (!contactId || (pageToFetch > convCurrentPage && pageToFetch > convTotalPages && pageToFetch !== 1)) return;
     setLoadingConv(true);
     try {
-      const response = await fetch(`https://api.ceres.gob.ar/api/api/contacts/${contactId}/conversations?page=${pageToFetch}&limit=${CONVERSATIONS_PAGE_SIZE}`);
+      const response = await fetch(`/api/core/contacts/${contactId}/conversations?page=${pageToFetch}&limit=${CONVERSATIONS_PAGE_SIZE}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -108,7 +108,7 @@ export default function ContactDetailPage() {
     if (!contactDetail?.phone || (pageToFetch > historyCurrentPage && pageToFetch > historyTotalPages && pageToFetch !== 1)) return;
     setLoadingHistory(true);
     try {
-      const response = await fetch(`https://api.ceres.gob.ar/api/api/history?phone=${contactDetail.phone}&page=${pageToFetch}&limit=${HISTORY_PAGE_SIZE}`);
+      const response = await fetch(`/api/core/history?phone=${contactDetail.phone}&page=${pageToFetch}&limit=${HISTORY_PAGE_SIZE}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

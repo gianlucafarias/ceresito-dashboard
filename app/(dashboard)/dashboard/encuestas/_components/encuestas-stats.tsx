@@ -203,7 +203,7 @@ export default function EncuestasStats({ stats: initialStats }: EncuestasStatsPr
                 onClick={async () => {
                   try {
                     // Obtener encuestas del barrio (hasta 1000)
-                    const url = `https://api.ceres.gob.ar/api/api/encuestaobras/todas?page=1&per_page=1000&barrio=${encodeURIComponent(selectedBarrio)}`
+                    const url = `/api/core/encuestaobras/todas?page=1&per_page=1000&barrio=${encodeURIComponent(selectedBarrio)}`
                     const resp = await fetch(url, { cache: 'no-store' })
                     if (!resp.ok) throw new Error('No se pudieron obtener encuestas del barrio')
                     const data = await resp.json()
