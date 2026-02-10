@@ -16,7 +16,7 @@ interface ConversationMessagesApiResponse {
 // Interfaz para las props de ConversationView
 export interface ConversationViewProps {
   details: {
-    contactId: number;
+    contactId?: number | null;
     conversationId: string | null; // Puede ser nulo si se cargan los más recientes por contactId
     // timestamp: string; // Ya no es estrictamente necesario para la lógica actual de este componente
   } | null;
@@ -62,25 +62,36 @@ export const ConversationView = ({ details }: ConversationViewProps) => {
       .filter((msg): msg is ChatMessage => msg !== null && msg.text !== ''); // Type guard
   }, []);
 
-  const fetchConversationMessages = useCallback(async (page: number, contactId: number, convId: string | null) => {
-    const params = new URLSearchParams({
-      contactId: contactId.toString(),
-      page: page.toString(),
-      limit: '10' // O el límite que prefieras
-    });
-    if (convId) {
-      params.append('conversationId', convId);
-    }
+  const fetchConversationMessages = useCallback(
+    async (page: number, contactId: number | null | undefined, convId: string | null) => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '10', // O el límite que prefieras
+      });
 
-    const API_ENDPOINT = `/api/core/history/conversation-details?${params.toString()}`;
-    // console.log(`Fetching messages from: ${API_ENDPOINT}`);
+      if (typeof contactId === 'number' && Number.isFinite(contactId)) {
+        params.append('contactId', contactId.toString());
+      }
 
-    const response = await fetch(API_ENDPOINT);
-    if (!response.ok) {
-      throw new Error(`Error cargando mensajes (status: ${response.status})`);
-    }
-    return response.json() as Promise<ConversationMessagesApiResponse>;
-  }, []);
+      if (convId) {
+        params.append('conversationId', convId);
+      }
+
+      if (!params.has('contactId') && !params.has('conversationId')) {
+        throw new Error('No se recibió un identificador válido de conversación.');
+      }
+
+      const API_ENDPOINT = `/api/core/history/conversation-details?${params.toString()}`;
+      // console.log(`Fetching messages from: ${API_ENDPOINT}`);
+
+      const response = await fetch(API_ENDPOINT);
+      if (!response.ok) {
+        throw new Error(`Error cargando mensajes (status: ${response.status})`);
+      }
+      return response.json() as Promise<ConversationMessagesApiResponse>;
+    },
+    []
+  );
 
 
   const loadMoreMessages = useCallback(async () => {
@@ -92,7 +103,11 @@ export const ConversationView = ({ details }: ConversationViewProps) => {
       scrollHeightBeforeLoad.current = chatContainerRef.current.scrollHeight;
     }
     try {
-      const data = await fetchConversationMessages(currentPage + 1, details.contactId, details.conversationId);
+      const data = await fetchConversationMessages(
+        currentPage + 1,
+        details.contactId,
+        details.conversationId
+      );
       const newFormattedMessages = formatMessages(data.messages);
       setMessages(prevMessages => [...newFormattedMessages, ...prevMessages]); // Nuevos mensajes arriba
       setCurrentPage(data.currentPage);
@@ -118,6 +133,12 @@ export const ConversationView = ({ details }: ConversationViewProps) => {
     }
 
     const { contactId, conversationId } = details;
+    if (!conversationId && (contactId === null || contactId === undefined)) {
+      setError('No se pudo identificar la conversación relacionada.');
+      setMessages([]);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setMessages([]);
