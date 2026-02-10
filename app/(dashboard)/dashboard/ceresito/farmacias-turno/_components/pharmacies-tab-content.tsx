@@ -132,8 +132,8 @@ export function PharmaciesTabContent({
         </div>
         {filteredPharmacies.length === 0 && (
           <p className="pt-4 text-sm text-muted-foreground">
-            No hay farmacias cargadas para mostrar. Usa "Cargar" por codigo para
-            traer una.
+            No hay farmacias cargadas para mostrar. Usa el boton Cargar por
+            codigo para traer una.
           </p>
         )}
       </CardContent>
