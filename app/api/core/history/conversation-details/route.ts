@@ -63,6 +63,29 @@ function jsonWithSource(
   });
 }
 
+function parsePositiveInteger(
+  value: string | null,
+  fallback: number,
+): number {
+  const parsed = Number.parseInt(value || '', 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return parsed;
+}
+
+function buildEmptyConversationDetailsPayload(request: NextRequest) {
+  const currentPage = parsePositiveInteger(
+    request.nextUrl.searchParams.get('page'),
+    1,
+  );
+
+  return {
+    messages: [],
+    totalMessages: 0,
+    currentPage,
+    totalPages: 0,
+  };
+}
+
 function buildLegacyUrl(request: NextRequest): string {
   const query = request.nextUrl.search || '';
   return `${normalizeBaseUrl(resolveLegacyBaseUrl())}${LEGACY_PATH}${query}`;
@@ -162,17 +185,14 @@ export async function GET(request: NextRequest) {
       if (legacyPayload === null) {
         logConversationDetails({
           target,
-          source: 'legacy_invalid_payload',
-          status: 502,
+          source: 'legacy_empty_payload',
+          status: 200,
           url: legacyUrl,
         });
         return jsonWithSource(
-          {
-            error: 'invalid_legacy_payload',
-            message: 'Legacy payload is not valid JSON',
-          },
-          502,
-          'legacy_invalid_payload'
+          buildEmptyConversationDetailsPayload(request),
+          200,
+          'legacy_empty_payload'
         );
       }
 
@@ -209,17 +229,14 @@ export async function GET(request: NextRequest) {
       if (v1Payload === null) {
         logConversationDetails({
           target,
-          source: 'v1_invalid_payload',
-          status: 502,
+          source: 'v1_empty_payload',
+          status: 200,
           url: v1Url,
         });
         return jsonWithSource(
-          {
-            error: 'invalid_v1_payload',
-            message: 'v1 payload is not valid JSON',
-          },
-          502,
-          'v1_invalid_payload'
+          buildEmptyConversationDetailsPayload(request),
+          200,
+          'v1_empty_payload'
         );
       }
 
@@ -266,18 +283,15 @@ export async function GET(request: NextRequest) {
     if (legacyPayload === null) {
       logConversationDetails({
         target,
-        source: 'legacy_fallback_invalid_payload',
-        status: 502,
+        source: 'legacy_fallback_empty_payload',
+        status: 200,
         url: legacyUrl,
         fallback: true,
       });
       return jsonWithSource(
-        {
-          error: 'invalid_legacy_payload_after_fallback',
-          message: 'Legacy fallback payload is not valid JSON',
-        },
-        502,
-        'legacy_fallback_invalid_payload'
+        buildEmptyConversationDetailsPayload(request),
+        200,
+        'legacy_fallback_empty_payload'
       );
     }
 
