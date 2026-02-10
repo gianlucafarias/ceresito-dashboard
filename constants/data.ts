@@ -120,6 +120,10 @@ export const navItems = {
         url: "/dashboard/ceresito/mensajes-bienvenida",
       },
       {
+        title: "Farmacias de turno",
+        url: "/dashboard/ceresito/farmacias-turno",
+      },
+      {
         title: "Contactos",
         url: "/dashboard/contacts",
       },
