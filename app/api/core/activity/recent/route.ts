@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const CONTACTS_BASE_PATH = '/contacts';
+const LEGACY_ACTIVITY_RECENT_PATH = '/recent';
+const V1_ACTIVITY_RECENT_PATH = '/activity/recent';
 const DEFAULT_LEGACY_BASE_URL = 'https://api.ceres.gob.ar/api/api';
 const DEFAULT_V1_BASE_URL = 'https://api.ceres.gob.ar/api/v1';
 
 type Target = 'legacy' | 'v1';
-type RouteParams = { id: string };
-type ContactRecord = Record<string, unknown> & {
-  contact_name?: unknown;
-};
-
-type ConversationRecord = Record<string, unknown> & {
-  nombre?: unknown;
-  fecha_hora?: unknown;
-};
 
 function normalizeBaseUrl(value: string): string {
   return value.endsWith('/') ? value.slice(0, -1) : value;
@@ -45,7 +37,7 @@ function shouldLogDebug(): boolean {
   return process.env.NODE_ENV !== 'production' || process.env.CORE_API_DEBUG === 'true';
 }
 
-function logContactById(meta: {
+function logActivity(meta: {
   target: Target;
   source: string;
   status: number;
@@ -53,7 +45,7 @@ function logContactById(meta: {
   fallback?: boolean;
 }) {
   if (!shouldLogDebug()) return;
-  console.log('[core-api/contacts/:id]', JSON.stringify(meta));
+  console.log('[core-api/activity/recent]', JSON.stringify(meta));
 }
 
 function jsonWithSource(
@@ -71,91 +63,14 @@ function jsonWithSource(
   });
 }
 
-function buildPath(params: RouteParams): string {
-  const id = encodeURIComponent(params.id);
-  return `${CONTACTS_BASE_PATH}/${id}`;
-}
-
-function buildConversationsPath(params: RouteParams): string {
-  return `${buildPath(params)}/conversations`;
-}
-
-function buildLegacyUrl(request: NextRequest, params: RouteParams): string {
+function buildLegacyUrl(request: NextRequest): string {
   const query = request.nextUrl.search || '';
-  return `${normalizeBaseUrl(resolveLegacyBaseUrl())}${buildPath(params)}${query}`;
+  return `${normalizeBaseUrl(resolveLegacyBaseUrl())}${LEGACY_ACTIVITY_RECENT_PATH}${query}`;
 }
 
-function buildV1Url(request: NextRequest, params: RouteParams): string {
+function buildV1Url(request: NextRequest): string {
   const query = request.nextUrl.search || '';
-  return `${normalizeBaseUrl(resolveV1BaseUrl())}${buildPath(params)}${query}`;
-}
-
-function buildV1ConversationsUrl(params: RouteParams): string {
-  const query = new URLSearchParams({
-    page: '1',
-    limit: '10',
-  });
-
-  return `${normalizeBaseUrl(resolveV1BaseUrl())}${buildConversationsPath(params)}?${query.toString()}`;
-}
-
-function normalizeName(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  if (trimmed.toLowerCase() === 'n/a') return null;
-  return trimmed;
-}
-
-function isMissingContactName(value: unknown): boolean {
-  return normalizeName(value) === null;
-}
-
-function extractConversationItems(payload: unknown): ConversationRecord[] {
-  if (Array.isArray(payload)) {
-    return payload.filter(
-      (item): item is ConversationRecord => item !== null && typeof item === 'object'
-    );
-  }
-
-  if (payload && typeof payload === 'object') {
-    const obj = payload as Record<string, unknown>;
-    if (Array.isArray(obj.items)) {
-      return obj.items.filter(
-        (item): item is ConversationRecord => item !== null && typeof item === 'object'
-      );
-    }
-    if (Array.isArray(obj.data)) {
-      return obj.data.filter(
-        (item): item is ConversationRecord => item !== null && typeof item === 'object'
-      );
-    }
-  }
-
-  return [];
-}
-
-function getConversationTimestamp(value: unknown): number {
-  if (typeof value !== 'string') return 0;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function pickConversationName(payload: unknown): string | null {
-  const items = extractConversationItems(payload);
-  let best: { name: string; timestamp: number } | null = null;
-
-  for (const item of items) {
-    const name = normalizeName(item.nombre);
-    if (!name) continue;
-
-    const timestamp = getConversationTimestamp(item.fecha_hora);
-    if (!best || timestamp >= best.timestamp) {
-      best = { name, timestamp };
-    }
-  }
-
-  return best?.name ?? null;
+  return `${normalizeBaseUrl(resolveV1BaseUrl())}${V1_ACTIVITY_RECENT_PATH}${query}`;
 }
 
 async function safeJson(response: Response): Promise<any> {
@@ -166,11 +81,8 @@ async function safeJson(response: Response): Promise<any> {
   }
 }
 
-async function fetchLegacyContactById(
-  request: NextRequest,
-  params: RouteParams
-): Promise<Response> {
-  const url = buildLegacyUrl(request, params);
+async function fetchLegacyActivity(request: NextRequest): Promise<Response> {
+  const url = buildLegacyUrl(request);
 
   try {
     return await fetch(url, {
@@ -186,14 +98,11 @@ async function fetchLegacyContactById(
   }
 }
 
-async function fetchV1ContactById(
-  request: NextRequest,
-  params: RouteParams
-): Promise<Response | null> {
+async function fetchV1Activity(request: NextRequest): Promise<Response | null> {
   const adminKey = resolveCoreAdminKey();
   if (!adminKey) return null;
 
-  const url = buildV1Url(request, params);
+  const url = buildV1Url(request);
 
   try {
     return await fetch(url, {
@@ -210,76 +119,19 @@ async function fetchV1ContactById(
   }
 }
 
-async function fetchV1ConversationNameByContactId(params: RouteParams): Promise<string | null> {
-  const adminKey = resolveCoreAdminKey();
-  if (!adminKey) return null;
-
-  const url = buildV1ConversationsUrl(params);
-
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'x-api-key': adminKey,
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) return null;
-
-    const payload = await safeJson(response);
-    if (payload === null) return null;
-
-    return pickConversationName(payload);
-  } catch {
-    return null;
-  }
-}
-
-async function enrichContactPayloadWithConversationName(
-  payload: unknown,
-  params: RouteParams
-): Promise<{ payload: unknown; enriched: boolean }> {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return { payload, enriched: false };
-  }
-
-  const contact = payload as ContactRecord;
-  if (!isMissingContactName(contact.contact_name)) {
-    return { payload, enriched: false };
-  }
-
-  const fallbackName = await fetchV1ConversationNameByContactId(params);
-  if (!fallbackName) {
-    return { payload, enriched: false };
-  }
-
-  return {
-    payload: {
-      ...contact,
-      contact_name: fallbackName,
-    },
-    enriched: true,
-  };
-}
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: RouteParams }
-) {
+export async function GET(request: NextRequest) {
   try {
     const target = resolveTarget();
     const failoverToLegacy = shouldFailover();
-    const legacyUrl = buildLegacyUrl(request, params);
-    const v1Url = buildV1Url(request, params);
+    const legacyUrl = buildLegacyUrl(request);
+    const v1Url = buildV1Url(request);
 
     if (target === 'legacy') {
-      const legacyResponse = await fetchLegacyContactById(request, params);
+      const legacyResponse = await fetchLegacyActivity(request);
       const legacyPayload = await safeJson(legacyResponse);
 
       if (!legacyResponse.ok) {
-        logContactById({
+        logActivity({
           target,
           source: 'legacy_error',
           status: legacyResponse.status,
@@ -293,7 +145,7 @@ export async function GET(
       }
 
       if (legacyPayload === null) {
-        logContactById({
+        logActivity({
           target,
           source: 'legacy_invalid_payload',
           status: 502,
@@ -309,7 +161,7 @@ export async function GET(
         );
       }
 
-      logContactById({
+      logActivity({
         target,
         source: 'legacy',
         status: 200,
@@ -318,9 +170,9 @@ export async function GET(
       return jsonWithSource(legacyPayload, 200, 'legacy');
     }
 
-    const v1Response = await fetchV1ContactById(request, params);
+    const v1Response = await fetchV1Activity(request);
     if (!v1Response) {
-      logContactById({
+      logActivity({
         target,
         source: 'v1_config_error',
         status: 500,
@@ -329,7 +181,7 @@ export async function GET(
       return jsonWithSource(
         {
           error: 'configuration_error',
-          message: 'CORE_API_ADMIN_KEY or ADMIN_API_KEY is required for v1 contacts/:id',
+          message: 'CORE_API_ADMIN_KEY or ADMIN_API_KEY is required for v1 activity',
         },
         500,
         'v1_config_error'
@@ -339,7 +191,7 @@ export async function GET(
     const v1Payload = await safeJson(v1Response);
     if (v1Response.ok) {
       if (v1Payload === null) {
-        logContactById({
+        logActivity({
           target,
           source: 'v1_invalid_payload',
           status: 502,
@@ -355,29 +207,20 @@ export async function GET(
         );
       }
 
-      const { payload: enrichedPayload, enriched } =
-        await enrichContactPayloadWithConversationName(v1Payload, params);
-      const source = enriched ? 'v1_enriched' : 'v1';
-
-      logContactById({
+      logActivity({
         target,
-        source,
+        source: 'v1',
         status: 200,
         url: v1Url,
       });
-      return jsonWithSource(
-        enrichedPayload,
-        200,
-        source,
-        enriched ? { 'x-core-api-contact-name-enriched': 'conversation' } : undefined
-      );
+      return jsonWithSource(v1Payload, 200, 'v1');
     }
 
     const canFallback =
       failoverToLegacy && (v1Response.status === 404 || v1Response.status === 501);
 
     if (!canFallback) {
-      logContactById({
+      logActivity({
         target,
         source: 'v1_error',
         status: v1Response.status,
@@ -386,11 +229,11 @@ export async function GET(
       return jsonWithSource(v1Payload || { error: 'v1_request_failed' }, v1Response.status, 'v1_error');
     }
 
-    const legacyResponse = await fetchLegacyContactById(request, params);
+    const legacyResponse = await fetchLegacyActivity(request);
     const legacyPayload = await safeJson(legacyResponse);
 
     if (!legacyResponse.ok) {
-      logContactById({
+      logActivity({
         target,
         source: 'legacy_fallback_error',
         status: legacyResponse.status,
@@ -405,7 +248,7 @@ export async function GET(
     }
 
     if (legacyPayload === null) {
-      logContactById({
+      logActivity({
         target,
         source: 'legacy_fallback_invalid_payload',
         status: 502,
@@ -422,7 +265,7 @@ export async function GET(
       );
     }
 
-    logContactById({
+    logActivity({
       target,
       source: 'legacy_fallback',
       status: 200,

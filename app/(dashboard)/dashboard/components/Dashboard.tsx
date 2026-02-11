@@ -3,7 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Calendar, Clock, LayoutDashboard, Users as UsersIcon, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  Calendar,
+  CheckCircle,
+  Clock,
+  LayoutDashboard,
+  Users as UsersIcon,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 
 interface Cuadrilla {
@@ -33,7 +41,25 @@ interface ReclamosResponse {
   data: Reclamo[];
 }
 
-// Cargar los gráficos de manera diferida para reducir JS inicial
+interface ActivityRecord {
+  id: number;
+  type: string;
+  action: string;
+  description: string;
+  createdAt: string;
+  metadata?: Record<string, unknown> | null;
+  timeAgo?: string;
+}
+
+type ActivityViewItem = {
+  id: number;
+  tipo: "completado" | "asignado" | "nuevo";
+  titulo: string;
+  descripcion: string;
+  tiempo: string;
+};
+
+// Cargar los graficos de manera diferida para reducir JS inicial
 const LazyReclamosPorTipoChart = dynamic(() => import("./ReclamosPorTipoChart"), {
   ssr: false,
   loading: () => <Skeleton className="h-48 w-full" />,
@@ -44,7 +70,6 @@ const LazyReclamosPorBarrioChart = dynamic(() => import("./ReclamosPorBarrioChar
   loading: () => <Skeleton className="h-48 w-full" />,
 });
 
-// Fetch helpers con deduplicación por request
 const fetchCuadrillas = cache(async (): Promise<Cuadrilla[]> => {
   const res = await fetch("/api/cuadrillas", { cache: "no-store" });
   if (!res.ok) throw new Error("Error al cargar cuadrillas");
@@ -52,9 +77,7 @@ const fetchCuadrillas = cache(async (): Promise<Cuadrilla[]> => {
 });
 
 const fetchReclamos = cache(async (): Promise<ReclamosResponse> => {
-  const res = await fetch("/api/core/reclamos", {
-    cache: "no-store",
-  });
+  const res = await fetch("/api/core/reclamos", { cache: "no-store" });
   if (!res.ok) throw new Error("Error al cargar reclamos");
   return res.json();
 });
@@ -65,22 +88,58 @@ const fetchRegistros = cache(async (): Promise<Registro[]> => {
   return res.json();
 });
 
+const fetchActivityRecent = cache(async (): Promise<ActivityRecord[]> => {
+  const res = await fetch("/api/core/activity/recent?limit=20", { cache: "no-store" });
+  if (!res.ok) throw new Error("Error al cargar actividad reciente");
+  return res.json();
+});
+
+function resolveActivityType(activity: ActivityRecord): ActivityViewItem["tipo"] {
+  if (activity.type === "RECLAMO" && activity.action === "ESTADO_CAMBIADO") {
+    return "completado";
+  }
+
+  if (activity.type === "FARMACIA_TURNO" && activity.action === "DIA_ACTUALIZADO") {
+    return "asignado";
+  }
+
+  return "nuevo";
+}
+
+function resolveActivityDescription(activity: ActivityRecord): string {
+  if (!activity.metadata || typeof activity.metadata !== "object") {
+    return `${activity.type} / ${activity.action}`;
+  }
+
+  const metadata = activity.metadata as Record<string, unknown>;
+  if (typeof metadata.ubicacion === "string" && metadata.ubicacion.trim().length > 0) {
+    return metadata.ubicacion;
+  }
+  if (typeof metadata.date === "string" && metadata.date.trim().length > 0) {
+    return `Fecha: ${metadata.date}`;
+  }
+
+  return `${activity.type} / ${activity.action}`;
+}
+
 export default async function Dashboard() {
-  const [cuadrillasResult, reclamosResult, registrosResult] = await Promise.allSettled([
+  const [cuadrillasResult, reclamosResult, registrosResult, activityResult] = await Promise.allSettled([
     fetchCuadrillas(),
     fetchReclamos(),
     fetchRegistros(),
+    fetchActivityRecent(),
   ]);
 
   const cuadrillas = cuadrillasResult.status === "fulfilled" ? cuadrillasResult.value : [];
   const reclamosData = reclamosResult.status === "fulfilled" ? reclamosResult.value : undefined;
   const registrosData = registrosResult.status === "fulfilled" ? registrosResult.value : undefined;
+  const activityData = activityResult.status === "fulfilled" ? activityResult.value : [];
 
-  const cuadrillasActivas = cuadrillas?.filter((cuadrilla) => cuadrilla.disponible)?.length || 0;
-  const reclamosPendientes = reclamosData?.data?.filter((reclamo) => reclamo.estado === "PENDIENTE")?.length || 0;
-  const reclamosAsignados = reclamosData?.data?.filter((reclamo) => reclamo.estado === "ASIGNADO")?.length || 0;
+  const cuadrillasActivas = cuadrillas.filter((cuadrilla) => cuadrilla.disponible).length;
+  const reclamosPendientes =
+    reclamosData?.data?.filter((reclamo) => reclamo.estado === "PENDIENTE").length || 0;
   const reclamosCompletados =
-    reclamosData?.data?.filter((reclamo) => reclamo.estado === "COMPLETADO")?.length || 0;
+    reclamosData?.data?.filter((reclamo) => reclamo.estado === "COMPLETADO").length || 0;
   const totalReclamos = reclamosData?.data?.length || 0;
 
   const tiempoPromedio = (() => {
@@ -91,7 +150,7 @@ export default async function Dashboard() {
       .map(
         (registro) =>
           new Date(registro.fechaSolucion as string).getTime() -
-          new Date(registro.fechaRegistro).getTime()
+          new Date(registro.fechaRegistro).getTime(),
       );
 
     if (tiempos.length > 0) {
@@ -106,44 +165,19 @@ export default async function Dashboard() {
     return `${horas}h ${minutos}m`;
   };
 
-  const actividadReciente = [
-    {
-      tipo: "completado",
-      titulo: "Reclamo #1245 completado",
-      tiempo: "Hace 10 minutos",
-      descripcion: "Luminaria en Calle San Martín",
-    },
-    {
-      tipo: "asignado",
-      titulo: "Cuadrilla #3 asignada",
-      tiempo: "Hace 1 hora",
-      descripcion: "Reparación en Plaza Central",
-    },
-    {
-      tipo: "nuevo",
-      titulo: "Nuevo reclamo registrado",
-      tiempo: "Hace 3 horas",
-      descripcion: "Poda de árbol en Av. Rivadavia",
-    },
-    {
-      tipo: "completado",
-      titulo: "Reclamo #1240 completado",
-      tiempo: "Ayer",
-      descripcion: "Reparación de bache en Calle Moreno",
-    },
-    {
-      tipo: "asignado",
-      titulo: "Cuadrilla #1 asignada",
-      tiempo: "Hace 2 días",
-      descripcion: "Trabajo en alumbrado público",
-    },
-  ];
+  const actividadReciente: ActivityViewItem[] = activityData.map((activity) => ({
+    id: activity.id,
+    tipo: resolveActivityType(activity),
+    titulo: activity.description,
+    descripcion: resolveActivityDescription(activity),
+    tiempo: activity.timeAgo || "Hace unos segundos",
+  }));
 
   return (
     <ScrollArea className="h-full">
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
         <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Hola, bienvenido al panel de Obras Públicas</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Hola, bienvenido al panel de Obras Publicas</h2>
         </div>
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
@@ -162,7 +196,7 @@ export default async function Dashboard() {
               <Card className="border-l-4 border-l-blue-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Cuadrillas Activas</CardTitle>
-                  <UsersIcon className="w-4 h-4 text-blue-500" />
+                  <UsersIcon className="h-4 w-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{cuadrillasActivas}</div>
@@ -177,7 +211,7 @@ export default async function Dashboard() {
               <Card className="border-l-4 border-l-orange-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Reclamos Pendientes</CardTitle>
-                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                  <AlertCircle className="h-4 w-4 text-orange-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{reclamosPendientes}</div>
@@ -192,7 +226,7 @@ export default async function Dashboard() {
               <Card className="border-l-4 border-l-green-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Reclamos Completados</CardTitle>
-                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <CheckCircle className="h-4 w-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{reclamosCompletados}</div>
@@ -207,13 +241,13 @@ export default async function Dashboard() {
               <Card className="border-l-4 border-l-purple-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Tiempo Promedio</CardTitle>
-                  <Clock className="w-4 h-4 text-purple-500" />
+                  <Clock className="h-4 w-4 text-purple-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
                     {tiempoPromedio ? convertirTiempoPromedio(tiempoPromedio) : "N/A"}
                   </div>
-                  <p className="text-xs text-muted-foreground">Tiempo de resolución</p>
+                  <p className="text-xs text-muted-foreground">Tiempo de resolucion</p>
                 </CardContent>
               </Card>
             </section>
@@ -232,36 +266,45 @@ export default async function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Registro de Actividad</CardTitle>
-                <CardDescription>Actividad registrada en el sistema durante los últimos días</CardDescription>
+                <CardDescription>Actividad registrada en el sistema durante los ultimos dias</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {actividadReciente.map((actividad, i) => (
-                    <div key={i} className="flex items-center gap-4 border-b pb-4 last:border-b-0 last:pb-0">
+                  {actividadReciente.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No hay actividad reciente disponible.
+                    </p>
+                  ) : (
+                    actividadReciente.map((actividad) => (
                       <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                          actividad.tipo === "completado"
-                            ? "bg-green-100"
-                            : actividad.tipo === "asignado"
-                              ? "bg-blue-100"
-                              : "bg-orange-100"
-                        }`}
+                        key={actividad.id}
+                        className="flex items-center gap-4 border-b pb-4 last:border-b-0 last:pb-0"
                       >
-                        {actividad.tipo === "completado" ? (
-                          <CheckCircle className="h-6 w-6 text-green-600" />
-                        ) : actividad.tipo === "asignado" ? (
-                          <UsersIcon className="h-6 w-6 text-blue-600" />
-                        ) : (
-                          <Calendar className="h-6 w-6 text-orange-600" />
-                        )}
+                        <div
+                          className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                            actividad.tipo === "completado"
+                              ? "bg-green-100"
+                              : actividad.tipo === "asignado"
+                                ? "bg-blue-100"
+                                : "bg-orange-100"
+                          }`}
+                        >
+                          {actividad.tipo === "completado" ? (
+                            <CheckCircle className="h-6 w-6 text-green-600" />
+                          ) : actividad.tipo === "asignado" ? (
+                            <UsersIcon className="h-6 w-6 text-blue-600" />
+                          ) : (
+                            <Calendar className="h-6 w-6 text-orange-600" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{actividad.titulo}</p>
+                          <p className="text-sm text-muted-foreground">{actividad.descripcion}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{actividad.tiempo}</p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{actividad.titulo}</p>
-                        <p className="text-sm text-muted-foreground">{actividad.descripcion}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{actividad.tiempo}</p>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

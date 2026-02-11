@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const CONTACTS_PATH = '/contacts';
+const CONVERSACIONES_PATH = '/conversaciones';
 const DEFAULT_LEGACY_BASE_URL = 'https://api.ceres.gob.ar/api/api';
 const DEFAULT_V1_BASE_URL = 'https://api.ceres.gob.ar/api/v1';
+const CONTACT_NAME_FALLBACK_CACHE_TTL_MS = 60_000;
+const CONTACT_NAME_FALLBACK_ERROR_TTL_MS = 15_000;
 
 type Target = 'legacy' | 'v1';
+type ContactRecord = Record<string, unknown> & {
+  phone?: unknown;
+  contact_name?: unknown;
+};
+
+type ConversationRecord = Record<string, unknown> & {
+  telefono?: unknown;
+  nombre?: unknown;
+  fecha_hora?: unknown;
+};
+
+let cachedConversationNameMap: Map<string, string> | null = null;
+let cachedConversationNameMapExpiresAt = 0;
+let cachedConversationNameMapErrorAt = 0;
 
 function normalizeBaseUrl(value: string): string {
   return value.endsWith('/') ? value.slice(0, -1) : value;
@@ -60,6 +77,186 @@ function jsonWithSource(
       ...(extraHeaders || {}),
     },
   });
+}
+
+function normalizePhone(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  return null;
+}
+
+function normalizeName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.toLowerCase() === 'n/a') return null;
+  return trimmed;
+}
+
+function isMissingContactName(value: unknown): boolean {
+  return normalizeName(value) === null;
+}
+
+function extractConversationItems(payload: unknown): ConversationRecord[] {
+  if (Array.isArray(payload)) {
+    return payload.filter(
+      (item): item is ConversationRecord => item !== null && typeof item === 'object'
+    );
+  }
+
+  if (payload && typeof payload === 'object') {
+    const obj = payload as Record<string, unknown>;
+    if (Array.isArray(obj.items)) {
+      return obj.items.filter(
+        (item): item is ConversationRecord => item !== null && typeof item === 'object'
+      );
+    }
+    if (Array.isArray(obj.data)) {
+      return obj.data.filter(
+        (item): item is ConversationRecord => item !== null && typeof item === 'object'
+      );
+    }
+  }
+
+  return [];
+}
+
+function getConversationTimestamp(value: unknown): number {
+  if (typeof value !== 'string') return 0;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildConversationNameMap(payload: unknown): Map<string, string> {
+  const items = extractConversationItems(payload);
+  const map = new Map<string, { name: string; timestamp: number }>();
+
+  for (const item of items) {
+    const phone = normalizePhone(item.telefono);
+    const name = normalizeName(item.nombre);
+    if (!phone || !name) continue;
+
+    const timestamp = getConversationTimestamp(item.fecha_hora);
+    const current = map.get(phone);
+
+    if (!current || timestamp >= current.timestamp) {
+      map.set(phone, { name, timestamp });
+    }
+  }
+
+  const result = new Map<string, string>();
+  map.forEach((entry, phone) => {
+    result.set(phone, entry.name);
+  });
+  return result;
+}
+
+async function fetchConversationNameMap(): Promise<Map<string, string> | null> {
+  const now = Date.now();
+
+  if (cachedConversationNameMap && now < cachedConversationNameMapExpiresAt) {
+    return cachedConversationNameMap;
+  }
+
+  if (
+    cachedConversationNameMapErrorAt > 0 &&
+    now - cachedConversationNameMapErrorAt < CONTACT_NAME_FALLBACK_ERROR_TTL_MS
+  ) {
+    return null;
+  }
+
+  const adminKey = resolveCoreAdminKey();
+  if (!adminKey) return null;
+
+  const url = `${normalizeBaseUrl(resolveV1BaseUrl())}${CONVERSACIONES_PATH}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'x-api-key': adminKey,
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      cachedConversationNameMapErrorAt = now;
+      return null;
+    }
+
+    const payload = await safeJson(response);
+    if (payload === null) {
+      cachedConversationNameMapErrorAt = now;
+      return null;
+    }
+
+    const nameMap = buildConversationNameMap(payload);
+    if (nameMap.size === 0) {
+      cachedConversationNameMapErrorAt = now;
+      return null;
+    }
+
+    cachedConversationNameMap = nameMap;
+    cachedConversationNameMapExpiresAt = now + CONTACT_NAME_FALLBACK_CACHE_TTL_MS;
+    cachedConversationNameMapErrorAt = 0;
+    return nameMap;
+  } catch {
+    cachedConversationNameMapErrorAt = now;
+    return null;
+  }
+}
+
+async function enrichContactsWithConversationNames(payload: unknown): Promise<{
+  payload: unknown;
+  enrichedCount: number;
+}> {
+  if (!Array.isArray(payload)) return { payload, enrichedCount: 0 };
+
+  const contacts = payload.filter(
+    (item): item is ContactRecord => item !== null && typeof item === 'object'
+  );
+
+  if (contacts.length === 0) return { payload, enrichedCount: 0 };
+
+  const hasMissingNames = contacts.some(
+    (contact) => isMissingContactName(contact.contact_name) && normalizePhone(contact.phone)
+  );
+
+  if (!hasMissingNames) return { payload, enrichedCount: 0 };
+
+  const nameMap = await fetchConversationNameMap();
+  if (!nameMap || nameMap.size === 0) {
+    return { payload, enrichedCount: 0 };
+  }
+
+  let enrichedCount = 0;
+
+  const enrichedPayload = contacts.map((contact) => {
+    if (!isMissingContactName(contact.contact_name)) return contact;
+
+    const phone = normalizePhone(contact.phone);
+    if (!phone) return contact;
+
+    const fallbackName = nameMap.get(phone);
+    if (!fallbackName) return contact;
+
+    enrichedCount += 1;
+    return {
+      ...contact,
+      contact_name: fallbackName,
+    };
+  });
+
+  return {
+    payload: enrichedPayload,
+    enrichedCount,
+  };
 }
 
 function buildLegacyUrl(request: NextRequest): string {
@@ -217,13 +414,24 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      const { payload: enrichedPayload, enrichedCount } =
+        await enrichContactsWithConversationNames(v1Payload);
+      const source = enrichedCount > 0 ? 'v1_enriched' : 'v1';
+
       logContacts({
         target,
-        source: 'v1',
+        source,
         status: 200,
         url: v1Url,
       });
-      return jsonWithSource(v1Payload, 200, 'v1');
+      return jsonWithSource(
+        enrichedPayload,
+        200,
+        source,
+        enrichedCount > 0
+          ? { 'x-core-api-contact-name-enriched': String(enrichedCount) }
+          : undefined
+      );
     }
 
     const canFallback =
