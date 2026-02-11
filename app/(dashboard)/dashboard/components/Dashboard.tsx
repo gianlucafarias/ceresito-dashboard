@@ -1,5 +1,13 @@
-import { Suspense, cache } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Suspense } from "react";
+import { unstable_noStore as noStore } from "next/cache";
+import { headers } from "next/headers";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -59,47 +67,81 @@ type ActivityViewItem = {
   tiempo: string;
 };
 
+function resolveInternalOrigin(): string {
+  try {
+    const requestHeaders = headers();
+    const host =
+      requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+    const protocol =
+      requestHeaders.get("x-forwarded-proto") ??
+      (process.env.NODE_ENV === "production" ? "https" : "http");
+
+    if (host) {
+      return `${protocol}://${host}`;
+    }
+  } catch {
+    // Fallback for contexts without request headers
+  }
+
+  return process.env.NEXTAUTH_URL || "http://localhost:3000";
+}
+
 // Cargar los graficos de manera diferida para reducir JS inicial
-const LazyReclamosPorTipoChart = dynamic(() => import("./ReclamosPorTipoChart"), {
-  ssr: false,
-  loading: () => <Skeleton className="h-48 w-full" />,
-});
+const LazyReclamosPorTipoChart = dynamic(
+  () => import("./ReclamosPorTipoChart"),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-48 w-full" />,
+  },
+);
 
-const LazyReclamosPorBarrioChart = dynamic(() => import("./ReclamosPorBarrioChart"), {
-  ssr: false,
-  loading: () => <Skeleton className="h-48 w-full" />,
-});
+const LazyReclamosPorBarrioChart = dynamic(
+  () => import("./ReclamosPorBarrioChart"),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-48 w-full" />,
+  },
+);
 
-const fetchCuadrillas = cache(async (): Promise<Cuadrilla[]> => {
-  const res = await fetch("/api/cuadrillas", { cache: "no-store" });
+async function fetchCuadrillas(origin: string): Promise<Cuadrilla[]> {
+  const res = await fetch(`${origin}/api/cuadrillas`, { cache: "no-store" });
   if (!res.ok) throw new Error("Error al cargar cuadrillas");
   return res.json();
-});
+}
 
-const fetchReclamos = cache(async (): Promise<ReclamosResponse> => {
-  const res = await fetch("/api/core/reclamos", { cache: "no-store" });
+async function fetchReclamos(origin: string): Promise<ReclamosResponse> {
+  const res = await fetch(`${origin}/api/core/reclamos`, { cache: "no-store" });
   if (!res.ok) throw new Error("Error al cargar reclamos");
   return res.json();
-});
+}
 
-const fetchRegistros = cache(async (): Promise<Registro[]> => {
-  const res = await fetch("/api/registro-reclamo", { cache: "no-store" });
+async function fetchRegistros(origin: string): Promise<Registro[]> {
+  const res = await fetch(`${origin}/api/registro-reclamo`, {
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error("Error al cargar registros");
   return res.json();
-});
+}
 
-const fetchActivityRecent = cache(async (): Promise<ActivityRecord[]> => {
-  const res = await fetch("/api/core/activity/recent?limit=20", { cache: "no-store" });
+async function fetchActivityRecent(origin: string): Promise<ActivityRecord[]> {
+  const res = await fetch(`${origin}/api/core/activity/recent?limit=20`, {
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error("Error al cargar actividad reciente");
   return res.json();
-});
+}
 
-function resolveActivityType(activity: ActivityRecord): ActivityViewItem["tipo"] {
+function resolveActivityType(
+  activity: ActivityRecord,
+): ActivityViewItem["tipo"] {
   if (activity.type === "RECLAMO" && activity.action === "ESTADO_CAMBIADO") {
     return "completado";
   }
 
-  if (activity.type === "FARMACIA_TURNO" && activity.action === "DIA_ACTUALIZADO") {
+  if (
+    activity.type === "FARMACIA_TURNO" &&
+    activity.action === "DIA_ACTUALIZADO"
+  ) {
     return "asignado";
   }
 
@@ -112,7 +154,10 @@ function resolveActivityDescription(activity: ActivityRecord): string {
   }
 
   const metadata = activity.metadata as Record<string, unknown>;
-  if (typeof metadata.ubicacion === "string" && metadata.ubicacion.trim().length > 0) {
+  if (
+    typeof metadata.ubicacion === "string" &&
+    metadata.ubicacion.trim().length > 0
+  ) {
     return metadata.ubicacion;
   }
   if (typeof metadata.date === "string" && metadata.date.trim().length > 0) {
@@ -123,23 +168,35 @@ function resolveActivityDescription(activity: ActivityRecord): string {
 }
 
 export default async function Dashboard() {
-  const [cuadrillasResult, reclamosResult, registrosResult, activityResult] = await Promise.allSettled([
-    fetchCuadrillas(),
-    fetchReclamos(),
-    fetchRegistros(),
-    fetchActivityRecent(),
-  ]);
+  noStore();
+  const origin = resolveInternalOrigin();
 
-  const cuadrillas = cuadrillasResult.status === "fulfilled" ? cuadrillasResult.value : [];
-  const reclamosData = reclamosResult.status === "fulfilled" ? reclamosResult.value : undefined;
-  const registrosData = registrosResult.status === "fulfilled" ? registrosResult.value : undefined;
-  const activityData = activityResult.status === "fulfilled" ? activityResult.value : [];
+  const [cuadrillasResult, reclamosResult, registrosResult, activityResult] =
+    await Promise.allSettled([
+      fetchCuadrillas(origin),
+      fetchReclamos(origin),
+      fetchRegistros(origin),
+      fetchActivityRecent(origin),
+    ]);
 
-  const cuadrillasActivas = cuadrillas.filter((cuadrilla) => cuadrilla.disponible).length;
+  const cuadrillas =
+    cuadrillasResult.status === "fulfilled" ? cuadrillasResult.value : [];
+  const reclamosData =
+    reclamosResult.status === "fulfilled" ? reclamosResult.value : undefined;
+  const registrosData =
+    registrosResult.status === "fulfilled" ? registrosResult.value : undefined;
+  const activityData =
+    activityResult.status === "fulfilled" ? activityResult.value : [];
+
+  const cuadrillasActivas = cuadrillas.filter(
+    (cuadrilla) => cuadrilla.disponible,
+  ).length;
   const reclamosPendientes =
-    reclamosData?.data?.filter((reclamo) => reclamo.estado === "PENDIENTE").length || 0;
+    reclamosData?.data?.filter((reclamo) => reclamo.estado === "PENDIENTE")
+      .length || 0;
   const reclamosCompletados =
-    reclamosData?.data?.filter((reclamo) => reclamo.estado === "COMPLETADO").length || 0;
+    reclamosData?.data?.filter((reclamo) => reclamo.estado === "COMPLETADO")
+      .length || 0;
   const totalReclamos = reclamosData?.data?.length || 0;
 
   const tiempoPromedio = (() => {
@@ -154,7 +211,9 @@ export default async function Dashboard() {
       );
 
     if (tiempos.length > 0) {
-      return tiempos.reduce((a: number, b: number) => a + b, 0) / tiempos.length;
+      return (
+        tiempos.reduce((a: number, b: number) => a + b, 0) / tiempos.length
+      );
     }
     return 0;
   })();
@@ -165,19 +224,23 @@ export default async function Dashboard() {
     return `${horas}h ${minutos}m`;
   };
 
-  const actividadReciente: ActivityViewItem[] = activityData.map((activity) => ({
-    id: activity.id,
-    tipo: resolveActivityType(activity),
-    titulo: activity.description,
-    descripcion: resolveActivityDescription(activity),
-    tiempo: activity.timeAgo || "Hace unos segundos",
-  }));
+  const actividadReciente: ActivityViewItem[] = activityData.map(
+    (activity) => ({
+      id: activity.id,
+      tipo: resolveActivityType(activity),
+      titulo: activity.description,
+      descripcion: resolveActivityDescription(activity),
+      tiempo: activity.timeAgo || "Hace unos segundos",
+    }),
+  );
 
   return (
     <ScrollArea className="h-full">
       <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
         <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Hola, bienvenido al panel de Obras Publicas</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Hola, bienvenido al panel de Obras Publicas
+          </h2>
         </div>
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
@@ -195,14 +258,18 @@ export default async function Dashboard() {
             <section className="grid w-full grid-cols-1 gap-4 gap-x-8 transition-all sm:grid-cols-2 xl:grid-cols-4">
               <Card className="border-l-4 border-l-blue-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Cuadrillas Activas</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Cuadrillas Activas
+                  </CardTitle>
                   <UsersIcon className="h-4 w-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{cuadrillasActivas}</div>
                   <p className="text-xs text-muted-foreground">
                     {cuadrillasActivas > 0 && cuadrillas.length > 0
-                      ? `${Math.round((cuadrillasActivas / cuadrillas.length) * 100)}% del total disponible`
+                      ? `${Math.round(
+                          (cuadrillasActivas / cuadrillas.length) * 100,
+                        )}% del total disponible`
                       : "Sin cuadrillas activas"}
                   </p>
                 </CardContent>
@@ -210,14 +277,18 @@ export default async function Dashboard() {
 
               <Card className="border-l-4 border-l-orange-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Reclamos Pendientes</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Reclamos Pendientes
+                  </CardTitle>
                   <AlertCircle className="h-4 w-4 text-orange-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{reclamosPendientes}</div>
                   <p className="text-xs text-muted-foreground">
                     {totalReclamos > 0
-                      ? `${Math.round((reclamosPendientes / totalReclamos) * 100)}% del total`
+                      ? `${Math.round(
+                          (reclamosPendientes / totalReclamos) * 100,
+                        )}% del total`
                       : "Sin reclamos registrados"}
                   </p>
                 </CardContent>
@@ -225,14 +296,20 @@ export default async function Dashboard() {
 
               <Card className="border-l-4 border-l-green-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Reclamos Completados</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Reclamos Completados
+                  </CardTitle>
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{reclamosCompletados}</div>
+                  <div className="text-2xl font-bold">
+                    {reclamosCompletados}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {totalReclamos > 0
-                      ? `${Math.round((reclamosCompletados / totalReclamos) * 100)}% del total`
+                      ? `${Math.round(
+                          (reclamosCompletados / totalReclamos) * 100,
+                        )}% del total`
                       : "Sin reclamos completados"}
                   </p>
                 </CardContent>
@@ -240,14 +317,20 @@ export default async function Dashboard() {
 
               <Card className="border-l-4 border-l-purple-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Tiempo Promedio</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Tiempo Promedio
+                  </CardTitle>
                   <Clock className="h-4 w-4 text-purple-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {tiempoPromedio ? convertirTiempoPromedio(tiempoPromedio) : "N/A"}
+                    {tiempoPromedio
+                      ? convertirTiempoPromedio(tiempoPromedio)
+                      : "N/A"}
                   </div>
-                  <p className="text-xs text-muted-foreground">Tiempo de resolucion</p>
+                  <p className="text-xs text-muted-foreground">
+                    Tiempo de resolucion
+                  </p>
                 </CardContent>
               </Card>
             </section>
@@ -266,7 +349,9 @@ export default async function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Registro de Actividad</CardTitle>
-                <CardDescription>Actividad registrada en el sistema durante los ultimos dias</CardDescription>
+                <CardDescription>
+                  Actividad registrada en el sistema durante los ultimos dias
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -285,8 +370,8 @@ export default async function Dashboard() {
                             actividad.tipo === "completado"
                               ? "bg-green-100"
                               : actividad.tipo === "asignado"
-                                ? "bg-blue-100"
-                                : "bg-orange-100"
+                              ? "bg-blue-100"
+                              : "bg-orange-100"
                           }`}
                         >
                           {actividad.tipo === "completado" ? (
@@ -299,8 +384,12 @@ export default async function Dashboard() {
                         </div>
                         <div className="flex-1">
                           <p className="font-medium">{actividad.titulo}</p>
-                          <p className="text-sm text-muted-foreground">{actividad.descripcion}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{actividad.tiempo}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {actividad.descripcion}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {actividad.tiempo}
+                          </p>
                         </div>
                       </div>
                     ))
