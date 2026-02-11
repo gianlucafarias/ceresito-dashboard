@@ -6,6 +6,14 @@ const DEFAULT_V1_BASE_URL = 'https://api.ceres.gob.ar/api/v1';
 
 type Target = 'legacy' | 'v1';
 type RouteParams = { id: string };
+type ContactRecord = Record<string, unknown> & {
+  contact_name?: unknown;
+};
+
+type ConversationRecord = Record<string, unknown> & {
+  nombre?: unknown;
+  fecha_hora?: unknown;
+};
 
 function normalizeBaseUrl(value: string): string {
   return value.endsWith('/') ? value.slice(0, -1) : value;
@@ -68,6 +76,10 @@ function buildPath(params: RouteParams): string {
   return `${CONTACTS_BASE_PATH}/${id}`;
 }
 
+function buildConversationsPath(params: RouteParams): string {
+  return `${buildPath(params)}/conversations`;
+}
+
 function buildLegacyUrl(request: NextRequest, params: RouteParams): string {
   const query = request.nextUrl.search || '';
   return `${normalizeBaseUrl(resolveLegacyBaseUrl())}${buildPath(params)}${query}`;
@@ -76,6 +88,74 @@ function buildLegacyUrl(request: NextRequest, params: RouteParams): string {
 function buildV1Url(request: NextRequest, params: RouteParams): string {
   const query = request.nextUrl.search || '';
   return `${normalizeBaseUrl(resolveV1BaseUrl())}${buildPath(params)}${query}`;
+}
+
+function buildV1ConversationsUrl(params: RouteParams): string {
+  const query = new URLSearchParams({
+    page: '1',
+    limit: '10',
+  });
+
+  return `${normalizeBaseUrl(resolveV1BaseUrl())}${buildConversationsPath(params)}?${query.toString()}`;
+}
+
+function normalizeName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.toLowerCase() === 'n/a') return null;
+  return trimmed;
+}
+
+function isMissingContactName(value: unknown): boolean {
+  return normalizeName(value) === null;
+}
+
+function extractConversationItems(payload: unknown): ConversationRecord[] {
+  if (Array.isArray(payload)) {
+    return payload.filter(
+      (item): item is ConversationRecord => item !== null && typeof item === 'object'
+    );
+  }
+
+  if (payload && typeof payload === 'object') {
+    const obj = payload as Record<string, unknown>;
+    if (Array.isArray(obj.items)) {
+      return obj.items.filter(
+        (item): item is ConversationRecord => item !== null && typeof item === 'object'
+      );
+    }
+    if (Array.isArray(obj.data)) {
+      return obj.data.filter(
+        (item): item is ConversationRecord => item !== null && typeof item === 'object'
+      );
+    }
+  }
+
+  return [];
+}
+
+function getConversationTimestamp(value: unknown): number {
+  if (typeof value !== 'string') return 0;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function pickConversationName(payload: unknown): string | null {
+  const items = extractConversationItems(payload);
+  let best: { name: string; timestamp: number } | null = null;
+
+  for (const item of items) {
+    const name = normalizeName(item.nombre);
+    if (!name) continue;
+
+    const timestamp = getConversationTimestamp(item.fecha_hora);
+    if (!best || timestamp >= best.timestamp) {
+      best = { name, timestamp };
+    }
+  }
+
+  return best?.name ?? null;
 }
 
 async function safeJson(response: Response): Promise<any> {
@@ -128,6 +208,60 @@ async function fetchV1ContactById(
     const message = error instanceof Error ? error.message : 'unknown error';
     throw new Error(`v1_upstream_unreachable:${url}:${message}`);
   }
+}
+
+async function fetchV1ConversationNameByContactId(params: RouteParams): Promise<string | null> {
+  const adminKey = resolveCoreAdminKey();
+  if (!adminKey) return null;
+
+  const url = buildV1ConversationsUrl(params);
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'x-api-key': adminKey,
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) return null;
+
+    const payload = await safeJson(response);
+    if (payload === null) return null;
+
+    return pickConversationName(payload);
+  } catch {
+    return null;
+  }
+}
+
+async function enrichContactPayloadWithConversationName(
+  payload: unknown,
+  params: RouteParams
+): Promise<{ payload: unknown; enriched: boolean }> {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return { payload, enriched: false };
+  }
+
+  const contact = payload as ContactRecord;
+  if (!isMissingContactName(contact.contact_name)) {
+    return { payload, enriched: false };
+  }
+
+  const fallbackName = await fetchV1ConversationNameByContactId(params);
+  if (!fallbackName) {
+    return { payload, enriched: false };
+  }
+
+  return {
+    payload: {
+      ...contact,
+      contact_name: fallbackName,
+    },
+    enriched: true,
+  };
 }
 
 export async function GET(
@@ -221,13 +355,22 @@ export async function GET(
         );
       }
 
+      const { payload: enrichedPayload, enriched } =
+        await enrichContactPayloadWithConversationName(v1Payload, params);
+      const source = enriched ? 'v1_enriched' : 'v1';
+
       logContactById({
         target,
-        source: 'v1',
+        source,
         status: 200,
         url: v1Url,
       });
-      return jsonWithSource(v1Payload, 200, 'v1');
+      return jsonWithSource(
+        enrichedPayload,
+        200,
+        source,
+        enriched ? { 'x-core-api-contact-name-enriched': 'conversation' } : undefined
+      );
     }
 
     const canFallback =
