@@ -1,637 +1,284 @@
-# 📚 API de Categorías - Plataforma Servicios CERES
+# API de Categorias
 
-## 🔐 Autenticación
+Documento alineado al backend actual de `plataforma-servicios-ceres`.
 
-Todos los endpoints requieren autenticación mediante API Key.
+## Autenticacion
 
-### Headers Requeridos
+Todos los endpoints admin usan:
 
 ```http
-x-admin-api-key: tu-api-key-aqui
+x-admin-api-key: <api-key>
 Content-Type: application/json
 ```
 
----
+El panel consume estos endpoints a traves del proxy:
 
-## 📊 Conceptos Importantes
-
-### Jerarquía de Categorías
-
-La plataforma maneja dos jerarquías de categorización:
-
-1. **OFICIOS** (estructura jerárquica de 2 niveles):
-   - **Áreas** (nivel 1): "Construcción y mantenimiento", "Climatización", etc.
-   - **Subcategorías** (nivel 2): "Plomero", "Electricista", etc.
-
-2. **PROFESIONES** (estructura plana de 1 nivel):
-   - **Subcategorías**: "Arquitectura", "Enfermería", "Marketing", etc.
-
-### Tipos de Categorías
-
-- **`area`**: Solo aplica a Oficios. Agrupa varias subcategorías (ej: "Construcción y mantenimiento")
-- **`subcategory`**: Categoría específica de un servicio (ej: "Plomero", "Arquitectura")
-
----
-
-## 📋 Endpoints
-
-### 1. Listar Todas las Categorías
-
-**Endpoint:** `GET /api/admin/categories`
-
-**Descripción:** Obtiene todas las áreas y subcategorías, tanto de oficios como profesiones.
-
-**Query Parameters:**
-
-| Parámetro | Tipo | Requerido | Descripción | Valores |
-|-----------|------|-----------|-------------|---------|
-| `type` | string | No | Filtrar por tipo | `area`, `subcategory` |
-| `group` | string | No | Filtrar por grupo | `oficios`, `profesiones` |
-| `search` | string | No | Buscar por nombre o slug | Cualquier texto |
-
-**Ejemplos de URLs:**
-```
-GET /api/admin/categories
-GET /api/admin/categories?type=area
-GET /api/admin/categories?group=oficios
-GET /api/admin/categories?group=profesiones&type=subcategory
-GET /api/admin/categories?search=plomero
+```text
+/api/servicios-externos/api/...
 ```
 
-**Respuesta Exitosa (200):**
+## Modelo real
+
+- `group = oficios`
+  - `type = area`: categoria padre, solo valida para oficios.
+  - `type = subcategory`: categoria hija de un area, requiere `parentId`.
+- `group = profesiones`
+  - Siempre se maneja como `type = subcategory`.
+  - No tiene padre.
+
+## GET /api/admin/categories
+
+### Sin query params
+
+Devuelve la estructura agrupada que hoy usa el panel:
+
 ```json
 {
   "success": true,
   "data": {
     "areas": [
       {
-        "id": "area-uuid-1",
-        "name": "Construcción y mantenimiento",
-        "slug": "construccion-mantenimiento",
+        "id": "cat_1",
+        "name": "Construccion",
+        "slug": "construccion",
         "group": "oficios",
-        "image": "/images/servicios/construccion.jpg",
-        "description": "Servicios relacionados con construcción y mantenimiento del hogar",
+        "image": "https://cdn.example.com/construccion.jpg",
+        "description": "Servicios del rubro construccion",
         "active": true,
-        "subcategoryCount": 9,
-        "createdAt": "2024-01-15T10:00:00.000Z",
-        "updatedAt": "2024-01-15T10:00:00.000Z"
+        "subcategoryCount": 4
       }
     ],
     "subcategoriesOficios": [
       {
-        "id": "subcat-uuid-1",
-        "name": "Plomero/a",
-        "slug": "plomero",
+        "id": "cat_2",
+        "name": "Plomeria",
+        "slug": "plomeria",
         "group": "oficios",
-        "areaId": "area-uuid-1",
-        "areaSlug": "construccion-mantenimiento",
+        "areaId": "cat_1",
+        "areaSlug": "construccion",
         "image": null,
-        "description": "Servicios de plomería en general",
+        "description": "Servicios de plomeria",
         "active": true,
-        "professionalCount": 15,
-        "createdAt": "2024-01-15T10:00:00.000Z",
-        "updatedAt": "2024-01-15T10:00:00.000Z"
+        "professionalCount": 7
       }
     ],
     "subcategoriesProfesiones": [
       {
-        "id": "subcat-uuid-100",
+        "id": "cat_3",
         "name": "Arquitectura",
         "slug": "arquitectura",
         "group": "profesiones",
         "areaId": null,
         "areaSlug": null,
-        "image": "/images/profesionales/arquitectura.jpg",
-        "description": "Profesionales en diseño arquitectónico",
+        "image": null,
+        "description": "Servicios profesionales",
         "active": true,
-        "professionalCount": 8,
-        "createdAt": "2024-01-15T10:00:00.000Z",
-        "updatedAt": "2024-01-15T10:00:00.000Z"
+        "professionalCount": 5
       }
     ],
     "stats": {
-      "totalAreas": 11,
-      "totalSubcategoriesOficios": 28,
-      "totalSubcategoriesProfesiones": 6,
-      "totalCategories": 45
+      "totalAreas": 1,
+      "totalSubcategoriesOficios": 1,
+      "totalSubcategoriesProfesiones": 1,
+      "totalCategories": 3
     }
   }
 }
 ```
 
-**Campos importantes:**
-- `subcategoryCount` / `professionalCount`: Cantidad de subcategorías bajo un área / profesionales en una categoría
-- `areaId` / `areaSlug`: Para subcategorías de oficios, referencia al área padre
-- `active`: Si la categoría está activa y visible en la plataforma pública
+### Con `type`, `group` o `search`
 
----
+El backend cambia de forma y devuelve una lista plana:
 
-### 2. Obtener Detalle de una Categoría
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "cat_2",
+      "type": "subcategory",
+      "name": "Plomeria",
+      "slug": "plomeria",
+      "group": "oficios",
+      "parentId": "cat_1",
+      "parentSlug": "construccion",
+      "image": null,
+      "description": "Servicios de plomeria",
+      "active": true,
+      "subcategoryCount": 0,
+      "professionalCount": 7
+    }
+  ]
+}
+```
 
-**Endpoint:** `GET /api/admin/categories/:id`
+Nota: por esa diferencia de contrato, la pantalla del panel carga el arbol completo y filtra localmente.
 
-**Descripción:** Obtiene información detallada de una categoría específica (área o subcategoría).
+## GET /api/admin/categories/:id
 
-**Path Parameters:**
-- `id` (string, required): UUID de la categoría
+Devuelve detalle real de una categoria:
 
-**Respuesta Exitosa (200):**
 ```json
 {
   "success": true,
   "data": {
-    "id": "area-uuid-1",
+    "id": "cat_1",
     "type": "area",
-    "name": "Construcción y mantenimiento",
-    "slug": "construccion-mantenimiento",
+    "name": "Construccion",
+    "slug": "construccion",
     "group": "oficios",
-    "image": "/images/servicios/construccion.jpg",
-    "description": "Servicios relacionados con construcción y mantenimiento del hogar",
+    "parentId": null,
+    "image": "https://cdn.example.com/construccion.jpg",
+    "description": "Servicios del rubro construccion",
     "active": true,
-    "createdAt": "2024-01-15T10:00:00.000Z",
-    "updatedAt": "2024-01-15T10:00:00.000Z",
+    "parent": null,
     "subcategories": [
       {
-        "id": "subcat-uuid-1",
-        "name": "Plomero/a",
-        "slug": "plomero",
-        "professionalCount": 15
-      },
-      {
-        "id": "subcat-uuid-2",
-        "name": "Electricista",
-        "slug": "electricista",
-        "professionalCount": 23
+        "id": "cat_2",
+        "name": "Plomeria",
+        "slug": "plomeria"
       }
     ],
+    "professionals": [],
     "_count": {
-      "subcategories": 9,
-      "professionals": 87
+      "children": 1,
+      "services": 0
     }
   }
 }
 ```
 
-**Respuesta para una subcategoría:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "subcat-uuid-1",
-    "type": "subcategory",
-    "name": "Plomero/a",
-    "slug": "plomero",
-    "group": "oficios",
-    "areaId": "area-uuid-1",
-    "areaSlug": "construccion-mantenimiento",
-    "image": null,
-    "description": "Servicios de plomería en general",
-    "active": true,
-    "createdAt": "2024-01-15T10:00:00.000Z",
-    "updatedAt": "2024-01-15T10:00:00.000Z",
-    "area": {
-      "id": "area-uuid-1",
-      "name": "Construcción y mantenimiento",
-      "slug": "construccion-mantenimiento"
-    },
-    "professionals": [
-      {
-        "id": "prof-uuid-1",
-        "user": {
-          "firstName": "Juan",
-          "lastName": "Pérez"
-        },
-        "rating": 4.8,
-        "verified": true
-      }
-    ],
-    "_count": {
-      "professionals": 15,
-      "services": 28
-    }
-  }
-}
-```
+## POST /api/admin/categories
 
-**Errores:**
-- `404` - Categoría no encontrada
+### Crear area de oficios
 
----
-
-### 3. Crear Nueva Categoría
-
-**Endpoint:** `POST /api/admin/categories`
-
-**Descripción:** Crea una nueva área (solo para oficios) o subcategoría.
-
-**Request Body:**
-
-**Para crear un Área (solo oficios):**
 ```json
 {
   "type": "area",
-  "name": "Nueva Área de Servicios",
-  "slug": "nueva-area-servicios",
+  "name": "Construccion",
+  "slug": "construccion",
   "group": "oficios",
-  "description": "Descripción de la nueva área",
-  "image": "/images/servicios/nueva-area.jpg",
+  "description": "Servicios del rubro construccion",
+  "image": "https://cdn.example.com/construccion.jpg",
   "active": true
 }
 ```
 
-**Para crear una Subcategoría de Oficios:**
+### Crear subcategoria hija de oficios
+
 ```json
 {
   "type": "subcategory",
-  "name": "Nuevo Oficio",
-  "slug": "nuevo-oficio",
+  "name": "Plomeria",
+  "slug": "plomeria",
   "group": "oficios",
-  "areaId": "area-uuid-1",
-  "areaSlug": "construccion-mantenimiento",
-  "description": "Descripción del nuevo oficio",
+  "parentId": "cat_1",
+  "description": "Servicios de plomeria",
   "image": null,
   "active": true
 }
 ```
 
-**Para crear una Subcategoría de Profesiones:**
+### Crear profesion
+
 ```json
 {
   "type": "subcategory",
-  "name": "Nueva Profesión",
-  "slug": "nueva-profesion",
+  "name": "Arquitectura",
+  "slug": "arquitectura",
   "group": "profesiones",
-  "areaId": null,
-  "areaSlug": null,
-  "description": "Descripción de la nueva profesión",
-  "image": "/images/profesionales/nueva-profesion.jpg",
+  "description": "Servicios profesionales",
+  "image": null,
   "active": true
 }
 ```
 
-**Validaciones:**
-- `name` (string, requerido): Nombre de la categoría
-- `slug` (string, requerido): URL-friendly, único en el grupo
-- `group` (string, requerido): `"oficios"` o `"profesiones"`
-- `type` (string, requerido): `"area"` o `"subcategory"`
-- `areaId` (string, requerido si type=subcategory y group=oficios): ID del área padre
-- `description` (string, opcional): Descripción de la categoría
-- `image` (string, opcional): URL de la imagen
-- `active` (boolean, opcional): Default true
+Reglas:
 
-**Reglas de Negocio:**
-- ❌ NO se pueden crear áreas para el grupo "profesiones"
-- ✅ Las subcategorías de oficios DEBEN tener un área padre (`areaId`)
-- ✅ Las subcategorías de profesiones NO tienen área padre
-- ✅ El `slug` debe ser único dentro del mismo grupo
+- `type = area` solo es valido para `group = oficios`.
+- `group = oficios` y `type = subcategory` requiere `parentId`.
+- `slug` debe ser unico.
 
-**Respuesta Exitosa (201):**
+## PUT /api/admin/categories/:id
+
+Campos soportados hoy:
+
+```json
+{
+  "name": "Nuevo nombre",
+  "description": "Nueva descripcion",
+  "image": "https://cdn.example.com/nueva.jpg",
+  "active": true,
+  "parentId": "cat_padre"
+}
+```
+
+Nota: el backend actual no expone update de `slug`.
+
+## DELETE /api/admin/categories/:id
+
+El panel usa:
+
+```text
+DELETE /api/admin/categories/:id?deactivate=true
+```
+
+Limitacion actual del backend:
+
+- Si la categoria tiene hijas o servicios asociados y no se usa `force=true`, devuelve `409`.
+- Esa restriccion aplica incluso cuando se intenta desactivar.
+
+## Upload de imagen alineado con R2
+
+Las categorias no suben imagen directo al endpoint admin. El panel usa el mismo flujo de upload del proyecto de servicios:
+
+1. `POST /api/upload/grant`
+
+```json
+{
+  "context": "register",
+  "type": "image"
+}
+```
+
+Respuesta:
+
 ```json
 {
   "success": true,
-  "data": {
-    "id": "new-uuid",
-    "type": "subcategory",
-    "name": "Nuevo Oficio",
-    "slug": "nuevo-oficio",
-    "group": "oficios",
-    "areaId": "area-uuid-1",
-    "description": "Descripción del nuevo oficio",
-    "image": null,
-    "active": true,
-    "createdAt": "2025-10-15T14:30:00.000Z",
-    "updatedAt": "2025-10-15T14:30:00.000Z"
-  },
-  "message": "Categoría creada exitosamente"
+  "token": "upload_token",
+  "expiresAt": "2026-03-17T12:00:00.000Z"
 }
 ```
 
-**Errores:**
-- `400` - Validación fallida (slug duplicado, área requerida para oficios, etc.)
-- `404` - Área padre no encontrada
+2. `POST /api/upload`
 
----
+- `multipart/form-data`
+- campos: `file`, `type=image`
+- header adicional: `x-upload-token: <token>`
 
-### 4. Actualizar Categoría
+Respuesta:
 
-**Endpoint:** `PUT /api/admin/categories/:id`
-
-**Descripción:** Actualiza una categoría existente (área o subcategoría).
-
-**Path Parameters:**
-- `id` (string, required): UUID de la categoría
-
-**Request Body:**
-```json
-{
-  "name": "Nombre Actualizado",
-  "description": "Nueva descripción",
-  "image": "/images/servicios/updated.jpg",
-  "active": false,
-  "areaId": "area-uuid-2"
-}
-```
-
-**Notas:**
-- Todos los campos son opcionales
-- Solo se actualizarán los campos enviados
-- No se puede cambiar el `type` ni el `group` una vez creada
-- No se puede cambiar el `slug` (podría romper referencias)
-
-**Respuesta Exitosa (200):**
 ```json
 {
   "success": true,
-  "data": {
-    // Objeto completo de la categoría actualizada
-  },
-  "message": "Categoría actualizada correctamente"
+  "filename": "profiles/123.jpg",
+  "path": "https://cdn.example.com/profiles/123.jpg",
+  "url": "https://cdn.example.com/profiles/123.jpg",
+  "value": "https://cdn.example.com/profiles/123.jpg",
+  "storage": "r2"
 }
 ```
 
-**Errores:**
-- `404` - Categoría no encontrada
-- `400` - Validación fallida
+El panel persiste `url` en `image`.
 
----
+## Contrato del panel
 
-### 5. Eliminar Categoría
+El cliente del panel normaliza:
 
-**Endpoint:** `DELETE /api/admin/categories/:id`
+- `areas` -> `type = area`
+- `subcategoriesOficios` -> `type = subcategory`
+- `subcategoriesProfesiones` -> `type = subcategory`
+- `parentId` y `areaId` para que la UI no dependa de formas distintas del backend
 
-**Descripción:** Elimina una categoría (área o subcategoría).
-
-**Path Parameters:**
-- `id` (string, required): UUID de la categoría
-
-**Validaciones antes de eliminar:**
-- ❌ NO se puede eliminar un área que tiene subcategorías asociadas
-- ❌ NO se puede eliminar una subcategoría que tiene profesionales activos
-- ⚠️ Opcionalmente: Desactivar en lugar de eliminar (soft delete)
-
-**Query Parameters:**
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `force` | boolean | Forzar eliminación (eliminar subcategorías/desvincular profesionales) |
-| `deactivate` | boolean | Desactivar en lugar de eliminar (soft delete) |
-
-**Ejemplos:**
-```
-DELETE /api/admin/categories/uuid-123
-DELETE /api/admin/categories/uuid-123?deactivate=true
-DELETE /api/admin/categories/uuid-123?force=true
-```
-
-**Respuesta Exitosa (200):**
-```json
-{
-  "success": true,
-  "message": "Categoría eliminada exitosamente",
-  "affected": {
-    "subcategories": 0,
-    "professionals": 0
-  }
-}
-```
-
-**Respuesta con Soft Delete:**
-```json
-{
-  "success": true,
-  "message": "Categoría desactivada exitosamente",
-  "data": {
-    "id": "uuid-123",
-    "active": false
-  }
-}
-```
-
-**Errores:**
-- `404` - Categoría no encontrada
-- `409` - Conflicto (tiene subcategorías o profesionales asociados)
-```json
-{
-  "success": false,
-  "error": "conflict",
-  "message": "No se puede eliminar: tiene 5 subcategorías asociadas",
-  "details": {
-    "subcategoryCount": 5,
-    "professionalCount": 0
-  }
-}
-```
-
----
-
-### 6. Cambiar Orden de Categorías (Opcional)
-
-**Endpoint:** `PUT /api/admin/categories/reorder`
-
-**Descripción:** Cambia el orden de visualización de las categorías.
-
-**Request Body:**
-```json
-{
-  "group": "oficios",
-  "type": "area",
-  "order": [
-    "area-uuid-1",
-    "area-uuid-3",
-    "area-uuid-2"
-  ]
-}
-```
-
-**Respuesta Exitosa (200):**
-```json
-{
-  "success": true,
-  "message": "Orden actualizado correctamente"
-}
-```
-
----
-
-### 7. Estadísticas de Categorías
-
-**Endpoint:** `GET /api/admin/categories/stats`
-
-**Descripción:** Obtiene estadísticas generales de las categorías.
-
-**Respuesta Exitosa (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "overview": {
-      "totalAreas": 11,
-      "totalSubcategoriesOficios": 28,
-      "totalSubcategoriesProfesiones": 6,
-      "totalActiveCategories": 43,
-      "totalInactiveCategories": 2
-    },
-    "topCategories": [
-      {
-        "id": "subcat-uuid-1",
-        "name": "Plomero/a",
-        "group": "oficios",
-        "professionalCount": 45
-      },
-      {
-        "id": "subcat-uuid-2",
-        "name": "Electricista",
-        "group": "oficios",
-        "professionalCount": 38
-      }
-    ],
-    "emptyCategories": [
-      {
-        "id": "subcat-uuid-50",
-        "name": "Categoría sin profesionales",
-        "group": "oficios"
-      }
-    ]
-  }
-}
-```
-
----
-
-## 📝 Modelo de Datos
-
-### Área (solo para Oficios)
-
-```typescript
-interface Area {
-  id: string;
-  type: 'area';
-  name: string;
-  slug: string;
-  group: 'oficios';
-  image?: string;
-  description?: string;
-  active: boolean;
-  displayOrder?: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
-
-### Subcategoría
-
-```typescript
-interface Subcategory {
-  id: string;
-  type: 'subcategory';
-  name: string;
-  slug: string;
-  group: 'oficios' | 'profesiones';
-  areaId?: string; // Solo para oficios
-  areaSlug?: string; // Solo para oficios
-  image?: string;
-  description?: string;
-  active: boolean;
-  displayOrder?: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
-
----
-
-## 🔒 Seguridad
-
-### Validaciones del Lado del Servidor
-
-1. **Slugs únicos** por grupo
-2. **Nombres únicos** por grupo (case-insensitive)
-3. **Área requerida** para subcategorías de oficios
-4. **No áreas para profesiones**
-5. **No eliminar si tiene dependencias** (subcategorías/profesionales)
-
-### Sanitización
-
-- Slugs: solo letras minúsculas, números y guiones
-- Nombres: sin HTML, máximo 100 caracteres
-- Descripciones: sin HTML peligroso, máximo 500 caracteres
-
----
-
-## 🧪 Casos de Uso del Dashboard
-
-### Página de Categorías
-
-```javascript
-// 1. Cargar todas las categorías al iniciar
-GET /api/admin/categories
-
-// 2. Crear nueva categoría
-POST /api/admin/categories
-{
-  "type": "subcategory",
-  "name": "Jardinero/a",
-  "slug": "jardinero",
-  "group": "oficios",
-  "areaId": "area-jardineria-uuid"
-}
-
-// 3. Editar categoría existente
-PUT /api/admin/categories/uuid-123
-{
-  "name": "Jardinero/a (actualizado)",
-  "description": "Nueva descripción"
-}
-
-// 4. Ver detalles de categoría
-GET /api/admin/categories/uuid-123
-
-// 5. Eliminar categoría (con validación)
-DELETE /api/admin/categories/uuid-123
-
-// 6. Buscar categorías
-GET /api/admin/categories?search=plomero
-```
-
----
-
-## 📅 Prioridad de Implementación
-
-### 🔴 Alta Prioridad
-1. `GET /api/admin/categories` - Listar todas
-2. `POST /api/admin/categories` - Crear nueva
-3. `PUT /api/admin/categories/:id` - Actualizar
-
-### 🟡 Media Prioridad
-4. `GET /api/admin/categories/:id` - Ver detalle
-5. `DELETE /api/admin/categories/:id` - Eliminar (con validaciones)
-
-### 🟢 Baja Prioridad
-6. `GET /api/admin/categories/stats` - Estadísticas
-7. `PUT /api/admin/categories/reorder` - Reordenar
-
----
-
-## 💡 Consideraciones Adicionales
-
-### Imágenes
-- Las imágenes deberían subirse a través de un endpoint separado de upload
-- O usar URLs externas si las imágenes están en un CDN
-
-### Slugs
-- Se recomienda generar el slug automáticamente desde el nombre en el backend
-- Validar que sea único antes de guardar
-
-### Soft Delete
-- Considerar implementar soft delete (marcar como inactivo) en lugar de eliminar físicamente
-- Permite recuperar categorías eliminadas por error
-
-### Cache
-- Las categorías cambian poco, ideal para cachear
-- Invalidar cache al crear/actualizar/eliminar
-
----
-
-**Contacto:** Equipo de Dashboard CERES  
-**Última actualización:** Octubre 2025  
-**Versión:** 1.0
-
+Eso deja estable la UI sin tocar aun el proyecto de servicios.

@@ -219,33 +219,57 @@ export interface UpdateUserData {
 }
 
 // Tipos para Categorías
-export interface APICategoryResponse {
+export type CategoryType = 'area' | 'subcategory';
+export type CategoryGroup = 'oficios' | 'profesiones';
+
+export interface APICategoryProfessionalResponse {
   id: string;
-  type: 'area' | 'subcategory';
+  rating?: number | null;
+  verified?: boolean;
+  user?: {
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface APICategoryChildResponse {
+  id: string;
   name: string;
   slug: string;
-  group: 'oficios' | 'profesiones';
+  professionalCount?: number;
+}
+
+export interface APICategoryResponse {
+  id: string;
+  type: CategoryType;
+  name: string;
+  slug: string;
+  group: CategoryGroup;
   areaId?: string | null;
   areaSlug?: string | null;
-  image?: string;
-  description?: string;
+  parentId?: string | null;
+  parentSlug?: string | null;
+  icon?: string | null;
+  image?: string | null;
+  description?: string | null;
   active: boolean;
+  showOnHome?: boolean;
   subcategoryCount?: number;
   professionalCount?: number;
-  createdAt: string;
-  updatedAt: string;
-  subcategories?: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    professionalCount: number;
-  }>;
+  subcategories?: APICategoryChildResponse[];
   area?: {
     id: string;
     name: string;
     slug: string;
-  };
+  } | null;
+  parent?: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
+  professionals?: APICategoryProfessionalResponse[];
   _count?: {
+    children?: number;
     subcategories?: number;
     professionals?: number;
     services?: number;
@@ -265,29 +289,69 @@ export interface CategoriesListResponse {
 }
 
 export interface ListCategoriesParams {
-  type?: 'area' | 'subcategory';
-  group?: 'oficios' | 'profesiones';
+  type?: CategoryType;
+  group?: CategoryGroup;
   search?: string;
 }
 
 export interface CreateCategoryData {
-  type: 'area' | 'subcategory';
+  type: CategoryType;
   name: string;
   slug: string;
-  group: 'oficios' | 'profesiones';
+  group: CategoryGroup;
   parentId?: string | null;
   description?: string;
+  icon?: string | null;
   image?: string;
   active?: boolean;
+  showOnHome?: boolean;
 }
 
 export interface UpdateCategoryData {
   name?: string;
   description?: string;
-  image?: string;
+  icon?: string | null;
+  image?: string | null;
   active?: boolean;
+  showOnHome?: boolean;
   parentId?: string | null;
 }
+
+export interface APIUploadGrantResponse {
+  token: string;
+  expiresAt: string;
+}
+
+export interface APIUploadedFileResponse {
+  filename: string;
+  originalName: string;
+  path: string;
+  url: string;
+  value: string;
+  storage: 'r2' | 'local';
+}
+
+type V1EnvelopeSuccess<T> = {
+  success: true;
+  data: T;
+  meta?: {
+    requestId?: string;
+  };
+};
+
+type V1EnvelopeError = {
+  success: false;
+  error?:
+    | string
+    | {
+        code?: string;
+        message?: string;
+      };
+  message?: string;
+  meta?: {
+    requestId?: string;
+  };
+};
 
 // Tipos para Bug Reports
 export interface APIBugReportResponse {
@@ -365,6 +429,116 @@ export interface UpdateCertificationData {
   adminNotes?: string;
 }
 
+type RawCategoryPayload = {
+  id: string;
+  type?: CategoryType;
+  name: string;
+  slug: string;
+  group?: CategoryGroup;
+  groupId?: CategoryGroup;
+  areaId?: string | null;
+  areaSlug?: string | null;
+  parentId?: string | null;
+  parentSlug?: string | null;
+  parentCategoryId?: string | null;
+  icon?: string | null;
+  image?: string | null;
+  backgroundUrl?: string | null;
+  description?: string | null;
+  active: boolean;
+  showOnHome?: boolean;
+  subcategoryCount?: number;
+  professionalCount?: number;
+  parent?: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
+  subcategories?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    professionalCount?: number;
+  }>;
+  professionals?: APICategoryProfessionalResponse[];
+  _count?: {
+    children?: number;
+    subcategories?: number;
+    professionals?: number;
+    services?: number;
+  };
+};
+
+type RawCategoriesListResponse = {
+  areas: RawCategoryPayload[];
+  subcategoriesOficios: RawCategoryPayload[];
+  subcategoriesProfesiones: RawCategoryPayload[];
+  stats: CategoriesListResponse['stats'];
+};
+
+function normalizeCategory(
+  category: RawCategoryPayload,
+  fallbackType?: CategoryType
+): APICategoryResponse {
+  const parentId =
+    category.parentId ?? category.parentCategoryId ?? category.parent?.id ?? category.areaId ?? null;
+  const parentSlug = category.parentSlug ?? category.parent?.slug ?? category.areaSlug ?? null;
+  const group = (category.group ?? category.groupId) as CategoryGroup;
+  const childCount = category.subcategoryCount ?? category._count?.children ?? category._count?.subcategories;
+  const professionalCount =
+    category.professionalCount ?? category._count?.services ?? category._count?.professionals;
+
+  return {
+    id: category.id,
+    type: category.type ?? fallbackType ?? (parentId ? 'subcategory' : 'area'),
+    name: category.name,
+    slug: category.slug,
+    group,
+    areaId: parentId,
+    areaSlug: parentSlug,
+    parentId,
+    parentSlug,
+    icon: category.icon ?? null,
+    image: category.image ?? category.backgroundUrl ?? null,
+    description: category.description ?? null,
+    active: category.active,
+    showOnHome: category.showOnHome ?? false,
+    subcategoryCount: childCount,
+    professionalCount,
+    subcategories: category.subcategories?.map((subcategory) => ({
+      id: subcategory.id,
+      name: subcategory.name,
+      slug: subcategory.slug,
+      professionalCount: subcategory.professionalCount,
+    })),
+    area: category.parent ?? null,
+    parent: category.parent ?? null,
+    professionals: category.professionals,
+    _count:
+      childCount !== undefined || professionalCount !== undefined
+        ? {
+            children: childCount,
+            subcategories: childCount,
+            professionals: professionalCount,
+            services: professionalCount,
+          }
+        : category._count,
+  };
+}
+
+function normalizeCategoriesList(data: RawCategoriesListResponse): CategoriesListResponse {
+  return {
+    areas: data.areas.map((area) => normalizeCategory(area, 'area')),
+    subcategoriesOficios: data.subcategoriesOficios.map((subcategory) =>
+      normalizeCategory(subcategory, 'subcategory')
+    ),
+    subcategoriesProfesiones: data.subcategoriesProfesiones.map((subcategory) =>
+      normalizeCategory(subcategory, 'subcategory')
+    ),
+    stats: data.stats,
+  };
+}
+
 /**
  * Cliente de API de Servicios
  */
@@ -375,6 +549,107 @@ class ServicesAPIClient {
   constructor(baseURL: string = API_BASE_URL, apiKey: string | undefined = API_KEY) {
     this.baseURL = baseURL;
     this.apiKey = apiKey;
+  }
+
+  private buildHeaders(options: RequestInit = {}): Headers {
+    const headers = new Headers(options.headers);
+
+    if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+
+    if (this.apiKey && !headers.has('x-admin-api-key')) {
+      headers.set('x-admin-api-key', this.apiKey);
+    }
+
+    return headers;
+  }
+
+  private normalizeApiError(response: Response, payload: unknown): APIError {
+    const errorObject =
+      payload && typeof payload === 'object' && 'error' in payload
+        ? (payload as V1EnvelopeError).error
+        : undefined;
+
+    const errorCode =
+      typeof errorObject === 'string'
+        ? errorObject
+        : errorObject?.code || 'unknown_error';
+
+    const errorMessage =
+      (typeof errorObject === 'object' && errorObject?.message) ||
+      (payload && typeof payload === 'object' && 'message' in payload
+        ? String((payload as { message?: unknown }).message || '')
+        : '') ||
+      `HTTP ${response.status}: ${response.statusText}`;
+
+    return {
+      success: false,
+      error: errorCode,
+      message: errorMessage,
+    };
+  }
+
+  private unwrapUploadGrantPayload(payload: unknown): APIUploadGrantResponse | null {
+    if (!payload || typeof payload !== 'object') {
+      return null;
+    }
+
+    const source =
+      'data' in payload &&
+      payload.data &&
+      typeof payload.data === 'object'
+        ? (payload as V1EnvelopeSuccess<APIUploadGrantResponse>).data
+        : payload;
+
+    if (
+      !source ||
+      typeof source !== 'object' ||
+      typeof (source as APIUploadGrantResponse).token !== 'string' ||
+      typeof (source as APIUploadGrantResponse).expiresAt !== 'string'
+    ) {
+      return null;
+    }
+
+    return {
+      token: (source as APIUploadGrantResponse).token,
+      expiresAt: (source as APIUploadGrantResponse).expiresAt,
+    };
+  }
+
+  private unwrapUploadedFilePayload(payload: unknown): APIUploadedFileResponse | null {
+    if (!payload || typeof payload !== 'object') {
+      return null;
+    }
+
+    const source =
+      'data' in payload &&
+      payload.data &&
+      typeof payload.data === 'object'
+        ? (payload as V1EnvelopeSuccess<APIUploadedFileResponse>).data
+        : payload;
+
+    if (
+      !source ||
+      typeof source !== 'object' ||
+      typeof (source as APIUploadedFileResponse).filename !== 'string' ||
+      typeof (source as APIUploadedFileResponse).originalName !== 'string' ||
+      typeof (source as APIUploadedFileResponse).path !== 'string' ||
+      typeof (source as APIUploadedFileResponse).url !== 'string' ||
+      typeof (source as APIUploadedFileResponse).value !== 'string' ||
+      typeof (source as APIUploadedFileResponse).storage !== 'string'
+    ) {
+      return null;
+    }
+
+    return {
+      filename: (source as APIUploadedFileResponse).filename,
+      originalName: (source as APIUploadedFileResponse).originalName,
+      path: (source as APIUploadedFileResponse).path,
+      url: (source as APIUploadedFileResponse).url,
+      value: (source as APIUploadedFileResponse).value,
+      storage: (source as APIUploadedFileResponse).storage,
+    };
   }
 
   /**
@@ -391,16 +666,11 @@ class ServicesAPIClient {
       const url = `${this.baseURL}${endpoint}`;
       
       // Preparar headers
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...(options.headers as Record<string, string> || {}),
-      };
+      const headers = this.buildHeaders(options);
       
       // Si tenemos API key, agregarla (opcional si usamos proxy, el proxy la agrega del servidor)
       // Si no usamos proxy, la API key es obligatoria
-      if (this.apiKey) {
-        headers['x-admin-api-key'] = this.apiKey;
-      } else if (!USE_PROXY) {
+      if (!this.apiKey && !USE_PROXY) {
         // Solo validar si NO estamos usando proxy (ejecución en servidor)
         console.error('ADMIN_API_KEY no está configurada. Configura ADMIN_API_KEY en las variables de entorno del servidor.');
         return {
@@ -688,19 +958,8 @@ class ServicesAPIClient {
   /**
    * Lista todas las categorías (áreas y subcategorías)
    */
-  async listCategories(
-    params?: ListCategoriesParams
-  ): Promise<APIResponse<CategoriesListResponse> | APIError> {
-    const queryParams = new URLSearchParams();
-    
-    if (params?.type) queryParams.set('type', params.type);
-    if (params?.group) queryParams.set('group', params.group);
-    if (params?.search) queryParams.set('search', params.search);
-
-    const query = queryParams.toString();
-    const endpoint = `/api/admin/categories${query ? `?${query}` : ''}`;
-
-    const result = await this.request<CategoriesListResponse>(endpoint);
+  async listCategories(): Promise<APIResponse<CategoriesListResponse> | APIError> {
+    const result = await this.request<RawCategoriesListResponse>('/api/admin/categories');
     if ('pagination' in result) {
       return {
         success: false,
@@ -708,14 +967,49 @@ class ServicesAPIClient {
         message: 'Se esperaba una respuesta simple, se recibió una respuesta paginada'
       };
     }
-    return result as APIResponse<CategoriesListResponse> | APIError;
+    if (!result.success) {
+      return result;
+    }
+    return {
+      ...result,
+      data: normalizeCategoriesList(result.data),
+    };
   }
 
   /**
    * Obtiene el detalle completo de una categoría
    */
+  async searchCategories(
+    params: ListCategoriesParams
+  ): Promise<APIResponse<APICategoryResponse[]> | APIError> {
+    const queryParams = new URLSearchParams();
+
+    if (params.type) queryParams.set('type', params.type);
+    if (params.group) queryParams.set('group', params.group);
+    if (params.search) queryParams.set('search', params.search);
+
+    const query = queryParams.toString();
+    const endpoint = `/api/admin/categories${query ? `?${query}` : ''}`;
+
+    const result = await this.request<RawCategoryPayload[]>(endpoint);
+    if ('pagination' in result) {
+      return {
+        success: false,
+        error: 'unexpected_response',
+        message: 'Se esperaba una respuesta simple, se recibio una respuesta paginada'
+      };
+    }
+    if (!result.success) {
+      return result;
+    }
+    return {
+      ...result,
+      data: result.data.map((category) => normalizeCategory(category)),
+    };
+  }
+
   async getCategory(id: string): Promise<APIResponse<APICategoryResponse> | APIError> {
-    const result = await this.request<APICategoryResponse>(`/api/admin/categories/${id}`);
+    const result = await this.request<RawCategoryPayload>(`/api/admin/categories/${id}`);
     if ('pagination' in result) {
       return {
         success: false,
@@ -723,7 +1017,13 @@ class ServicesAPIClient {
         message: 'Se esperaba una respuesta simple, se recibió una respuesta paginada'
       };
     }
-    return result as APIResponse<APICategoryResponse> | APIError;
+    if (!result.success) {
+      return result;
+    }
+    return {
+      ...result,
+      data: normalizeCategory(result.data),
+    };
   }
 
   /**
@@ -732,7 +1032,7 @@ class ServicesAPIClient {
   async createCategory(
     data: CreateCategoryData
   ): Promise<APIResponse<APICategoryResponse> | APIError> {
-    const result = await this.request<APICategoryResponse>('/api/admin/categories', {
+    const result = await this.request<RawCategoryPayload>('/api/admin/categories', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -743,7 +1043,13 @@ class ServicesAPIClient {
         message: 'Se esperaba una respuesta simple, se recibió una respuesta paginada'
       };
     }
-    return result as APIResponse<APICategoryResponse> | APIError;
+    if (!result.success) {
+      return result;
+    }
+    return {
+      ...result,
+      data: normalizeCategory(result.data, data.type),
+    };
   }
 
   /**
@@ -753,7 +1059,7 @@ class ServicesAPIClient {
     id: string,
     data: UpdateCategoryData
   ): Promise<APIResponse<APICategoryResponse> | APIError> {
-    const result = await this.request<APICategoryResponse>(`/api/admin/categories/${id}`, {
+    const result = await this.request<RawCategoryPayload>(`/api/admin/categories/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -764,7 +1070,13 @@ class ServicesAPIClient {
         message: 'Se esperaba una respuesta simple, se recibió una respuesta paginada'
       };
     }
-    return result as APIResponse<APICategoryResponse> | APIError;
+    if (!result.success) {
+      return result;
+    }
+    return {
+      ...result,
+      data: normalizeCategory(result.data),
+    };
   }
 
   /**
@@ -792,6 +1104,99 @@ class ServicesAPIClient {
       };
     }
     return result as APIResponse<{ id: string; active?: boolean }> | APIError;
+  }
+
+  async createUploadGrant(
+    input: { context?: 'register'; type?: 'image' | 'cv' } = { context: 'register', type: 'image' }
+  ): Promise<APIResponse<APIUploadGrantResponse> | APIError> {
+    try {
+      const payload = {
+        context: input.context ?? 'register',
+        type: input.type ?? 'image',
+      };
+
+      const response = await fetch(`${this.baseURL}/api/v1/upload/grant`, {
+        method: 'POST',
+        headers: this.buildHeaders({ body: JSON.stringify(payload) }),
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.success) {
+        return this.normalizeApiError(response, data);
+      }
+
+      const grant = this.unwrapUploadGrantPayload(data);
+      if (!grant) {
+        return {
+          success: false,
+          error: 'unexpected_response',
+          message: 'La API de upload grant devolvio un formato inesperado',
+        };
+      }
+
+      return {
+        success: true,
+        data: grant,
+      };
+    } catch (error) {
+      console.error('Upload grant request error:', error);
+      return {
+        success: false,
+        error: 'network_error',
+        message: error instanceof Error ? error.message : 'Error al solicitar el token de upload',
+      };
+    }
+  }
+
+  async uploadFile(
+    file: File,
+    input: { type?: 'image' | 'cv'; token?: string | null } = {}
+  ): Promise<APIResponse<APIUploadedFileResponse> | APIError> {
+    try {
+      const body = new FormData();
+      body.set('file', file);
+      body.set('type', input.type ?? 'image');
+
+      const headers = this.buildHeaders({ body });
+      if (input.token) {
+        headers.set('x-upload-token', input.token);
+      }
+
+      const response = await fetch(`${this.baseURL}/api/v1/upload`, {
+        method: 'POST',
+        headers,
+        body,
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.success) {
+        return this.normalizeApiError(response, data);
+      }
+
+      const upload = this.unwrapUploadedFilePayload(data);
+      if (!upload) {
+        return {
+          success: false,
+          error: 'unexpected_response',
+          message: 'La API de upload devolvio un formato inesperado',
+        };
+      }
+
+      return {
+        success: true,
+        data: upload,
+      };
+    } catch (error) {
+      console.error('File upload request error:', error);
+      return {
+        success: false,
+        error: 'network_error',
+        message: error instanceof Error ? error.message : 'Error al subir el archivo',
+      };
+    }
   }
 
   // ==================== BUG REPORTS ====================
