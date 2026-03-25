@@ -1,5 +1,6 @@
 "use client";
 
+import Image, { type ImageLoaderProps } from "next/image";
 import { ChangeEvent, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +95,8 @@ function generateSlug(name: string) {
     .replace(/(^-|-$)/g, "");
 }
 
+const categoryImageLoader = ({ src }: ImageLoaderProps) => src;
+
 function CategoryImagePreview({ src, alt }: { src?: string | null; alt: string }) {
   if (!src) {
     return (
@@ -103,7 +106,19 @@ function CategoryImagePreview({ src, alt }: { src?: string | null; alt: string }
     );
   }
 
-  return <img src={src} alt={alt} className="h-20 w-28 rounded-md border object-cover" />;
+  return (
+    <div className="relative h-20 w-28 overflow-hidden rounded-md border">
+      <Image
+        loader={categoryImageLoader}
+        unoptimized
+        src={src}
+        alt={alt}
+        fill
+        sizes="112px"
+        className="object-cover"
+      />
+    </div>
+  );
 }
 
 function canCategoryShowOnHome(type: CategoryType, group: CategoryGroup) {
@@ -1271,7 +1286,7 @@ export default function CategoriasPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Ocultar categoria</AlertDialogTitle>
             <AlertDialogDescription>
-              Se intentara ocultar la categoria "{selectedItem?.name}". Si el backend detecta subcategorias o servicios asociados puede rechazar la operacion.
+              Se intentara ocultar la categoria &quot;{selectedItem?.name}&quot;. Si el backend detecta subcategorias o servicios asociados puede rechazar la operacion.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
