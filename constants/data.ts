@@ -124,6 +124,10 @@ export const navItems = {
         url: "/dashboard/ceresito/farmacias-turno",
       },
       {
+        title: "Flujos No-Code",
+        url: "/dashboard/ceresito/flows",
+      },
+      {
         title: "Contactos",
         url: "/dashboard/contacts",
       },

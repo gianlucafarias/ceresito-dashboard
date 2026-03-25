@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { subMonths, subYears, startOfDay } from "date-fns";
+import Link from "next/link";
 
 const MessagesPerDayChart = dynamic(
   () => import("@/components/messages-per-day-chart").then((mod) => mod.MessagesPerDayChart),
@@ -219,6 +220,12 @@ export default function CeresitoPage() {
               {getStatusIndicator()}
             </div>
             <div className="flex items-center gap-4">
+              <Link
+                href="/dashboard/ceresito/flows"
+                className="rounded-md border border-input px-3 py-2 text-sm hover:bg-accent"
+              >
+                Flujos No-Code
+              </Link>
               <Select value={timeFilter} onValueChange={(value) => setTimeFilter(value as TimeFilter)}>
                 <SelectTrigger className="w-[180px]" aria-label="Seleccionar período de tiempo">
                   <SelectValue placeholder="Seleccionar período" />
