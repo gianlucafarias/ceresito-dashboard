@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +48,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiClient, APICertificationResponse } from "../../_lib/api-client";
 import { adaptProfessional } from "../../_lib/api-adapters";
+import { getUserInitials, resolveServicesMediaSrc } from "../../_lib/media";
 import { mockReviews } from "../../_lib/mock-data";
 import { Professional } from "../../_types";
 
@@ -57,6 +60,7 @@ interface ProfessionalDetailPageProps {
 
 export default function ProfessionalDetailPage({ params }: ProfessionalDetailPageProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [professional, setProfessional] = useState<Professional | undefined>();
   const [certifications, setCertifications] = useState<APICertificationResponse[]>([]);
   const [isLoadingCertifications, setIsLoadingCertifications] = useState(false);
@@ -120,6 +124,34 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
     }
   }, [professional?.id]);
 
+  const reloadProfessional = useCallback(async () => {
+    const response = await apiClient.getProfessional(params.id);
+
+    if (!response.success) {
+      throw new Error(response.message || "Error al recargar el profesional");
+    }
+
+    const adaptedProfessional = adaptProfessional(response.data);
+    setProfessional(adaptedProfessional);
+    return adaptedProfessional;
+  }, [params.id]);
+
+  const reloadCertifications = useCallback(async (professionalId: string) => {
+    const response = await apiClient.listCertifications({
+      professionalId,
+      limit: 100,
+    });
+
+    if (response.success && "pagination" in response) {
+      setCertifications(response.data);
+      return response.data;
+    }
+
+    throw new Error(
+      "message" in response ? response.message || "Error al recargar certificaciones" : "Error al recargar certificaciones"
+    );
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -153,6 +185,10 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
   }
 
   const professionalServices = professional.services || [];
+  const documentation = professional.documentation;
+  const isCertified = certifications.some((certification) => certification.status === "approved");
+  const toProxyDownloadPath = (downloadPath?: string) =>
+    downloadPath ? `/api/servicios-externos${downloadPath}` : null;
   
   // TODO: Las reviews aún vienen como mock, pendiente de endpoint en la API
   const professionalReviews = mockReviews.filter(r => r.professionalId === professional.id);
@@ -250,16 +286,25 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
       const response = await apiClient.updateProfessionalStatus(professional.id, 'active', true);
       
       if (response.success) {
-        // Actualizar el estado local
-        const updatedProfessional = adaptProfessional(response.data);
-        setProfessional(updatedProfessional);
-        alert('Profesional aprobado correctamente');
+        await reloadProfessional();
+        toast({
+          title: "Profesional aprobado",
+          description: "El profesional ya quedó activo y verificado.",
+        });
       } else {
-        alert(`Error: ${response.message}`);
+        toast({
+          title: "No se pudo aprobar",
+          description: response.message,
+          variant: "destructive",
+        });
       }
     } catch (err) {
       console.error('Error approving professional:', err);
-      alert('Error al aprobar el profesional');
+      toast({
+        title: "Error al aprobar",
+        description: "Ocurrió un problema al aprobar el profesional.",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -273,16 +318,25 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
       const response = await apiClient.updateProfessionalStatus(professional.id, 'pending', false);
       
       if (response.success) {
-        // Actualizar el estado local
-        const updatedProfessional = adaptProfessional(response.data);
-        setProfessional(updatedProfessional);
-        alert('Profesional rechazado');
+        await reloadProfessional();
+        toast({
+          title: "Solicitud actualizada",
+          description: "El profesional volvió a estado pendiente.",
+        });
       } else {
-        alert(`Error: ${response.message}`);
+        toast({
+          title: "No se pudo actualizar",
+          description: response.message,
+          variant: "destructive",
+        });
       }
     } catch (err) {
       console.error('Error rejecting professional:', err);
-      alert('Error al rechazar el profesional');
+      toast({
+        title: "Error al rechazar",
+        description: "Ocurrió un problema al rechazar al profesional.",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -298,15 +352,25 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
       
       if (response.success) {
         // Actualizar el estado local
-        const updatedProfessional = adaptProfessional(response.data);
-        setProfessional(updatedProfessional);
-        alert('Servicios certificados correctamente');
+        await reloadProfessional();
+        toast({
+          title: "Estado actualizado",
+          description: "Se actualizó la certificación del profesional.",
+        });
       } else {
-        alert(`Error: ${response.message}`);
+        toast({
+          title: "No se pudo certificar",
+          description: response.message,
+          variant: "destructive",
+        });
       }
     } catch (err) {
       console.error('Error certifying professional:', err);
-      alert('Error al certificar los servicios');
+      toast({
+        title: "Error al certificar",
+        description: "Ocurrió un problema al certificar los servicios.",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -334,10 +398,10 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
       });
 
       if (response.success) {
-        // Actualizar certificaciones en memoria
         setCertifications((prev) =>
           prev.map((c) => (c.id === selectedCertification.id ? response.data : c))
         );
+        await reloadProfessional();
         
         const statusMessages = {
           approved: "Certificación aprobada correctamente",
@@ -345,14 +409,27 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
           suspended: "Certificación suspendida",
         };
         
-        alert(statusMessages[status]);
+        toast({
+          title: "Certificación actualizada",
+          description: statusMessages[status],
+        });
         handleCloseCertificationModal();
       } else {
-        alert(response.message || `Error al ${status === 'approved' ? 'aprobar' : status === 'rejected' ? 'rechazar' : 'suspender'} la certificación`);
+        toast({
+          title: "No se pudo actualizar la certificación",
+          description:
+            response.message ||
+            `Error al ${status === 'approved' ? 'aprobar' : status === 'rejected' ? 'rechazar' : 'suspender'} la certificación`,
+          variant: "destructive",
+        });
       }
     } catch (err) {
       console.error(`Error updating certification:`, err);
-      alert(`Error al ${status === 'approved' ? 'aprobar' : status === 'rejected' ? 'rechazar' : 'suspender'} la certificación`);
+      toast({
+        title: "Error al actualizar la certificación",
+        description: `No se pudo ${status === 'approved' ? 'aprobar' : status === 'rejected' ? 'rechazar' : 'suspender'} la certificación.`,
+        variant: "destructive",
+      });
     } finally {
       setUpdatingCertificationId(null);
     }
@@ -370,19 +447,31 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
           </Button>
         </Link>
         
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex items-start gap-4">
+          <Avatar className="h-16 w-16 border border-border/60 shadow-sm md:h-20 md:w-20">
+            <AvatarImage
+              src={resolveServicesMediaSrc(professional.user?.picture) || undefined}
+              alt={`${professional.user?.firstName || ""} ${professional.user?.lastName || ""}`.trim()}
+              className="object-cover"
+            />
+            <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
+              {getUserInitials(professional.user?.firstName, professional.user?.lastName)}
+            </AvatarFallback>
+          </Avatar>
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">
+            <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
               {professional.user?.firstName} {professional.user?.lastName}
             </h2>
             <p className="text-muted-foreground">
               Detalles del profesional y solicitud de registro
             </p>
           </div>
-          <div className="flex items-center space-x-2">
-            {getStatusBadge(professional.status)}
-            {getVerifiedBadge(professional.verified)}
-            {getCertifiedBadge(professional.certified)}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 md:justify-end">
+          {getStatusBadge(professional.status)}
+          {getVerifiedBadge(professional.verified)}
+            {getCertifiedBadge(isCertified)}
             {getEmailVerifiedBadge(professional.user?.emailVerified || false)}
           </div>
         </div>
@@ -549,6 +638,90 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
                     </p>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="h-5 w-5" />
+                <span>Documentación</span>
+              </CardTitle>
+              <CardDescription>
+                Estado de antecedentes penales y referencias laborales del profesional.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={professional.documentationRequired ? "default" : "secondary"}>
+                  {professional.documentationRequired ? "Documentación requerida" : "No bloquea visibilidad"}
+                </Badge>
+                <Badge variant={professional.criminalRecordPresent ? "default" : "secondary"}>
+                  {professional.criminalRecordPresent ? "Antecedentes cargados" : "Sin antecedentes"}
+                </Badge>
+                <Badge variant={professional.hasLaborReferences ? "outline" : "secondary"}>
+                  {professional.hasLaborReferences ? "Con referencias laborales" : "Sin referencias"}
+                </Badge>
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">Certificado de antecedentes penales</p>
+                    <p className="text-sm text-muted-foreground">
+                      {documentation?.criminalRecord?.fileName || "No cargado"}
+                    </p>
+                  </div>
+                  {documentation?.criminalRecord?.downloadPath && (
+                    <a
+                      href={toProxyDownloadPath(documentation.criminalRecord.downloadPath) || "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Button variant="outline" size="sm">Descargar</Button>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium">Referencias laborales</p>
+                  <p className="text-sm text-muted-foreground">
+                    {(documentation?.laborReferences?.length || 0) > 0
+                      ? `${documentation?.laborReferences?.length} referencia(s) cargada(s)`
+                      : "No hay referencias laborales cargadas"}
+                  </p>
+                </div>
+
+                {(documentation?.laborReferences || []).length > 0 && (
+                  <div className="space-y-3">
+                    {documentation?.laborReferences?.map((reference) => (
+                      <div key={reference.id} className="rounded-lg border p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="font-medium">{reference.name}</p>
+                            <p className="text-sm text-muted-foreground">{reference.company}</p>
+                            <p className="text-sm text-muted-foreground">{reference.contact}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {reference.attachment?.fileName || "Sin adjunto"}
+                            </p>
+                          </div>
+                          {reference.attachment?.downloadPath && (
+                            <a
+                              href={toProxyDownloadPath(reference.attachment.downloadPath) || "#"}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <Button variant="outline" size="sm">Descargar adjunto</Button>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -823,17 +996,12 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
                 <>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Estado de certificación</span>
-                    {getCertifiedBadge(professional.certified)}
+                    {getCertifiedBadge(isCertified)}
                   </div>
-                  {!professional.certified && (
-                    <Button 
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                      onClick={handleCertify}
-                      disabled={isProcessing}
-                    >
-                      <Award className="mr-2 h-4 w-4" />
-                      Certificar Servicios
-                    </Button>
+                  {!isCertified && (
+                    <p className="text-sm text-muted-foreground">
+                      Este profesional todavía no tiene certificaciones aprobadas.
+                    </p>
                   )}
                 </>
               )}

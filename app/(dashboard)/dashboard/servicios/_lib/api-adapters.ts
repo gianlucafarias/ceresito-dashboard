@@ -3,7 +3,7 @@
  * Convierte respuestas de la API en los tipos definidos en _types/index.ts
  */
 
-import { Professional, Service, User } from '../_types';
+import { Professional, ProfessionalDocumentation, Service, User } from '../_types';
 import { APIProfessionalResponse, APIStatsResponse } from './api-client';
 
 /**
@@ -91,6 +91,33 @@ export function adaptService(apiService: APIProfessionalResponse['services'][0],
  */
 export function adaptProfessional(apiProfessional: APIProfessionalResponse): Professional {
   const user = adaptUser(apiProfessional.user, apiProfessional);
+  const documentation: ProfessionalDocumentation | undefined = apiProfessional.documentation
+    ? {
+        required: apiProfessional.documentation.required,
+        criminalRecordPresent: apiProfessional.documentation.criminalRecordPresent,
+        hasLaborReferences: apiProfessional.documentation.hasLaborReferences,
+        criminalRecord: apiProfessional.documentation.criminalRecord
+          ? {
+              objectKey: apiProfessional.documentation.criminalRecord.objectKey,
+              fileName: apiProfessional.documentation.criminalRecord.fileName,
+              downloadPath: apiProfessional.documentation.criminalRecord.downloadPath,
+            }
+          : null,
+        laborReferences: (apiProfessional.documentation.laborReferences || []).map((reference) => ({
+          id: reference.id,
+          name: reference.name,
+          company: reference.company,
+          contact: reference.contact,
+          attachment: reference.attachment
+            ? {
+                objectKey: reference.attachment.objectKey,
+                fileName: reference.attachment.fileName,
+                downloadPath: reference.attachment.downloadPath,
+              }
+            : null,
+        })),
+      }
+    : undefined;
   
   const services = apiProfessional.services?.map(service => 
     adaptService(service, apiProfessional.id)
@@ -104,12 +131,16 @@ export function adaptProfessional(apiProfessional: APIProfessionalResponse): Pro
     bio: apiProfessional.bio || '',
     experienceYears: apiProfessional.experienceYears || 0,
     verified: apiProfessional.verified,
-    certified: false, // La API no retorna este campo aún, por defecto false
+    certified: Boolean(apiProfessional.certified),
     status: apiProfessional.status,
+    documentationRequired: apiProfessional.documentationRequired,
+    criminalRecordPresent: apiProfessional.criminalRecordPresent,
+    hasLaborReferences: apiProfessional.hasLaborReferences,
     rating: apiProfessional.rating || 0,
     reviewCount: apiProfessional.reviewCount || apiProfessional._count?.reviews || 0,
     createdAt: parseDate(apiProfessional.createdAt),
     updatedAt: parseDate(apiProfessional.updatedAt),
+    documentation,
     services: services,
     registrationType: apiProfessional.registrationType, // Preservar el tipo de registro
   };
@@ -181,7 +212,5 @@ export function prepareUpdateProfessionalData(formData: any) {
 
   return data;
 }
-
-
 
 

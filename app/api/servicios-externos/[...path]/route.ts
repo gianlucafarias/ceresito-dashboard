@@ -160,12 +160,29 @@ async function handleRequest(
       return NextResponse.json(data, { status: response.status });
     }
 
-    const text = await response.text();
-    return new NextResponse(text, {
+    const body = await response.arrayBuffer();
+    const headers = new Headers();
+    const contentDisposition = response.headers.get('content-disposition');
+    const cacheControl = response.headers.get('cache-control');
+    const contentLength = response.headers.get('content-length');
+
+    headers.set('Content-Type', responseContentType);
+
+    if (contentDisposition) {
+      headers.set('Content-Disposition', contentDisposition);
+    }
+
+    if (cacheControl) {
+      headers.set('Cache-Control', cacheControl);
+    }
+
+    if (contentLength) {
+      headers.set('Content-Length', contentLength);
+    }
+
+    return new NextResponse(body, {
       status: response.status,
-      headers: {
-        'Content-Type': responseContentType,
-      },
+      headers,
     });
   } catch (error) {
     console.error('[Proxy] Error en proxy de servicios externos:', error);

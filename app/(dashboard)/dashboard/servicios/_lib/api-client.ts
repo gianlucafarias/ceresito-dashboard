@@ -65,6 +65,7 @@ export interface APIProfessionalResponse {
   bio: string;
   status: 'pending' | 'active' | 'suspended';
   verified: boolean;
+  certified?: boolean;
   professionalGroup?: 'oficios' | 'profesiones';
   experienceYears?: number;
   rating?: number;
@@ -81,8 +82,44 @@ export interface APIProfessionalResponse {
   portfolio?: string;
   CV?: string;
   registrationType?: 'email' | 'google' | 'facebook';
+  documentationRequired?: boolean;
+  criminalRecordPresent?: boolean;
+  hasLaborReferences?: boolean;
+  documentation?: {
+    required?: boolean;
+    criminalRecordPresent?: boolean;
+    hasLaborReferences?: boolean;
+    criminalRecord?: {
+      objectKey?: string;
+      fileName: string;
+      downloadPath?: string;
+    } | null;
+    laborReferences?: Array<{
+      id: string;
+      name: string;
+      company: string;
+      contact: string;
+      attachment?: {
+        objectKey?: string;
+        fileName: string;
+        downloadPath?: string;
+      } | null;
+    }>;
+  };
   createdAt: string;
   updatedAt: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    birthDate?: string;
+    location?: string;
+    verified?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+  };
   services?: Array<{
     id: string;
     title: string;
@@ -95,6 +132,11 @@ export interface APIProfessionalResponse {
     createdAt?: string;
     updatedAt?: string;
   }>;
+  _count?: {
+    services?: number;
+    reviews?: number;
+    contactRequests?: number;
+  };
 }
 
 export interface APIServiceResponse {

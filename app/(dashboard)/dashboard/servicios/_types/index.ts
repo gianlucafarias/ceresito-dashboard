@@ -172,6 +172,28 @@ export interface User {
   emailVerified?: boolean;
 }
 
+export interface PrivateDocumentFile {
+  objectKey?: string;
+  fileName: string;
+  downloadPath?: string;
+}
+
+export interface LaborReference {
+  id: string;
+  name: string;
+  company: string;
+  contact: string;
+  attachment?: PrivateDocumentFile | null;
+}
+
+export interface ProfessionalDocumentation {
+  required?: boolean;
+  criminalRecordPresent?: boolean;
+  hasLaborReferences?: boolean;
+  criminalRecord?: PrivateDocumentFile | null;
+  laborReferences?: LaborReference[];
+}
+
 // Jerarquía de categorías: grupos principales y subcategorías
 export type CategoryGroup = 'oficios' | 'profesiones';
 
@@ -205,11 +227,15 @@ export interface Professional {
   verified: boolean;
   certified: boolean; // Nuevo: si sus servicios están certificados
   status: 'pending' | 'active' | 'suspended';
+  documentationRequired?: boolean;
+  criminalRecordPresent?: boolean;
+  hasLaborReferences?: boolean;
   rating: number;
   reviewCount: number;
   registrationType?: 'email' | 'google' | 'facebook'; // Cómo se registró el profesional
   createdAt: Date;
   updatedAt: Date;
+  documentation?: ProfessionalDocumentation;
   services?: Service[]; // para vistas que incluyen servicios
 }
 

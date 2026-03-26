@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/use-toast";
 import { 
   Upload, 
   FileSpreadsheet, 
@@ -69,6 +70,7 @@ interface BulkUploadProfessionalsProps {
 }
 
 export function BulkUploadProfessionals({ onUploadComplete }: BulkUploadProfessionalsProps = {}) {
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<CSVRow[]>([]);
@@ -184,7 +186,11 @@ export function BulkUploadProfessionals({ onUploadComplete }: BulkUploadProfessi
     if (!selectedFile) return;
 
     if (!selectedFile.name.endsWith('.csv')) {
-      alert('Por favor selecciona un archivo CSV');
+      toast({
+        title: "Archivo inválido",
+        description: "Seleccioná un archivo CSV para continuar.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -202,7 +208,11 @@ export function BulkUploadProfessionals({ onUploadComplete }: BulkUploadProfessi
       setValidationErrors(errors);
     } catch (error) {
       console.error('Error parsing CSV:', error);
-      alert('Error al leer el archivo CSV');
+      toast({
+        title: "No se pudo leer el archivo",
+        description: "Ocurrió un problema al procesar el CSV.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -271,7 +281,11 @@ export function BulkUploadProfessionals({ onUploadComplete }: BulkUploadProfessi
       }
     } catch (error) {
       console.error('Error uploading professionals:', error);
-      alert('Error al cargar los profesionales');
+      toast({
+        title: "Error en la carga masiva",
+        description: "No se pudieron cargar los profesionales.",
+        variant: "destructive",
+      });
     } finally {
       setIsUploading(false);
     }

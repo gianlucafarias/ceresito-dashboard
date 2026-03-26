@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +63,7 @@ interface EditProfessionalPageProps {
 
 export default function EditProfessionalPage({ params }: EditProfessionalPageProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [professional, setProfessional] = useState<Professional | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -203,7 +205,11 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
       const response = await apiClient.updateProfessional(params.id, updateData);
       
       if (!response.success) {
-        alert(`Error al guardar: ${response.message}`);
+        toast({
+          title: "No se pudieron guardar los cambios",
+          description: response.message,
+          variant: "destructive",
+        });
         setIsSaving(false);
         return;
       }
@@ -277,12 +283,19 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
         }
       }
 
-      alert('Cambios guardados correctamente');
+      toast({
+        title: "Cambios guardados",
+        description: "La información del profesional se actualizó correctamente.",
+      });
       // Redirigir de vuelta a la página de detalles
       router.push(`/dashboard/servicios/profesionales/${params.id}`);
     } catch (error) {
       console.error("Error al guardar cambios:", error);
-      alert('Error de conexión al guardar los cambios');
+      toast({
+        title: "Error al guardar",
+        description: "Ocurrió un problema al guardar los cambios.",
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -315,21 +328,41 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
       const response = await apiClient.updateProfessionalStatus(professional.id, status, verified);
       
       if (response.success) {
-        const updatedProfessional = adaptProfessional(response.data);
-        setProfessional(updatedProfessional);
+        setProfessional((prev) =>
+          prev
+            ? {
+                ...prev,
+                status,
+                verified,
+              }
+            : prev
+        );
         setFormData(prev => ({
           ...prev,
-          status: updatedProfessional.status
+          status,
+          verified,
         }));
-        alert(status === 'active' 
-          ? 'Profesional aprobado y visible en la plataforma' 
-          : 'Profesional desactivado. Volverá a estar pendiente de aprobación.');
+        toast({
+          title: status === 'active' ? "Profesional aprobado" : "Profesional desactivado",
+          description:
+            status === 'active'
+              ? 'El profesional quedó visible en la plataforma.'
+              : 'El profesional volvió a estado pendiente de aprobación.',
+        });
       } else {
-        alert(`Error: ${response.message}`);
+        toast({
+          title: "No se pudo actualizar el estado",
+          description: response.message,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error al actualizar estado:", error);
-      alert('Error de conexión al actualizar el estado');
+      toast({
+        title: "Error al actualizar estado",
+        description: "Ocurrió un problema al actualizar el estado del profesional.",
+        variant: "destructive",
+      });
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -373,7 +406,11 @@ export default function EditProfessionalPage({ params }: EditProfessionalPagePro
 
   const handleSaveService = () => {
     if (!serviceFormData.categoryId || !serviceFormData.title || !serviceFormData.description) {
-      alert('Por favor completa todos los campos requeridos');
+      toast({
+        title: "Campos incompletos",
+        description: "Completá todos los campos requeridos del servicio.",
+        variant: "destructive",
+      });
       return;
     }
 
