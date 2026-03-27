@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -39,7 +40,6 @@ import {
   Star,
   MapPin,
   Calendar,
-  User,
   Loader2,
   AlertCircle,
   ChevronLeft,
@@ -50,6 +50,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "../_lib/api-client";
 import { adaptProfessionals } from "../_lib/api-adapters";
+import { getUserInitials, resolveServicesMediaSrc } from "../_lib/media";
 import { Professional } from "../_types";
 import { BulkUploadProfessionals } from "./_components/bulk-upload";
 
@@ -290,9 +291,16 @@ export default function ProfesionalesPage() {
                 >
                   <TableCell>
                     <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
+                      <Avatar className="h-9 w-9 border border-border/60">
+                        <AvatarImage
+                          src={resolveServicesMediaSrc(professional.user?.picture) || undefined}
+                          alt={`${professional.user?.firstName || ""} ${professional.user?.lastName || ""}`.trim()}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                          {getUserInitials(professional.user?.firstName, professional.user?.lastName)}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <div className="font-medium">
                           {professional.user?.firstName} {professional.user?.lastName}

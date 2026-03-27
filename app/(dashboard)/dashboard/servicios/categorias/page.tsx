@@ -1,6 +1,5 @@
 "use client";
 
-import Image, { type ImageLoaderProps } from "next/image";
 import { ChangeEvent, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -95,10 +94,36 @@ function generateSlug(name: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-const categoryImageLoader = ({ src }: ImageLoaderProps) => src;
+function getServicesBaseUrl() {
+  return (process.env.NEXT_PUBLIC_SERVICES_API_URL || "").replace(/\/$/, "");
+}
+
+function resolveCategoryImageSrc(src?: string | null) {
+  if (!src) {
+    return null;
+  }
+
+  const normalizedSrc = src.trim();
+  if (!normalizedSrc) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(normalizedSrc)) {
+    return normalizedSrc;
+  }
+
+  if (normalizedSrc.startsWith("/uploads/")) {
+    const servicesBaseUrl = getServicesBaseUrl();
+    return servicesBaseUrl ? `${servicesBaseUrl}${normalizedSrc}` : normalizedSrc;
+  }
+
+  return normalizedSrc;
+}
 
 function CategoryImagePreview({ src, alt }: { src?: string | null; alt: string }) {
-  if (!src) {
+  const resolvedSrc = resolveCategoryImageSrc(src);
+
+  if (!resolvedSrc) {
     return (
       <div className="flex h-20 w-28 items-center justify-center rounded-md border border-dashed bg-muted text-xs text-muted-foreground">
         Sin imagen
@@ -108,21 +133,26 @@ function CategoryImagePreview({ src, alt }: { src?: string | null; alt: string }
 
   return (
     <div className="relative h-20 w-28 overflow-hidden rounded-md border">
-      <Image
-        loader={categoryImageLoader}
-        unoptimized
-        src={src}
-        alt={alt}
-        fill
-        sizes="112px"
-        className="object-cover"
-      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={resolvedSrc} alt={alt} className="h-full w-full object-cover" />
     </div>
   );
 }
 
 function canCategoryShowOnHome(type: CategoryType, group: CategoryGroup) {
   return type === "area" || group === "profesiones";
+}
+
+function canCategoryManageIcon(type: CategoryType, group: CategoryGroup) {
+  return type === "area" || group === "profesiones";
+}
+
+function getCategoryKindLabel(type: CategoryType, group: CategoryGroup) {
+  if (group === "profesiones") {
+    return "Profesion";
+  }
+
+  return type === "area" ? "Area" : "Subcategoria";
 }
 
 function CategoryIconPreview({ icon, slug }: { icon?: string | null; slug?: string | null }) {
@@ -308,41 +338,52 @@ export default function CategoriasPage() {
     setIsCreateDialogOpen(true);
   }
 
+  function openCreateProfession() {
+    setSelectedItem(null);
+    setNotice(null);
+    resetForm({ type: "subcategory", group: "profesiones", parentId: "" });
+    setIsCreateDialogOpen(true);
+  }
+
   function openCreateSubcategory(parentId?: string) {
     setSelectedItem(null);
     setNotice(null);
     resetForm({
       type: "subcategory",
-      group: parentId ? "oficios" : "profesiones",
+      group: "oficios",
       parentId: parentId || "",
     });
     setIsCreateDialogOpen(true);
   }
 
   function handleTypeChange(value: CategoryType) {
-    setFormData((current) => ({
-      ...current,
-      type: value,
-      group: value === "area" ? "oficios" : current.group,
-      parentId: value === "area" ? "" : current.parentId,
-      showOnHome:
-        canCategoryShowOnHome(value, value === "area" ? "oficios" : current.group)
-          ? current.showOnHome
-          : false,
-    }));
+    setFormData((current) => {
+      const nextGroup = value === "area" ? "oficios" : current.group;
+
+      return {
+        ...current,
+        type: value,
+        group: nextGroup,
+        parentId: value === "area" ? "" : current.parentId,
+        icon: canCategoryManageIcon(value, nextGroup) ? current.icon : "",
+        showOnHome: canCategoryShowOnHome(value, nextGroup) ? current.showOnHome : false,
+      };
+    });
   }
 
   function handleGroupChange(value: CategoryGroup) {
-    setFormData((current) => ({
-      ...current,
-      group: value,
-      type: value === "profesiones" ? "subcategory" : current.type,
-      parentId: value === "profesiones" ? "" : current.parentId,
-      showOnHome:
-        canCategoryShowOnHome(value === "profesiones" ? "subcategory" : current.type, value)
-          ? current.showOnHome
-          : false,
-    }));
+    setFormData((current) => {
+      const nextType = value === "profesiones" ? "subcategory" : current.type;
+
+      return {
+        ...current,
+        group: value,
+        type: nextType,
+        parentId: value === "profesiones" ? "" : current.parentId,
+        icon: canCategoryManageIcon(nextType, value) ? current.icon : "",
+        showOnHome: canCategoryShowOnHome(nextType, value) ? current.showOnHome : false,
+      };
+    });
   }
 
   function handleEdit(item: APICategoryResponse) {
@@ -355,7 +396,7 @@ export default function CategoriasPage() {
       type: item.type,
       group: item.group,
       parentId: item.parentId || item.areaId || "",
-      icon: item.icon || "",
+      icon: canCategoryManageIcon(item.type, item.group) ? item.icon || "" : "",
       image: item.image || "",
       active: item.active,
       showOnHome: item.showOnHome || false,
@@ -431,7 +472,7 @@ export default function CategoriasPage() {
             ? formData.parentId || null
             : null,
         description: formData.description.trim() || undefined,
-        icon: formData.icon || null,
+        icon: canCategoryManageIcon(formData.type, formData.group) ? formData.icon || null : null,
         image: formData.image.trim() || undefined,
         active: formData.active,
         showOnHome: canCategoryShowOnHome(formData.type, formData.group)
@@ -467,7 +508,9 @@ export default function CategoriasPage() {
       const response = await apiClient.updateCategory(selectedItem.id, {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        icon: formData.icon || null,
+        icon: canCategoryManageIcon(selectedItem.type, selectedItem.group)
+          ? formData.icon || null
+          : null,
         image: formData.image.trim() || null,
         active: formData.active,
         showOnHome: canCategoryShowOnHome(selectedItem.type, selectedItem.group)
@@ -555,7 +598,7 @@ export default function CategoriasPage() {
               onChange={(event) =>
                 setFormData((current) => ({ ...current, image: event.target.value }))
               }
-              placeholder="URL publica de la imagen"
+              placeholder="URL publica o ruta devuelta por el backend"
             />
             <div className="flex items-center gap-2">
               <Button
@@ -575,7 +618,7 @@ export default function CategoriasPage() {
               ) : null}
             </div>
             <p className="text-xs text-muted-foreground">
-              El panel usa el flujo de upload del backend de servicios: grant + upload.
+              El panel usa el flujo de upload del backend de servicios. Si la imagen queda en una ruta local, el preview la resuelve contra ese host.
             </p>
           </div>
         </div>
@@ -585,29 +628,36 @@ export default function CategoriasPage() {
 
   function renderPresentationField(idPrefix: string) {
     const showHomeToggle = canCategoryShowOnHome(formData.type, formData.group);
+    const showIconControls = canCategoryManageIcon(formData.type, formData.group);
 
     return (
       <div className="grid gap-4 rounded-xl border p-4">
-        <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
-          <CategoryIconPreview icon={formData.icon || null} slug={formData.slug || null} />
-          <div className="grid gap-2">
-            <Label htmlFor={`${idPrefix}-icon`}>Icono</Label>
-            <CategoryIconPicker
-              id={`${idPrefix}-icon`}
-              value={formData.icon}
-              slug={formData.slug || null}
-              onChange={(value) =>
-                setFormData((current) => ({
-                  ...current,
-                  icon: value,
-                }))
-              }
-            />
-            <p className="text-xs text-muted-foreground">
-              Hay {CATEGORY_ICON_OPTIONS.length} iconos disponibles. Busca por nombre y elige con preview real.
-            </p>
+        {showIconControls ? (
+          <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
+            <CategoryIconPreview icon={formData.icon || null} slug={formData.slug || null} />
+            <div className="grid gap-2">
+              <Label htmlFor={`${idPrefix}-icon`}>Icono</Label>
+              <CategoryIconPicker
+                id={`${idPrefix}-icon`}
+                value={formData.icon}
+                slug={formData.slug || null}
+                onChange={(value) =>
+                  setFormData((current) => ({
+                    ...current,
+                    icon: value,
+                  }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Hay {CATEGORY_ICON_OPTIONS.length} iconos disponibles. Busca por nombre y elige con preview real.
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+            Las subcategorias de oficio heredan el icono del area padre. No se configura icono propio.
+          </div>
+        )}
 
         <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
           <div className="space-y-1">
@@ -665,9 +715,9 @@ export default function CategoriasPage() {
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Recargar
           </Button>
-          <Button variant="outline" onClick={() => openCreateSubcategory()}>
+          <Button variant="outline" onClick={openCreateProfession}>
             <Plus className="mr-2 h-4 w-4" />
-            Nueva subcategoria
+            Nueva profesion
           </Button>
           <Button onClick={openCreateArea}>
             <Plus className="mr-2 h-4 w-4" />
@@ -855,7 +905,6 @@ export default function CategoriasPage() {
                         className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between"
                       >
                         <div className="flex min-w-0 gap-3">
-                          <CategoryIconPreview icon={subcategory.icon} slug={subcategory.slug} />
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="font-medium">{subcategory.name}</p>
@@ -889,12 +938,18 @@ export default function CategoriasPage() {
 
           <div className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 text-green-500" />
-                  Profesiones
-                  <Badge variant="secondary">{profesionesSubcategories.length}</Badge>
-                </CardTitle>
+              <CardHeader className="space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5 text-green-500" />
+                    Profesiones
+                    <Badge variant="secondary">{profesionesSubcategories.length}</Badge>
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={openCreateProfession}>
+                    <Plus className="mr-2 h-3 w-3" />
+                    Nueva profesion
+                  </Button>
+                </div>
                 <CardDescription>Categorias planas para servicios profesionales.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -959,8 +1014,10 @@ export default function CategoriasPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="area">Area</SelectItem>
-                    <SelectItem value="subcategory">Subcategoria</SelectItem>
+                    {formData.group === "oficios" ? <SelectItem value="area">Area</SelectItem> : null}
+                    <SelectItem value="subcategory">
+                      {formData.group === "profesiones" ? "Profesion" : "Subcategoria"}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -973,7 +1030,7 @@ export default function CategoriasPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="oficios">Oficios</SelectItem>
-                    {formData.type !== "area" ? <SelectItem value="profesiones">Profesiones</SelectItem> : null}
+                    <SelectItem value="profesiones">Profesiones</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1068,7 +1125,12 @@ export default function CategoriasPage() {
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Tipo</Label>
-                <Input value={selectedItem?.type === "area" ? "Area" : "Subcategoria"} disabled />
+                <Input
+                  value={
+                    selectedItem ? getCategoryKindLabel(selectedItem.type, selectedItem.group) : ""
+                  }
+                  disabled
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Grupo</Label>
@@ -1173,7 +1235,9 @@ export default function CategoriasPage() {
                 <div className="flex flex-col gap-4 sm:flex-row">
                   <div className="flex flex-col gap-2">
                     <CategoryImagePreview src={activeDetail.image} alt={activeDetail.name} />
-                    <CategoryIconPreview icon={activeDetail.icon} slug={activeDetail.slug} />
+                    {canCategoryManageIcon(activeDetail.type, activeDetail.group) ? (
+                      <CategoryIconPreview icon={activeDetail.icon} slug={activeDetail.slug} />
+                    ) : null}
                   </div>
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
@@ -1185,7 +1249,12 @@ export default function CategoriasPage() {
                     </div>
                     <p className="font-mono text-xs text-muted-foreground">{activeDetail.slug}</p>
                     <p className="text-sm text-muted-foreground">
-                      {activeDetail.type === "area" ? "Area de oficios" : "Subcategoria"} - {activeDetail.group === "oficios" ? "Oficios" : "Profesiones"}
+                      {activeDetail.group === "profesiones"
+                        ? "Profesion"
+                        : activeDetail.type === "area"
+                          ? "Area de oficios"
+                          : "Subcategoria de oficio"}{" "}
+                      - {activeDetail.group === "oficios" ? "Oficios" : "Profesiones"}
                     </p>
                     {activeDetail.parent?.name ? (
                       <p className="text-sm text-muted-foreground">
@@ -1202,14 +1271,22 @@ export default function CategoriasPage() {
                   </div>
                 ) : null}
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg border p-3">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Icono</p>
-                    <div className="mt-2 flex items-center gap-3">
-                      <CategoryIconPreview icon={activeDetail.icon} slug={activeDetail.slug} />
-                      <p className="font-mono text-xs">{activeDetail.icon || "fallback por slug"}</p>
+                <div
+                  className={`grid gap-3 ${
+                    canCategoryManageIcon(activeDetail.type, activeDetail.group)
+                      ? "sm:grid-cols-2"
+                      : "sm:grid-cols-1"
+                  }`}
+                >
+                  {canCategoryManageIcon(activeDetail.type, activeDetail.group) ? (
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Icono</p>
+                      <div className="mt-2 flex items-center gap-3">
+                        <CategoryIconPreview icon={activeDetail.icon} slug={activeDetail.slug} />
+                        <p className="font-mono text-xs">{activeDetail.icon || "fallback por slug"}</p>
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
                   <div className="rounded-lg border p-3">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Mostrar en inicio</p>
                     <p className="mt-2 text-lg font-semibold">{activeDetail.showOnHome ? "Si" : "No"}</p>
