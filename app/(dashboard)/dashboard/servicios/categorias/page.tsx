@@ -58,6 +58,7 @@ import {
   CategoryType,
 } from "../_lib/api-client";
 import { CATEGORY_ICON_OPTIONS, resolveCategoryIcon } from "../_lib/category-icons";
+import { resolveServicesMediaSrc } from "../_lib/media";
 
 type CategoryFormState = {
   name: string;
@@ -94,34 +95,8 @@ function generateSlug(name: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-function getServicesBaseUrl() {
-  return (process.env.NEXT_PUBLIC_SERVICES_API_URL || "").replace(/\/$/, "");
-}
-
-function resolveCategoryImageSrc(src?: string | null) {
-  if (!src) {
-    return null;
-  }
-
-  const normalizedSrc = src.trim();
-  if (!normalizedSrc) {
-    return null;
-  }
-
-  if (/^https?:\/\//i.test(normalizedSrc)) {
-    return normalizedSrc;
-  }
-
-  if (normalizedSrc.startsWith("/uploads/")) {
-    const servicesBaseUrl = getServicesBaseUrl();
-    return servicesBaseUrl ? `${servicesBaseUrl}${normalizedSrc}` : normalizedSrc;
-  }
-
-  return normalizedSrc;
-}
-
 function CategoryImagePreview({ src, alt }: { src?: string | null; alt: string }) {
-  const resolvedSrc = resolveCategoryImageSrc(src);
+  const resolvedSrc = resolveServicesMediaSrc(src);
 
   if (!resolvedSrc) {
     return (
@@ -568,7 +543,10 @@ export default function CategoriasPage() {
         return;
       }
 
-      setFormData((current) => ({ ...current, image: uploadResponse.data.url }));
+      setFormData((current) => ({
+        ...current,
+        image: uploadResponse.data.value || uploadResponse.data.url,
+      }));
       setNotice("Imagen subida correctamente.");
     } catch (err) {
       console.error("Error uploading category image:", err);
