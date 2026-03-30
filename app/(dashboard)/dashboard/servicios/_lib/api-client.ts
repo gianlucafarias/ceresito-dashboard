@@ -10,8 +10,8 @@ const API_BASE_URL = USE_PROXY
   ? '/api/servicios-externos' // Ruta del proxy en Next.js (ruta API real)
   : process.env.NEXT_PUBLIC_SERVICES_API_URL || process.env.SERVICES_API_URL || 'https://ceresenred.ceres.gob.ar';
 const API_KEY = USE_PROXY 
-  ? process.env.NEXT_PUBLIC_ADMIN_API_KEY // Opcional en cliente si el proxy no tiene la key
-  : (process.env.ADMIN_API_KEY || process.env.NEXT_PUBLIC_ADMIN_API_KEY);
+  ? undefined
+  : process.env.ADMIN_API_KEY;
 
 export interface APIError {
   success: false;
@@ -469,6 +469,82 @@ export interface ListCertificationsParams {
 export interface UpdateCertificationData {
   status: 'approved' | 'rejected' | 'suspended';
   adminNotes?: string;
+}
+
+export interface APIObservabilityEvent {
+  id: string;
+  kind: 'audit' | 'workflow' | 'request';
+  domain: string;
+  eventName: string;
+  entityType?: string | null;
+  entityId?: string | null;
+  actorType: 'admin_user' | 'end_user' | 'system';
+  actorId?: string | null;
+  actorLabel?: string | null;
+  requestId?: string | null;
+  route?: string | null;
+  method?: string | null;
+  status: 'success' | 'failure' | 'warning' | 'skipped';
+  durationMs?: number | null;
+  summary: string;
+  changes?: Record<string, any> | null;
+  metadata?: Record<string, any> | null;
+  createdAt: string;
+}
+
+export interface ObservabilityEventsParams {
+  from?: string;
+  to?: string;
+  domain?: string;
+  actorId?: string;
+  kind?: 'audit' | 'workflow' | 'request';
+  status?: 'success' | 'failure' | 'warning' | 'skipped';
+  entityType?: string;
+  entityId?: string;
+  requestId?: string;
+  query?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface APIObservabilitySummaryResponse {
+  totals: {
+    totalEvents: number;
+    events24h: number;
+    errorEvents24h: number;
+    adminActions24h: number;
+    emailEvents24h: number;
+    requestFailures24h: number;
+    slowRequests24h: number;
+  };
+  statusBreakdown: Array<{
+    status: APIObservabilityEvent['status'];
+    count: number;
+  }>;
+  domainBreakdown: Array<{
+    domain: string;
+    count: number;
+  }>;
+  recentFailures: APIObservabilityEvent[];
+}
+
+export interface APIObservabilityEventDetailResponse {
+  event: APIObservabilityEvent;
+  timeline: APIObservabilityEvent[];
+}
+
+export interface APIObservabilityEventsResponse {
+  success: true;
+  data: APIObservabilityEvent[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  filters?: ObservabilityEventsParams & {
+    query?: string | null;
+  };
 }
 
 type RawCategoryPayload = {
@@ -1353,6 +1429,66 @@ class ServicesAPIClient {
       };
     }
     return result as APIResponse<{ id: string }> | APIError;
+  }
+
+  // ==================== OBSERVABILIDAD ====================
+
+  async getObservabilitySummary(): Promise<APIResponse<APIObservabilitySummaryResponse> | APIError> {
+    const result = await this.request<APIObservabilitySummaryResponse>('/api/admin/observability/summary');
+    if ('pagination' in result) {
+      return {
+        success: false,
+        error: 'unexpected_response',
+        message: 'Se esperaba una respuesta simple, se recibio una respuesta paginada'
+      };
+    }
+    return result as APIResponse<APIObservabilitySummaryResponse> | APIError;
+  }
+
+  async listObservabilityEvents(
+    params?: ObservabilityEventsParams
+  ): Promise<APIObservabilityEventsResponse | APIError> {
+    const queryParams = new URLSearchParams();
+
+    if (params?.from) queryParams.set('from', params.from);
+    if (params?.to) queryParams.set('to', params.to);
+    if (params?.domain) queryParams.set('domain', params.domain);
+    if (params?.actorId) queryParams.set('actorId', params.actorId);
+    if (params?.kind) queryParams.set('kind', params.kind);
+    if (params?.status) queryParams.set('status', params.status);
+    if (params?.entityType) queryParams.set('entityType', params.entityType);
+    if (params?.entityId) queryParams.set('entityId', params.entityId);
+    if (params?.requestId) queryParams.set('requestId', params.requestId);
+    if (params?.query) queryParams.set('query', params.query);
+    if (params?.page) queryParams.set('page', String(params.page));
+    if (params?.limit) queryParams.set('limit', String(params.limit));
+
+    const query = queryParams.toString();
+    const result = await this.request<any>(`/api/admin/observability/events${query ? `?${query}` : ''}`);
+
+    if (!result.success) {
+      return result as APIError;
+    }
+
+    if (!('pagination' in result) && Array.isArray((result as any).data) && (result as any).pagination) {
+      return result as APIObservabilityEventsResponse;
+    }
+
+    return result as APIObservabilityEventsResponse;
+  }
+
+  async getObservabilityEvent(
+    id: string
+  ): Promise<APIResponse<APIObservabilityEventDetailResponse> | APIError> {
+    const result = await this.request<APIObservabilityEventDetailResponse>(`/api/admin/observability/events/${id}`);
+    if ('pagination' in result) {
+      return {
+        success: false,
+        error: 'unexpected_response',
+        message: 'Se esperaba una respuesta simple, se recibio una respuesta paginada'
+      };
+    }
+    return result as APIResponse<APIObservabilityEventDetailResponse> | APIError;
   }
 
   /**

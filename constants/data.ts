@@ -1,16 +1,12 @@
 import {
   LayoutDashboard,
-  Users,
   Bot,
-  Map,
   LogOut,
-  List,
   Building,
   Settings,
   ClipboardList,
-  Briefcase
+  Briefcase,
 } from "lucide-react";
-import { NavItem, SidebarNavItem } from "@/types";
 
 export const navItems = {
   NavMain: [
@@ -41,8 +37,8 @@ export const navItems = {
         {
           title: "Poda",
           url: "/dashboard/reclamos/poda",
-        }
-      ]
+        },
+      ],
     },
     {
       id: "encuestas",
@@ -51,14 +47,14 @@ export const navItems = {
       icon: ClipboardList,
       items: [
         {
-          title: "Estadísticas",
+          title: "Estadisticas",
           url: "/dashboard/encuestas",
         },
         {
           title: "Todas las encuestas",
           url: "/dashboard/encuestas",
-        }
-      ]
+        },
+      ],
     },
     {
       id: "servicios",
@@ -83,8 +79,12 @@ export const navItems = {
           url: "/dashboard/servicios/usuarios",
         },
         {
-          title: "Categorías",
+          title: "Categorias",
           url: "/dashboard/servicios/categorias",
+        },
+        {
+          title: "Logs",
+          url: "/dashboard/servicios/logs",
         },
         {
           title: "Bug Reports",
@@ -93,64 +93,48 @@ export const navItems = {
         {
           title: "Soporte",
           url: "/dashboard/servicios/solicitudes",
-        }
-      ]
+        },
+      ],
     },
-    
-    /*
     {
-      title: "Cuadrillas",
-      href: "/dashboard/cuadrillas",
-      icon: Users,
-      label: "profile",
+      id: "ceresito",
+      title: "Ceresito",
+      url: "/dashboard/ceresito",
+      icon: Bot,
+      items: [
+        {
+          title: "Estadisticas",
+          url: "/dashboard/ceresito",
+        },
+        {
+          title: "Mensajes de bienvenida",
+          url: "/dashboard/ceresito/mensajes-bienvenida",
+        },
+        {
+          title: "Farmacias de turno",
+          url: "/dashboard/ceresito/farmacias-turno",
+        },
+        {
+          title: "Flujos No-Code",
+          url: "/dashboard/ceresito/flows",
+        },
+        {
+          title: "Contactos",
+          url: "/dashboard/contacts",
+        },
+      ],
     },
-    */
-   {
-    id: "ceresito",
-    title: "Ceresito",
-    url: "/dashboard/ceresito",
-    icon: Bot,
-    items: [
-      {
-        title: "Estadisticas",
-        url: "/dashboard/ceresito",
-      },
-      {
-        title: "Mensajes de bienvenida",
-        url: "/dashboard/ceresito/mensajes-bienvenida",
-      },
-      {
-        title: "Farmacias de turno",
-        url: "/dashboard/ceresito/farmacias-turno",
-      },
-      {
-        title: "Flujos No-Code",
-        url: "/dashboard/ceresito/flows",
-      },
-      {
-        title: "Contactos",
-        url: "/dashboard/contacts",
-      },
-    ],
-   },
-    /*
     {
-      title: "Tareas",
-      url: "/dashboard/kanban",
-      icon: List,
+      id: "ajustes",
+      title: "Ajustes",
+      url: "/dashboard/settings",
+      icon: Settings,
     },
-    */
-   {
-    id: "ajustes",
-    title: "Ajustes",
-    url: "/dashboard/settings",
-    icon: Settings
-   },
     {
       id: "salir",
       title: "Salir",
       url: "/",
       icon: LogOut,
     },
-  ] 
-}
+  ],
+};
