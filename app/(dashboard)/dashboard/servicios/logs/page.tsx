@@ -31,12 +31,8 @@ import {
 } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-const DEFAULT_FILTERS: ObservabilityEventsParams = {
-  from: format(subDays(new Date(), 7), "yyyy-MM-dd"),
-  to: format(new Date(), "yyyy-MM-dd"),
-  page: 1,
-  limit: 20,
-};
+const DEFAULT_FROM_DATE = format(subDays(new Date(), 7), "yyyy-MM-dd");
+const DEFAULT_TO_DATE = format(new Date(), "yyyy-MM-dd");
 
 type LogsDraftFilters = Omit<ObservabilityEventsParams, "kind" | "status"> & {
   kind?: ObservabilityEventsParams["kind"] | "all";
@@ -45,7 +41,10 @@ type LogsDraftFilters = Omit<ObservabilityEventsParams, "kind" | "status"> & {
 };
 
 const DEFAULT_DRAFT: LogsDraftFilters = {
-  ...DEFAULT_FILTERS,
+  from: DEFAULT_FROM_DATE,
+  to: DEFAULT_TO_DATE,
+  page: 1,
+  limit: 20,
   domain: "all",
   kind: "all",
   status: "all",
@@ -54,6 +53,43 @@ const DEFAULT_DRAFT: LogsDraftFilters = {
 const DOMAIN_OPTIONS = ["all", "auth", "auth.email", "services", "services.catalog", "admin.categories", "admin.professionals", "admin.certifications", "http"];
 const KIND_OPTIONS = ["all", "audit", "workflow", "request"] as const;
 const STATUS_OPTIONS = ["all", "success", "warning", "failure", "skipped"] as const;
+
+function toIsoRangeBoundary(
+  value: string | undefined,
+  boundary: "start" | "end",
+) {
+  if (!value) return undefined;
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return undefined;
+
+  const [, year, month, day] = match;
+  const date =
+    boundary === "start"
+      ? new Date(Number(year), Number(month) - 1, Number(day), 0, 0, 0, 0)
+      : new Date(Number(year), Number(month) - 1, Number(day), 23, 59, 59, 999);
+
+  return date.toISOString();
+}
+
+function buildAppliedFilters(draft: LogsDraftFilters): ObservabilityEventsParams {
+  return {
+    ...draft,
+    from: toIsoRangeBoundary(draft.from, "start"),
+    to: toIsoRangeBoundary(draft.to, "end"),
+    domain: draft.domain === "all" ? undefined : draft.domain,
+    kind: draft.kind === "all" ? undefined : draft.kind,
+    status: draft.status === "all" ? undefined : draft.status,
+    query: draft.query?.trim() || undefined,
+    actorId: draft.actorId?.trim() || undefined,
+    entityId: draft.entityId?.trim() || undefined,
+    requestId: draft.requestId?.trim() || undefined,
+    page: draft.page ?? 1,
+    limit: draft.limit ?? 20,
+  };
+}
+
+const DEFAULT_FILTERS: ObservabilityEventsParams = buildAppliedFilters(DEFAULT_DRAFT);
 
 function errorMessage(result: APIError | null) {
   return result?.message || "Error inesperado";
@@ -138,14 +174,7 @@ export default function ServiciosLogsPage() {
 
   function applyFilters() {
     setFilters({
-      ...draft,
-      domain: draft.domain === "all" ? undefined : draft.domain,
-      kind: draft.kind === "all" ? undefined : draft.kind,
-      status: draft.status === "all" ? undefined : draft.status,
-      query: draft.query?.trim() || undefined,
-      actorId: draft.actorId?.trim() || undefined,
-      entityId: draft.entityId?.trim() || undefined,
-      requestId: draft.requestId?.trim() || undefined,
+      ...buildAppliedFilters(draft),
       page: 1,
     });
   }
