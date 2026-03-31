@@ -12,6 +12,12 @@ const API_BASE_URL = USE_PROXY
 const API_KEY = USE_PROXY 
   ? undefined
   : process.env.ADMIN_API_KEY;
+const CENTRAL_API_BASE_URL = USE_PROXY
+  ? '/api/ceres-api'
+  : process.env.CERES_API_URL || process.env.NEXT_PUBLIC_CERES_API_URL || '';
+const CENTRAL_API_KEY = USE_PROXY
+  ? undefined
+  : process.env.OPS_API_KEY || process.env.ADMIN_API_KEY;
 
 export interface APIError {
   success: false;
@@ -473,6 +479,7 @@ export interface UpdateCertificationData {
 
 export interface APIObservabilityEvent {
   id: string;
+  source?: string;
   kind: 'audit' | 'workflow' | 'request';
   domain: string;
   eventName: string;
@@ -493,6 +500,7 @@ export interface APIObservabilityEvent {
 }
 
 export interface ObservabilityEventsParams {
+  source?: string;
   from?: string;
   to?: string;
   domain?: string;
@@ -683,6 +691,58 @@ class ServicesAPIClient {
     return headers;
   }
 
+  private async requestTo<T>(
+    baseURL: string,
+    apiKey: string | undefined,
+    endpoint: string,
+    options: RequestInit = {},
+    apiKeyHeader: 'x-admin-api-key' | 'x-api-key' = 'x-admin-api-key',
+  ): Promise<APIResponse<T> | PaginatedAPIResponse<T> | APIError> {
+    try {
+      const url = `${baseURL}${endpoint}`;
+      const headers = new Headers(options.headers);
+
+      if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json');
+      }
+
+      if (apiKey && !headers.has(apiKeyHeader)) {
+        headers.set(apiKeyHeader, apiKey);
+      }
+
+      if (!apiKey && !USE_PROXY) {
+        return {
+          success: false,
+          error: 'configuration_error',
+          message: 'API Key no configurada en las variables de entorno del servidor.',
+        };
+      }
+
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          error: errorData.error || 'unknown_error',
+          message: errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+        };
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('API Request Error:', error);
+      return {
+        success: false,
+        error: 'network_error',
+        message: error instanceof Error ? error.message : 'Error de conexión con la API',
+      };
+    }
+  }
+
   private normalizeApiError(response: Response, payload: unknown): APIError {
     const errorObject =
       payload && typeof payload === 'object' && 'error' in payload
@@ -777,52 +837,10 @@ class ServicesAPIClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<APIResponse<T> | PaginatedAPIResponse<T> | APIError> {
-    try {
-      // Construir la URL final hacia el backend externo.
-      // Importante: NO eliminar el prefijo /api porque el backend expone
-      // los endpoints como /api/admin/... según la documentación.
-      const url = `${this.baseURL}${endpoint}`;
-      
-      // Preparar headers
-      const headers = this.buildHeaders(options);
-      
-      // Si tenemos API key, agregarla (opcional si usamos proxy, el proxy la agrega del servidor)
-      // Si no usamos proxy, la API key es obligatoria
-      if (!this.apiKey && !USE_PROXY) {
-        // Solo validar si NO estamos usando proxy (ejecución en servidor)
-        console.error('ADMIN_API_KEY no está configurada. Configura ADMIN_API_KEY en las variables de entorno del servidor.');
-        return {
-          success: false,
-          error: 'configuration_error',
-          message: 'API Key no configurada. Por favor, configura ADMIN_API_KEY en las variables de entorno del servidor.',
-        };
-      }
-      
-      const response = await fetch(url, {
-        ...options,
-        headers,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        
-        return {
-          success: false,
-          error: errorData.error || 'unknown_error',
-          message: errorData.message || `HTTP ${response.status}: ${response.statusText}`,
-        };
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('API Request Error:', error);
-      return {
-        success: false,
-        error: 'network_error',
-        message: error instanceof Error ? error.message : 'Error de conexión con la API',
-      };
-    }
+    return this.requestTo(this.baseURL, this.apiKey, endpoint, {
+      ...options,
+      headers: this.buildHeaders(options),
+    });
   }
 
   /**
@@ -1433,8 +1451,20 @@ class ServicesAPIClient {
 
   // ==================== OBSERVABILIDAD ====================
 
-  async getObservabilitySummary(): Promise<APIResponse<APIObservabilitySummaryResponse> | APIError> {
-    const result = await this.request<APIObservabilitySummaryResponse>('/api/admin/observability/summary');
+  async getObservabilitySummary(
+    source: string = 'plataforma-servicios-ceres'
+  ): Promise<APIResponse<APIObservabilitySummaryResponse> | APIError> {
+    const queryParams = new URLSearchParams();
+    if (source) queryParams.set('source', source);
+    const endpoint = `/api/v1/ops/summary${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
+    const result = await this.requestTo<APIObservabilitySummaryResponse>(
+      CENTRAL_API_BASE_URL,
+      CENTRAL_API_KEY,
+      endpoint,
+      {},
+      'x-api-key'
+    );
     if ('pagination' in result) {
       return {
         success: false,
@@ -1450,6 +1480,7 @@ class ServicesAPIClient {
   ): Promise<APIObservabilityEventsResponse | APIError> {
     const queryParams = new URLSearchParams();
 
+    queryParams.set('source', params?.source || 'plataforma-servicios-ceres');
     if (params?.from) queryParams.set('from', params.from);
     if (params?.to) queryParams.set('to', params.to);
     if (params?.domain) queryParams.set('domain', params.domain);
@@ -1464,7 +1495,13 @@ class ServicesAPIClient {
     if (params?.limit) queryParams.set('limit', String(params.limit));
 
     const query = queryParams.toString();
-    const result = await this.request<any>(`/api/admin/observability/events${query ? `?${query}` : ''}`);
+    const result = await this.requestTo<any>(
+      CENTRAL_API_BASE_URL,
+      CENTRAL_API_KEY,
+      `/api/v1/ops/events${query ? `?${query}` : ''}`,
+      {},
+      'x-api-key'
+    );
 
     if (!result.success) {
       return result as APIError;
@@ -1480,7 +1517,13 @@ class ServicesAPIClient {
   async getObservabilityEvent(
     id: string
   ): Promise<APIResponse<APIObservabilityEventDetailResponse> | APIError> {
-    const result = await this.request<APIObservabilityEventDetailResponse>(`/api/admin/observability/events/${id}`);
+    const result = await this.requestTo<APIObservabilityEventDetailResponse>(
+      CENTRAL_API_BASE_URL,
+      CENTRAL_API_KEY,
+      `/api/v1/ops/events/${id}`,
+      {},
+      'x-api-key'
+    );
     if ('pagination' in result) {
       return {
         success: false,
