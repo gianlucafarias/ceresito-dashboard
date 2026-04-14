@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
@@ -72,9 +73,13 @@ export async function GET() {
     );
   } catch (error) {
     console.error("Error fetching qr codes:", error);
+    const responseError = mapQrCodeApiError(
+      error,
+      "Error al obtener los codigos QR",
+    );
     return NextResponse.json(
-      { error: "Error al obtener los codigos QR" },
-      { status: 500 },
+      { error: responseError.message },
+      { status: responseError.status },
     );
   }
 }
@@ -149,9 +154,64 @@ export async function POST(request: Request) {
     }
 
     console.error("Error creating qr code:", error);
+    const responseError = mapQrCodeApiError(
+      error,
+      "Error al crear el codigo QR",
+    );
     return NextResponse.json(
-      { error: "Error al crear el codigo QR" },
-      { status: 500 },
+      { error: responseError.message },
+      { status: responseError.status },
     );
   }
+}
+
+function mapQrCodeApiError(error: unknown, fallbackMessage: string) {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2022"
+  ) {
+    return {
+      status: 500,
+      message:
+        "Falta aplicar la migracion QR en la base del dashboard. Ejecuta Prisma migrate deploy.",
+    };
+  }
+
+  if (error instanceof Error) {
+    if (
+      error.message.includes("CORE_API_V1_BASE_URL") ||
+      error.message.includes("CORE_API_ADMIN_KEY") ||
+      error.message.includes("OPS_API_KEY") ||
+      error.message.includes("ADMIN_API_KEY")
+    ) {
+      return {
+        status: 500,
+        message: error.message,
+      };
+    }
+
+    if (
+      error.message.includes("qr_tracking") ||
+      error.message.includes("QR tracking no encontrado") ||
+      error.message.includes("relation \"qr_tracking\"")
+    ) {
+      return {
+        status: 500,
+        message:
+          "Falta aplicar la migracion QR en ceres-api. Ejecuta la migracion del backend.",
+      };
+    }
+
+    if (error.message.trim()) {
+      return {
+        status: 500,
+        message: error.message,
+      };
+    }
+  }
+
+  return {
+    status: 500,
+    message: fallbackMessage,
+  };
 }

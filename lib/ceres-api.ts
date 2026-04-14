@@ -1,5 +1,7 @@
 import { randomUUID } from "crypto";
 
+const DEFAULT_CORE_API_V1_BASE_URL = "https://api.ceres.gob.ar/api/v1";
+
 export type QrTrackingRecord = {
   id: string;
   slug: string;
@@ -23,14 +25,14 @@ export async function createQrTracking(input: {
   name: string;
   targetUrl: string;
 }) {
-  return ceresApiRequest<QrTrackingRecord>("/v1/qr-tracking", {
+  return ceresApiRequest<QrTrackingRecord>("/qr-tracking", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
 export async function deleteQrTracking(id: string) {
-  await ceresApiRequest(`/v1/qr-tracking/${id}`, {
+  await ceresApiRequest(`/qr-tracking/${id}`, {
     method: "DELETE",
   });
 }
@@ -44,9 +46,7 @@ export async function listQrTrackingsByIds(ids: string[]) {
     ids: ids.join(","),
   });
 
-  return ceresApiRequest<QrTrackingRecord[]>(
-    `/v1/qr-tracking?${params.toString()}`,
-  );
+  return ceresApiRequest<QrTrackingRecord[]>(`/qr-tracking?${params.toString()}`);
 }
 
 async function ceresApiRequest<T>(
@@ -84,35 +84,70 @@ async function ceresApiRequest<T>(
 }
 
 function buildCeresApiUrl(path: string) {
-  const baseUrl =
-    process.env.CERES_API_URL || process.env.NEXT_PUBLIC_CERES_API_URL;
-
-  if (!baseUrl) {
-    throw new Error(
-      "CERES_API_URL o NEXT_PUBLIC_CERES_API_URL no estan configuradas",
-    );
-  }
+  const baseUrl = resolveCoreApiV1BaseUrl();
 
   const normalizedBaseUrl = baseUrl.endsWith("/")
     ? baseUrl.slice(0, -1)
     : baseUrl;
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const resolvedPath =
-    normalizedBaseUrl.endsWith("/v1") && normalizedPath.startsWith("/v1/")
-      ? normalizedPath.slice(3)
-      : normalizedPath;
 
-  return `${normalizedBaseUrl}${resolvedPath}`;
+  if (normalizedBaseUrl.endsWith("/api/v1")) {
+    if (normalizedPath.startsWith("/api/v1/")) {
+      return `${normalizedBaseUrl}${normalizedPath.slice("/api/v1".length)}`;
+    }
+
+    if (normalizedPath.startsWith("/v1/")) {
+      return `${normalizedBaseUrl}${normalizedPath.slice("/v1".length)}`;
+    }
+
+    return `${normalizedBaseUrl}${normalizedPath}`;
+  }
+
+  if (normalizedBaseUrl.endsWith("/v1")) {
+    if (normalizedPath.startsWith("/api/v1/")) {
+      return `${normalizedBaseUrl}${normalizedPath.slice("/api/v1".length)}`;
+    }
+
+    if (normalizedPath.startsWith("/v1/")) {
+      return `${normalizedBaseUrl}${normalizedPath.slice("/v1".length)}`;
+    }
+
+    return `${normalizedBaseUrl}${normalizedPath}`;
+  }
+
+  if (normalizedPath.startsWith("/api/v1/")) {
+    return `${normalizedBaseUrl}${normalizedPath}`;
+  }
+
+  if (normalizedPath.startsWith("/v1/")) {
+    return `${normalizedBaseUrl}/api${normalizedPath}`;
+  }
+
+  return `${normalizedBaseUrl}/api/v1${normalizedPath}`;
 }
 
 function getCeresApiKey() {
-  const apiKey = process.env.OPS_API_KEY || process.env.ADMIN_API_KEY;
+  const apiKey =
+    process.env.CORE_API_ADMIN_KEY ||
+    process.env.OPS_API_KEY ||
+    process.env.ADMIN_API_KEY;
 
   if (!apiKey) {
-    throw new Error("OPS_API_KEY o ADMIN_API_KEY no estan configuradas");
+    throw new Error(
+      "CORE_API_ADMIN_KEY, OPS_API_KEY o ADMIN_API_KEY no estan configuradas",
+    );
   }
 
   return apiKey;
+}
+
+function resolveCoreApiV1BaseUrl() {
+  return (
+    process.env.CORE_API_V1_BASE_URL ||
+    process.env.CERES_API_URL ||
+    process.env.NEXT_PUBLIC_CERES_API_URL ||
+    DEFAULT_CORE_API_V1_BASE_URL
+  );
 }
 
 async function parseJsonResponse(response: Response) {

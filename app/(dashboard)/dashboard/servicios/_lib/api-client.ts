@@ -14,10 +14,15 @@ const API_KEY = USE_PROXY
   : process.env.ADMIN_API_KEY;
 const CENTRAL_API_BASE_URL = USE_PROXY
   ? '/api/ceres-api'
-  : process.env.CERES_API_URL || process.env.NEXT_PUBLIC_CERES_API_URL || '';
+  : process.env.CORE_API_V1_BASE_URL ||
+    process.env.CERES_API_URL ||
+    process.env.NEXT_PUBLIC_CERES_API_URL ||
+    '';
 const CENTRAL_API_KEY = USE_PROXY
   ? undefined
-  : process.env.OPS_API_KEY || process.env.ADMIN_API_KEY;
+  : process.env.CORE_API_ADMIN_KEY ||
+    process.env.OPS_API_KEY ||
+    process.env.ADMIN_API_KEY;
 
 export interface APIError {
   success: false;

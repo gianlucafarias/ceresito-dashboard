@@ -6,6 +6,8 @@ type AdminToken = {
   id?: string;
 };
 
+const DEFAULT_CORE_API_V1_BASE_URL = 'https://api.ceres.gob.ar/api/v1';
+
 const PROXY_HEADERS = {
   requestId: 'x-request-id',
 } as const;
@@ -92,16 +94,16 @@ async function handleRequest(
   const requestId = request.headers.get(PROXY_HEADERS.requestId) || randomUUID();
 
   try {
-    const baseUrl =
-      process.env.CERES_API_URL || process.env.NEXT_PUBLIC_CERES_API_URL;
-    const apiKey = process.env.OPS_API_KEY || process.env.ADMIN_API_KEY;
+    const baseUrl = resolveCoreApiBaseUrl();
+    const apiKey = resolveCoreAdminKey();
 
     if (!baseUrl || !apiKey) {
       return NextResponse.json(
         {
           success: false,
           error: 'configuration_error',
-          message: 'CERES_API_URL / OPS_API_KEY no estan configuradas',
+          message:
+            'CORE_API_V1_BASE_URL / CORE_API_ADMIN_KEY no estan configuradas',
         },
         { status: 500, headers: { [PROXY_HEADERS.requestId]: requestId } },
       );
@@ -116,7 +118,8 @@ async function handleRequest(
     const path = params.path.join('/');
     const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-    const url = new URL(`${normalizedBase}${normalizedPath}`);
+    const resolvedPath = resolveUpstreamPath(normalizedBase, normalizedPath);
+    const url = new URL(`${normalizedBase}${resolvedPath}`);
 
     request.nextUrl.searchParams.forEach((value, key) => {
       url.searchParams.set(key, value);
@@ -159,4 +162,33 @@ async function handleRequest(
       { status: 500, headers: { [PROXY_HEADERS.requestId]: requestId } },
     );
   }
+}
+
+function resolveCoreApiBaseUrl() {
+  return (
+    process.env.CORE_API_V1_BASE_URL ||
+    process.env.CERES_API_URL ||
+    process.env.NEXT_PUBLIC_CERES_API_URL ||
+    DEFAULT_CORE_API_V1_BASE_URL
+  );
+}
+
+function resolveCoreAdminKey() {
+  return (
+    process.env.CORE_API_ADMIN_KEY ||
+    process.env.OPS_API_KEY ||
+    process.env.ADMIN_API_KEY
+  );
+}
+
+function resolveUpstreamPath(baseUrl: string, path: string) {
+  if (baseUrl.endsWith('/api/v1') && path.startsWith('/api/v1/')) {
+    return path.slice('/api/v1'.length);
+  }
+
+  if (baseUrl.endsWith('/v1') && path.startsWith('/v1/')) {
+    return path.slice('/v1'.length);
+  }
+
+  return path;
 }
