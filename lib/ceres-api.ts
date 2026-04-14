@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 
 const DEFAULT_CORE_API_V1_BASE_URL = "https://api.ceres.gob.ar/api/v1";
+const DEFAULT_PUBLIC_QR_ORIGIN = "https://link.ceres.gob.ar";
 
 export type QrTrackingRecord = {
   id: string;
@@ -25,10 +26,12 @@ export async function createQrTracking(input: {
   name: string;
   targetUrl: string;
 }) {
-  return ceresApiRequest<QrTrackingRecord>("/qr-tracking", {
+  const tracking = await ceresApiRequest<QrTrackingRecord>("/qr-tracking", {
     method: "POST",
     body: JSON.stringify(input),
   });
+
+  return normalizeQrTrackingRecord(tracking);
 }
 
 export async function deleteQrTracking(id: string) {
@@ -46,7 +49,11 @@ export async function listQrTrackingsByIds(ids: string[]) {
     ids: ids.join(","),
   });
 
-  return ceresApiRequest<QrTrackingRecord[]>(`/qr-tracking?${params.toString()}`);
+  const trackings = await ceresApiRequest<QrTrackingRecord[]>(
+    `/qr-tracking?${params.toString()}`,
+  );
+
+  return trackings.map(normalizeQrTrackingRecord);
 }
 
 async function ceresApiRequest<T>(
@@ -61,6 +68,7 @@ async function ceresApiRequest<T>(
       Accept: "application/json",
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       "x-api-key": getCeresApiKey(),
+      "x-public-origin": resolvePublicQrOrigin(),
       "x-request-id": requestId,
       ...init.headers,
     },
@@ -148,6 +156,61 @@ function resolveCoreApiV1BaseUrl() {
     process.env.NEXT_PUBLIC_CERES_API_URL ||
     DEFAULT_CORE_API_V1_BASE_URL
   );
+}
+
+function normalizeQrTrackingRecord(tracking: QrTrackingRecord): QrTrackingRecord {
+  return {
+    ...tracking,
+    redirectUrl: buildPublicQrRedirectUrl(tracking.slug),
+  };
+}
+
+function buildPublicQrRedirectUrl(slug: string) {
+  return `${resolvePublicQrOrigin()}/${slug}`;
+}
+
+function resolvePublicQrOrigin() {
+  const configuredOrigin = process.env.QR_TRACKING_PUBLIC_ORIGIN?.trim();
+  if (configuredOrigin) {
+    return configuredOrigin.replace(/\/+$/g, "");
+  }
+
+  const resolvedBaseUrl = resolveCoreApiV1BaseUrl();
+  const parsedBaseUrl = new URL(resolvedBaseUrl);
+
+  if (isInternalHostname(parsedBaseUrl.hostname)) {
+    return DEFAULT_PUBLIC_QR_ORIGIN;
+  }
+
+  return DEFAULT_PUBLIC_QR_ORIGIN;
+}
+
+function isInternalHostname(hostname: string) {
+  const normalizedHost = hostname.trim().toLowerCase();
+
+  if (
+    normalizedHost === "localhost" ||
+    normalizedHost === "127.0.0.1" ||
+    normalizedHost === "::1"
+  ) {
+    return true;
+  }
+
+  if (/^10\./.test(normalizedHost)) {
+    return true;
+  }
+
+  if (/^192\.168\./.test(normalizedHost)) {
+    return true;
+  }
+
+  const private172Match = normalizedHost.match(/^172\.(\d{1,3})\./);
+  if (private172Match) {
+    const secondOctet = Number.parseInt(private172Match[1], 10);
+    return secondOctet >= 16 && secondOctet <= 31;
+  }
+
+  return false;
 }
 
 async function parseJsonResponse(response: Response) {
