@@ -1,36 +1,53 @@
-import prisma from '@/lib/prisma';
-import { NextResponse } from 'next/server';
+import prisma from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
+import { requireMenuAccess } from "@/lib/route-access";
 
 export async function POST(request: Request) {
+  const access = await requireMenuAccess("obras");
+  if (!access.ok) {
+    return access.response;
+  }
+
   try {
     const { reclamoId, cuadrillaId, reclamoDetalles } = await request.json();
     const origin = new URL(request.url).origin;
 
-
     if (!reclamoId) {
-      console.error('reclamoId es nulo o indefinido');
-      return NextResponse.json({ error: 'reclamoId no puede ser nulo o indefinido' }, { status: 400 });
+      console.error("reclamoId es nulo o indefinido");
+      return NextResponse.json(
+        { error: "reclamoId no puede ser nulo o indefinido" },
+        { status: 400 },
+      );
     }
 
     const cuadrilla = await prisma.cuadrilla.findUnique({
       where: { id: parseInt(cuadrillaId, 10) },
-      include: { RegistroReclamo: true }
+      include: { RegistroReclamo: true },
     });
 
     if (!cuadrilla) {
-      console.error('Cuadrilla no encontrada:', cuadrillaId);
-      return NextResponse.json({ error: 'Cuadrilla no encontrada' }, { status: 404 });
+      console.error("Cuadrilla no encontrada:", cuadrillaId);
+      return NextResponse.json(
+        { error: "Cuadrilla no encontrada" },
+        { status: 404 },
+      );
     }
 
     const reclamosActuales = cuadrilla.RegistroReclamo.filter(
-      (reclamo) => reclamo.estado !== 'SOLUCIONADO'
+      (reclamo) => reclamo.estado !== "SOLUCIONADO",
     ).length;
 
     if (reclamosActuales >= cuadrilla.limiteReclamosSimultaneos) {
-      console.error('La cuadrilla ha alcanzado su límite de reclamos simultáneos y no puede aceptar el reclamo.');
+      console.error(
+        "La cuadrilla ha alcanzado su límite de reclamos simultáneos y no puede aceptar el reclamo.",
+      );
       return NextResponse.json(
-        { error: 'La cuadrilla ha alcanzado su límite de reclamos simultaneos y no puede aceptar el reclamo.' },
-        { status: 400 }
+        {
+          error:
+            "La cuadrilla ha alcanzado su límite de reclamos simultaneos y no puede aceptar el reclamo.",
+        },
+        { status: 400 },
       );
     }
 
@@ -40,15 +57,16 @@ export async function POST(request: Request) {
         reclamoId: parseInt(reclamoId, 10),
         reclamo: reclamoDetalles.reclamo,
         fecha: new Date(reclamoDetalles.fecha),
-        estado: 'ASIGNADO',
+        estado: "ASIGNADO",
         prioridad: reclamoDetalles.prioridad,
         detalle: reclamoDetalles.detalle,
         direccion: reclamoDetalles.ubicacion,
         barrio: reclamoDetalles.barrio,
-      }
+      },
     });
 
-    const nuevaDisponibilidad = reclamosActuales + 1 < cuadrilla.limiteReclamosSimultaneos;
+    const nuevaDisponibilidad =
+      reclamosActuales + 1 < cuadrilla.limiteReclamosSimultaneos;
 
     const updatedCuadrilla = await prisma.cuadrilla.update({
       where: { id: parseInt(cuadrillaId, 10) },
@@ -56,43 +74,53 @@ export async function POST(request: Request) {
         disponible: nuevaDisponibilidad,
         ultimaAsignacion: new Date(),
         reclamosAsignados: {
-          push: parseInt(reclamoId, 10)
-        }
+          push: parseInt(reclamoId, 10),
+        },
       },
-      include: { RegistroReclamo: true }
+      include: { RegistroReclamo: true },
     });
 
     // Actualizar el reclamo en la API externa
     const response = await fetch(`${origin}/api/core/reclamos/${reclamoId}`, {
-      method: 'PATCH',
+      method: "PATCH",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ estado: 'ASIGNADO', cuadrillaid: cuadrillaId }),
+      body: JSON.stringify({ estado: "ASIGNADO", cuadrillaid: cuadrillaId }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Error al actualizar el estado del reclamo en la API externa:', errorText);
-      return NextResponse.json({ error: 'Error al actualizar el estado del reclamo en la API externa' }, { status: 500 });
+      console.error(
+        "Error al actualizar el estado del reclamo en la API externa:",
+        errorText,
+      );
+      return NextResponse.json(
+        {
+          error: "Error al actualizar el estado del reclamo en la API externa",
+        },
+        { status: 500 },
+      );
     }
-
 
     await prisma.mensaje.create({
       data: {
         contenido: `Reclamo #${reclamoId} ha sido asignado a la cuadrilla.`,
-        remitente: 'Sistema',
+        remitente: "Sistema",
         cuadrillaId: parseInt(cuadrillaId, 10),
       },
     });
 
-    return NextResponse.json({ 
-      message: 'Reclamo asignado y registrado correctamente', 
+    return NextResponse.json({
+      message: "Reclamo asignado y registrado correctamente",
       updatedCuadrilla,
-      nuevoRegistroReclamo
+      nuevoRegistroReclamo,
     });
   } catch (error) {
-    console.error('Error al asignar el reclamo a la cuadrilla:', error);
-    return NextResponse.json({ error: 'Error al asignar el reclamo a la cuadrilla' }, { status: 500 });
+    console.error("Error al asignar el reclamo a la cuadrilla:", error);
+    return NextResponse.json(
+      { error: "Error al asignar el reclamo a la cuadrilla" },
+      { status: 500 },
+    );
   }
 }

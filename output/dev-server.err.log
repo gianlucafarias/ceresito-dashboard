@@ -1,0 +1,81 @@
+Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[API GET Error] Fetching WhatsApp profile picture URL: {
+  error: {
+    message: 'Malformed access token EAAL3XZA7O8p8BO8gWlgRS3zNebBwD6nqDBHBMTTmCYanWIi33w8QuL07M3G6Ay79bOIRfJtvt2Dn5OmuvxRvWI6yqoraE5p0GuYBEJUvRfZBMeGhBWcz9z3VXDcRmKqZBwbDT1KvmYasaKGuYy4Gk6zjOZBvcV3VWA0A>',
+    type: 'OAuthException',
+    code: 190,
+    fbtrace_id: 'ADtRSdr1eMX3TOF2asihNak'
+  }
+}
+[API GET Error] Fetching WhatsApp profile picture URL: {
+  error: {
+    message: 'Malformed access token EAAL3XZA7O8p8BO8gWlgRS3zNebBwD6nqDBHBMTTmCYanWIi33w8QuL07M3G6Ay79bOIRfJtvt2Dn5OmuvxRvWI6yqoraE5p0GuYBEJUvRfZBMeGhBWcz9z3VXDcRmKqZBwbDT1KvmYasaKGuYy4Gk6zjOZBvcV3VWA0A>',
+    type: 'OAuthException',
+    code: 190,
+    fbtrace_id: 'AMT1gyS8V6jHU8h2hpymuTr'
+  }
+}
+ ⨯ ./lib/auth-options.ts
+Error: ENOENT: no such file or directory, open 'D:\Proyectos\ceresito\dashboard\dashboard-ceres\lib\auth-options.ts'
+
+Import trace for requested module:
+./lib/auth-options.ts
+./lib/menu-access.ts
+./app/(dashboard)/dashboard/qr/page.tsx
+[API GET Error] Fetching WhatsApp profile picture URL: {
+  error: {
+    message: 'Malformed access token EAAL3XZA7O8p8BO8gWlgRS3zNebBwD6nqDBHBMTTmCYanWIi33w8QuL07M3G6Ay79bOIRfJtvt2Dn5OmuvxRvWI6yqoraE5p0GuYBEJUvRfZBMeGhBWcz9z3VXDcRmKqZBwbDT1KvmYasaKGuYy4Gk6zjOZBvcV3VWA0A>',
+    type: 'OAuthException',
+    code: 190,
+    fbtrace_id: 'AOFfYm3jysaMRP-ASsjacT6'
+  }
+}
+[API GET Error] Fetching WhatsApp profile picture URL: {
+  error: {
+    message: 'Malformed access token EAAL3XZA7O8p8BO8gWlgRS3zNebBwD6nqDBHBMTTmCYanWIi33w8QuL07M3G6Ay79bOIRfJtvt2Dn5OmuvxRvWI6yqoraE5p0GuYBEJUvRfZBMeGhBWcz9z3VXDcRmKqZBwbDT1KvmYasaKGuYy4Gk6zjOZBvcV3VWA0A>',
+    type: 'OAuthException',
+    code: 190,
+    fbtrace_id: 'A0pWGzKCQuUUvTlARaO7l_T'
+  }
+}
+Error de respuesta: {"error":"upstream_unreachable","message":"v1_upstream_unreachable:http://localhost:3012/api/v1/encuestaobras/estadisticas:fetch failed"}
+Error al obtener estadísticas de encuestas: Error: Error 502: Bad Gateway
+    at getEstadisticasEncuestas (webpack-internal:///(rsc)/./app/(dashboard)/dashboard/encuestas/_lib/queries.ts:114:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async EncuestasStatsWrapper (webpack-internal:///(rsc)/./app/(dashboard)/dashboard/encuestas/page.tsx:161:23)
+Error al obtener encuestas: Error: Error al obtener las encuestas de la API externa
+    at getEncuestas (webpack-internal:///(rsc)/./app/(dashboard)/dashboard/encuestas/_lib/queries.ts:70:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+ ⨯ app\(dashboard)\dashboard\encuestas\_lib\queries.ts (107:10) @ getEncuestas
+ ⨯ Error: Error al obtener las encuestas de la API externa
+    at getEncuestas (dashboard/encuestas/_lib/queries.ts:96:15)
+[0m [90m 105 |[39m   } [36mcatch[39m (err) {[0m
+[0m [90m 106 |[39m     [90m/* eslint-disable */[39mconsole[33m.[39merror([33m...[39moo_tx([32m`3887363437_106_4_106_53_11`[39m[33m,[39m[32m"Error al obtener encuestas:"[39m[33m,[39m err))[0m
+[0m[31m[1m>[22m[39m[90m 107 |[39m     [36mthrow[39m [36mnew[39m [33mError[39m([32m"Error al obtener las encuestas de la API externa"[39m)[0m
+[0m [90m     |[39m          [31m[1m^[22m[39m[0m
+[0m [90m 108 |[39m   }[0m
+[0m [90m 109 |[39m }[0m
+[0m [90m 110 |[39m[0m
+Error de respuesta: {"error":"upstream_unreachable","message":"v1_upstream_unreachable:http://localhost:3012/api/v1/encuestaobras/estadisticas:fetch failed"}
+Error al obtener estadísticas de encuestas: Error: Error 502: Bad Gateway
+    at getEstadisticasEncuestas (webpack-internal:///(rsc)/./app/(dashboard)/dashboard/encuestas/_lib/queries.ts:114:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async BarrioFilterWrapper (webpack-internal:///(rsc)/./app/(dashboard)/dashboard/encuestas/page.tsx:126:23)
+[API GET Error] Fetching WhatsApp profile picture URL: {
+  error: {
+    message: 'Malformed access token EAAL3XZA7O8p8BO8gWlgRS3zNebBwD6nqDBHBMTTmCYanWIi33w8QuL07M3G6Ay79bOIRfJtvt2Dn5OmuvxRvWI6yqoraE5p0GuYBEJUvRfZBMeGhBWcz9z3VXDcRmKqZBwbDT1KvmYasaKGuYy4Gk6zjOZBvcV3VWA0A>',
+    type: 'OAuthException',
+    code: 190,
+    fbtrace_id: 'AoU2ubt3CBxZVBzR9v-DpXK'
+  }
+}
+[API GET Error] Fetching WhatsApp profile picture URL: {
+  error: {
+    message: 'Malformed access token EAAL3XZA7O8p8BO8gWlgRS3zNebBwD6nqDBHBMTTmCYanWIi33w8QuL07M3G6Ay79bOIRfJtvt2Dn5OmuvxRvWI6yqoraE5p0GuYBEJUvRfZBMeGhBWcz9z3VXDcRmKqZBwbDT1KvmYasaKGuYy4Gk6zjOZBvcV3VWA0A>',
+    type: 'OAuthException',
+    code: 190,
+    fbtrace_id: 'AQFeXumELc3-Qwqaa0u9lCB'
+  }
+}

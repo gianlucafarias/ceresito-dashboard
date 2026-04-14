@@ -1,113 +1,137 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-options";
-import prisma from '@/lib/prisma';
-import bcrypt from 'bcrypt';
-import { z } from 'zod';
+import { NextResponse } from "next/server";
+import bcrypt from "bcrypt";
+import { z } from "zod";
+
+import prisma from "@/lib/prisma";
+import { requireMenuAccess } from "@/lib/route-access";
 
 const userCreateSchema = z.object({
-  email: z.string().email({ message: "Correo electrónico inválido." }),
-  username: z.string().min(4, { message: "Nombre de usuario requiere al menos 4 caracteres." }),
-  password: z.string().min(8, { message: "Contraseña requiere al menos 8 caracteres." }),
-  roleId: z.string().refine(val => !isNaN(parseInt(val, 10)), { message: "ID de rol inválido" }),
+  email: z.string().email({ message: "Correo electronico invalido." }),
+  username: z
+    .string()
+    .min(4, { message: "Nombre de usuario requiere al menos 4 caracteres." }),
+  password: z
+    .string()
+    .min(8, { message: "Contrasena requiere al menos 8 caracteres." }),
+  roleId: z
+    .string()
+    .refine((value) => !Number.isNaN(Number.parseInt(value, 10)), {
+      message: "ID de rol invalido",
+    }),
 });
 
-// GET /api/users
-export async function GET(request: Request) {
+export async function GET() {
+  const access = await requireMenuAccess("ajustes");
+  if (!access.ok) {
+    return access.response;
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Opcional: Obtener el ID del usuario actual para excluirlo si se desea
-    // const currentUserId = parseInt(session.user.id, 10);
-
     const users = await prisma.user.findMany({
-      // Opcional: Excluir al usuario actual de la lista
-      // where: {
-      //   id: { not: currentUserId }
-      // },
-      select: { // Seleccionar solo los campos necesarios
+      select: {
         id: true,
         username: true,
         email: true,
-        // Podríamos incluir el rol si fuera necesario
-        // role: { select: { name: true } }
       },
       orderBy: {
-        username: 'asc', // Ordenar alfabéticamente
+        username: "asc",
       },
     });
 
     return NextResponse.json(users);
-
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error("Error fetching users:", error);
     if (error instanceof Error) {
-      return NextResponse.json({ error: 'Failed to fetch users', details: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to fetch users", details: error.message },
+        { status: 500 },
+      );
     }
-    return NextResponse.json({ error: 'An unknown error occurred' }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "An unknown error occurred" },
+      { status: 500 },
+    );
   }
 }
 
-// POST /api/users
 export async function POST(request: Request) {
+  const access = await requireMenuAccess("ajustes");
+  if (!access.ok) {
+    return access.response;
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    // Podrías añadir una verificación de rol aquí, si solo ciertos roles pueden crear usuarios
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
-
-    // Validar el cuerpo de la solicitud (opcional)
     const validation = userCreateSchema.safeParse(body);
+
     if (!validation.success) {
-      return NextResponse.json({ error: 'Invalid input', details: validation.error.flatten().fieldErrors }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Invalid input",
+          details: validation.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
     }
 
     const { email, username, password, roleId } = validation.data;
 
-    // Verificar si el email o username ya existen
     const existingUser = await prisma.user.findFirst({
       where: { OR: [{ email }, { username }] },
     });
 
     if (existingUser) {
-      return NextResponse.json({ error: 'Email or username already exists' }, { status: 409 }); // 409 Conflict
+      return NextResponse.json(
+        { error: "Email or username already exists" },
+        { status: 409 },
+      );
     }
 
-    // Hash de la contraseña
-    const hashedPassword = await bcrypt.hash(password, 10); // 10 es el número de rondas de salt
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Crear usuario
     const newUser = await prisma.user.create({
       data: {
         email,
         username,
         password: hashedPassword,
-        roleId: parseInt(roleId, 10), // Convertir roleId a número
+        roleId: Number.parseInt(roleId, 10),
       },
-      select: { // Devolver solo los datos necesarios (sin contraseña)
+      select: {
         id: true,
         username: true,
         email: true,
         roleId: true,
-      }
+        role: {
+          select: {
+            id: true,
+            name: true,
+            menuPermissions: true,
+          },
+        },
+      },
     });
 
-    return NextResponse.json(newUser, { status: 201 }); // 201 Created
-
+    return NextResponse.json(newUser, { status: 201 });
   } catch (error) {
-    console.error('Error creating user:', error);
-    if (error instanceof z.ZodError) { // Manejo específico para errores de Zod
-         return NextResponse.json({ error: 'Invalid input', details: error.flatten().fieldErrors }, { status: 400 });
-     }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: 'Failed to create user', details: error.message }, { status: 500 });
+    console.error("Error creating user:", error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input", details: error.flatten().fieldErrors },
+        { status: 400 },
+      );
     }
-    return NextResponse.json({ error: 'An unknown error occurred' }, { status: 500 });
+
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: "Failed to create user", details: error.message },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json(
+      { error: "An unknown error occurred" },
+      { status: 500 },
+    );
   }
-} 
+}

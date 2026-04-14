@@ -3,6 +3,7 @@ import {
   Bot,
   LogOut,
   Building,
+  QrCode,
   Settings,
   ClipboardList,
   Briefcase,
@@ -15,6 +16,12 @@ export const navItems = {
       title: "Panel",
       url: "/dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      id: "qr",
+      title: "QR",
+      url: "/dashboard/qr",
+      icon: QrCode,
     },
     {
       id: "obras",
