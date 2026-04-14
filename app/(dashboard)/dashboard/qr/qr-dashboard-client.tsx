@@ -3,7 +3,14 @@
 
 import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Download, Loader2, PlusCircle, QrCode, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Download,
+  Loader2,
+  PlusCircle,
+  QrCode,
+  Trash2,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -185,6 +192,21 @@ export function QrDashboardClient() {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleCopyTrackingLink = async (qrCode: QrCodeItem) => {
+    if (!qrCode.trackingRedirectUrl) {
+      toast.error("Este QR todavia no tiene un link trackeado para copiar");
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(qrCode.trackingRedirectUrl);
+      toast.success("Link trackeado copiado al portapapeles");
+    } catch (error) {
+      console.error("Error copying tracking link:", error);
+      toast.error("No se pudo copiar el link trackeado");
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!qrCodeToDelete) {
       return;
@@ -228,8 +250,8 @@ export function QrDashboardClient() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">QR</h1>
           <p className="text-sm text-muted-foreground">
-                    Genera codigos QR persistentes a partir de links y descargalos
-            cuando los necesites. Los nuevos incluyen tracking de escaneos.
+            Genera codigos QR persistentes a partir de links y descargalos
+            cuando los necesites. Los nuevos incluyen tracking y link corto.
           </p>
         </div>
       </div>
@@ -238,8 +260,8 @@ export function QrDashboardClient() {
         <CardHeader>
           <CardTitle>Generar nuevo QR</CardTitle>
           <CardDescription>
-            Guarda el link y el archivo PNG para mantenerlo disponible en el
-            dashboard.
+            Guarda el link, el PNG y su link corto trackeado para mantenerlo
+            disponible en el dashboard.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -354,7 +376,7 @@ export function QrDashboardClient() {
                   <TableHead>Link</TableHead>
                   <TableHead className="w-[220px]">Escaneos</TableHead>
                   <TableHead className="w-[190px]">Creado</TableHead>
-                  <TableHead className="w-[220px] text-right">Accion</TableHead>
+                  <TableHead className="w-[320px] text-right">Accion</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -375,6 +397,11 @@ export function QrDashboardClient() {
                       <div className="text-xs text-muted-foreground">
                         {qrCode.downloadFileName}
                       </div>
+                      {qrCode.trackingRedirectUrl ? (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {formatDisplayUrl(qrCode.trackingRedirectUrl)}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell className="max-w-[420px]">
                       <a
@@ -414,12 +441,21 @@ export function QrDashboardClient() {
                       {new Date(qrCode.createdAt).toLocaleString("es-AR")}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <Button asChild size="sm" variant="outline">
                           <a href={qrCode.downloadUrl}>
                             <Download className="mr-2 h-4 w-4" />
                             Descargar
                           </a>
+                        </Button>
+                        <Button
+                          disabled={!qrCode.trackingRedirectUrl}
+                          onClick={() => void handleCopyTrackingLink(qrCode)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copiar link
                         </Button>
                         <Button
                           onClick={() => handleDeleteClick(qrCode)}
@@ -490,4 +526,30 @@ export function QrDashboardClient() {
       </AlertDialog>
     </div>
   );
+}
+
+async function copyTextToClipboard(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "absolute";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+}
+
+function formatDisplayUrl(value: string) {
+  try {
+    const parsedUrl = new URL(value);
+    return `${parsedUrl.host}${parsedUrl.pathname}`;
+  } catch {
+    return value;
+  }
 }
