@@ -1,8 +1,8 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { useRouter } from 'next/navigation';
-import { useCallback } from 'react';
-import { toast } from 'sonner';
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Form,
   FormControl,
@@ -32,6 +32,7 @@ export default function UserAuthForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isHydrated, setIsHydrated] = useState(false);
   const defaultValues = {
     email: "",
     password: "",
@@ -42,41 +43,49 @@ export default function UserAuthForm() {
     defaultValues,
   });
 
-  const onSubmit = useCallback(async (data: UserFormValue) => {
-    if (loading) return;
-    setLoading(true);
-    setError("");
-try {
-    const result = await signIn("credentials", {
-      email: data.email,
-      password: data.password,
-      redirect: false,
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
-    });
-    if (result?.error) {
-      setError(result.error);
-      toast.error("Error al iniciar sesión: " + result.error)
-    } else {
-      toast.success("Sesión Iniciada correctamente. ¡Bienvenido!")
-      router.push('/dashboard');
-    }
-  }
-  catch (error) {
-    setError("Ocurrió un error al iniciar sesion")
-    toast.error("Error inesperado al iniciar sesión")
-  } finally {
-    setLoading(false)
-  }
-  }, [loading, router]);
+  const onSubmit = useCallback(
+    async (data: UserFormValue) => {
+      if (loading || !isHydrated) return;
+      setLoading(true);
+      setError("");
+      try {
+        const result = await signIn("credentials", {
+          email: data.email,
+          password: data.password,
+          redirect: false,
+        });
+        if (result?.error) {
+          setError(result.error);
+          toast.error("Error al iniciar sesión: " + result.error);
+        } else {
+          toast.success("Sesión Iniciada correctamente. ¡Bienvenido!");
+          router.replace("/dashboard");
+          router.refresh();
+        }
+      } catch (error) {
+        setError("Ocurrió un error al iniciar sesion");
+        toast.error("Error inesperado al iniciar sesión");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isHydrated, loading, router],
+  );
 
   return (
     <>
       <Form {...form}>
-      <form onSubmit={(e) => {
-  e.preventDefault();
-  form.handleSubmit(onSubmit)(e);
-}} className="space-y-2 w-full">
-            <FormField
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          method="post"
+          noValidate
+          className="space-y-2 w-full"
+        >
+          <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
@@ -86,12 +95,14 @@ try {
                   <Input
                     type="email"
                     placeholder="Ingresa tu correo..."
-                    disabled={loading}
+                    disabled={loading || !isHydrated}
                     {...field}
                   />
                 </FormControl>
                 {form.formState.errors.email && (
-                  <FormMessage>{form.formState.errors.email.message}</FormMessage>
+                  <FormMessage>
+                    {form.formState.errors.email.message}
+                  </FormMessage>
                 )}
               </FormItem>
             )}
@@ -107,12 +118,14 @@ try {
                   <Input
                     type="password"
                     placeholder="Ingresa tu contraseña..."
-                    disabled={loading}
+                    disabled={loading || !isHydrated}
                     {...field}
                   />
                 </FormControl>
                 {form.formState.errors.password && (
-                  <FormMessage>{form.formState.errors.password.message}</FormMessage>
+                  <FormMessage>
+                    {form.formState.errors.password.message}
+                  </FormMessage>
                 )}
               </FormItem>
             )}
@@ -120,8 +133,16 @@ try {
 
           {error && <p className="text-red-500">{error}</p>}
 
-          <Button disabled={loading} className="ml-auto w-full" type="submit">
-            {loading ? "Ingresando..." : "Ingresar"}
+          <Button
+            disabled={loading || !isHydrated}
+            className="ml-auto w-full"
+            type="submit"
+          >
+            {!isHydrated
+              ? "Cargando..."
+              : loading
+              ? "Ingresando..."
+              : "Ingresar"}
           </Button>
         </form>
       </Form>
@@ -133,4 +154,3 @@ try {
     </>
   );
 }
-

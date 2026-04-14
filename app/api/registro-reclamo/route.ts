@@ -1,10 +1,17 @@
-import prisma from '@/lib/prisma';
-import { NextResponse } from 'next/server';
+import prisma from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
+import { requireMenuAccess } from "@/lib/route-access";
 
 export async function GET(request: Request) {
+  const access = await requireMenuAccess("obras");
+  if (!access.ok) {
+    return access.response;
+  }
+
   const { searchParams } = new URL(request.url);
   try {
-    const cuadrillaId = searchParams.get('cuadrillaId');
+    const cuadrillaId = searchParams.get("cuadrillaId");
 
     const whereCondition = cuadrillaId
       ? { cuadrillaId: parseInt(cuadrillaId, 10) }
@@ -13,13 +20,16 @@ export async function GET(request: Request) {
     const reclamos = await prisma.registroReclamo.findMany({
       where: whereCondition,
       orderBy: {
-        fecha: 'desc',
+        fecha: "desc",
       },
     });
 
     return NextResponse.json(reclamos);
   } catch (error) {
-    console.error('Error al obtener los registros de reclamo:', error);
-    return NextResponse.json({ error: 'Error al obtener los registros de reclamo' }, { status: 500 });
+    console.error("Error al obtener los registros de reclamo:", error);
+    return NextResponse.json(
+      { error: "Error al obtener los registros de reclamo" },
+      { status: 500 },
+    );
   }
 }

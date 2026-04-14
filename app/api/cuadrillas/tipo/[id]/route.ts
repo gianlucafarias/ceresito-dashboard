@@ -1,14 +1,24 @@
-import prisma from '@/lib/prisma';
-import { NextResponse } from 'next/server';
+import prisma from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
+import { requireMenuAccess } from "@/lib/route-access";
 
 export async function GET(request: Request) {
+  const access = await requireMenuAccess("obras");
+  if (!access.ok) {
+    return access.response;
+  }
+
   try {
     // Obtener la URL y extraer el ID del tipo de los parámetros
     const url = new URL(request.url);
-    const tipoId = url.pathname.split('/').pop(); // Extraer el ID del tipo de la URL
+    const tipoId = url.pathname.split("/").pop(); // Extraer el ID del tipo de la URL
 
     if (!tipoId) {
-      return NextResponse.json({ error: 'ID del tipo no proporcionado' }, { status: 400 });
+      return NextResponse.json(
+        { error: "ID del tipo no proporcionado" },
+        { status: 400 },
+      );
     }
 
     // Buscar las cuadrillas que tienen el tipo especificado
@@ -16,20 +26,26 @@ export async function GET(request: Request) {
       where: {
         tipo: {
           some: {
-            id: Number(tipoId)
-          }
-        }
+            id: Number(tipoId),
+          },
+        },
       },
       include: { tipo: true }, // Incluir los tipos asociados si es necesario
     });
 
     if (cuadrillas.length === 0) {
-      return NextResponse.json({ error: 'No se encuentran cuadrillas para este tipo' }, { status: 404 });
+      return NextResponse.json(
+        { error: "No se encuentran cuadrillas para este tipo" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json(cuadrillas);
   } catch (error) {
-    console.error('Error al buscar las cuadrillas:', error);
-    return NextResponse.json({ error: 'Error al buscar las cuadrillas' }, { status: 500 });
+    console.error("Error al buscar las cuadrillas:", error);
+    return NextResponse.json(
+      { error: "Error al buscar las cuadrillas" },
+      { status: 500 },
+    );
   }
 }

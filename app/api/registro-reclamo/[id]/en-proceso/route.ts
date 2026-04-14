@@ -1,64 +1,76 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma'; 
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { requireMenuAccess } from "@/lib/route-access";
 
 type Params = {
-    id: any
-  }
+  id: any;
+};
 
 export async function PATCH(request: Request, context: { params: Params }) {
+  const access = await requireMenuAccess("obras");
+  if (!access.ok) {
+    return access.response;
+  }
+
   try {
     const origin = new URL(request.url).origin;
     const { id } = context.params;
     const { estado, notificar = false } = await request.json();
 
-    if (estado !== 'EN_PROCESO') {
-      return NextResponse.json({ error: 'Estado inválido' }, { status: 400 });
+    if (estado !== "EN_PROCESO") {
+      return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
     }
 
     const updatedReclamo = await prisma.registroReclamo.update({
       where: { id: parseInt(id) },
       data: {
-        estado: 'EN_PROCESO',
+        estado: "EN_PROCESO",
         fechaAsignacion: new Date(),
       },
     });
 
     await prisma.mensaje.create({
-        data: {
-          contenido: `Reclamo #${updatedReclamo.reclamoId} ha sido aceptado y está en proceso.`,
-          remitente: 'Cuadrilla',
-          cuadrillaId: updatedReclamo.cuadrillaId,
-        },
-      });
-
-    const response = await fetch(`${origin}/api/core/reclamos/${updatedReclamo.reclamoId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
+      data: {
+        contenido: `Reclamo #${updatedReclamo.reclamoId} ha sido aceptado y está en proceso.`,
+        remitente: "Cuadrilla",
+        cuadrillaId: updatedReclamo.cuadrillaId,
       },
-      body: JSON.stringify({ estado: 'EN_PROCESO' }),
     });
+
+    const response = await fetch(
+      `${origin}/api/core/reclamos/${updatedReclamo.reclamoId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ estado: "EN_PROCESO" }),
+      },
+    );
 
     // Si se solicitó notificar al usuario
     if (notificar) {
       try {
         // Obtener los detalles completos del reclamo incluyendo el número de teléfono
-        const reclamoResponse = await fetch(`${origin}/api/core/reclamos/${updatedReclamo.reclamoId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
+        const reclamoResponse = await fetch(
+          `${origin}/api/core/reclamos/${updatedReclamo.reclamoId}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
           },
-        });
+        );
 
         if (reclamoResponse.ok) {
           const reclamoData = await reclamoResponse.json();
-          
+
           if (reclamoData.telefono) {
             // Fecha actual formateada para Argentina
-            const fechaActual = new Date().toLocaleDateString('es_AR');
+            const fechaActual = new Date().toLocaleDateString("es_AR");
             // Nombre del usuario que realizó el reclamo
             const nombreUsuario = reclamoData.nombre || "Usuario";
-            
+
             // Asegurarnos que el número de teléfono tenga el formato correcto
             let phoneNumber = reclamoData.telefono;
             if (phoneNumber.startsWith("+")) {
@@ -67,32 +79,32 @@ export async function PATCH(request: Request, context: { params: Params }) {
             if (!phoneNumber.startsWith("54")) {
               phoneNumber = "54" + phoneNumber; // Añadimos el código de país si no lo tiene
             }
-            
+
             // Preparar plantilla y componentes para WhatsApp
             const templateName = "r_asignado";
             const components = [
               {
-                "type": "HEADER",
-                "parameters": [
+                type: "HEADER",
+                parameters: [
                   {
-                    "type": "text",
-                    "text": updatedReclamo.reclamoId.toString()
-                  }
-                ]
+                    type: "text",
+                    text: updatedReclamo.reclamoId.toString(),
+                  },
+                ],
               },
               {
-                "type": "BODY",
-                "parameters": [
+                type: "BODY",
+                parameters: [
                   {
-                    "type": "text",
-                    "text": nombreUsuario
+                    type: "text",
+                    text: nombreUsuario,
                   },
                   {
-                    "type": "text",
-                    "text": fechaActual
-                  }
-                ]
-              }
+                    type: "text",
+                    text: fechaActual,
+                  },
+                ],
+              },
             ];
 
             // Payload completo para la notificación
@@ -100,21 +112,30 @@ export async function PATCH(request: Request, context: { params: Params }) {
               number: phoneNumber,
               template: templateName,
               languageCode: "es_AR",
-              components: components
+              components: components,
             };
-            
-            console.log("Enviando notificación:", JSON.stringify(notificationPayload, null, 2));
+
+            console.log(
+              "Enviando notificación:",
+              JSON.stringify(notificationPayload, null, 2),
+            );
 
             // Llamar al endpoint de notificación
-            const notificationResponse = await fetch("https://api.ceres.gob.ar/v1/template", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
+            const notificationResponse = await fetch(
+              "https://api.ceres.gob.ar/v1/template",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(notificationPayload),
               },
-              body: JSON.stringify(notificationPayload),
-            });
-            
-            console.log("Respuesta de notificación status:", notificationResponse.status);
+            );
+
+            console.log(
+              "Respuesta de notificación status:",
+              notificationResponse.status,
+            );
 
             if (!notificationResponse.ok) {
               const errorText = await notificationResponse.text();
@@ -131,12 +152,20 @@ export async function PATCH(request: Request, context: { params: Params }) {
     }
 
     if (!response.ok) {
-      return NextResponse.json({ error: 'Error al actualizar el estado del reclamo en la API externa' }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Error al actualizar el estado del reclamo en la API externa",
+        },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json(updatedReclamo);
   } catch (error) {
-    console.error('Error al marcar el reclamo como en proceso:', error);
-    return NextResponse.json({ error: 'Error al marcar el reclamo como en proceso' }, { status: 500 });
+    console.error("Error al marcar el reclamo como en proceso:", error);
+    return NextResponse.json(
+      { error: "Error al marcar el reclamo como en proceso" },
+      { status: 500 },
+    );
   }
 }

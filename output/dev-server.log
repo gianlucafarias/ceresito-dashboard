@@ -1,0 +1,122 @@
+
+> dashboard-ceres@0.1.0 dev
+> next dev
+
+[32m✔[0m [33mConsole Ninja[0m extension is connected to [33mNext.js[0m, see [36mhttps://tinyurl.com/2vt8jxzw[0m
+   ▲ Next.js 14.0.1
+   - Local:        http://localhost:3000
+   - Environments: .env.local, .env
+
+ ✓ Ready in 11.2s
+ ○ Compiling /(auth)/(signin)/page ...
+ ✓ Compiled /(auth)/(signin)/page in 17.2s (1118 modules)
+ ✓ Compiled in 1092ms (416 modules)
+ ○ Compiling /api/auth/[...nextauth]/route ...
+ ✓ Compiled /api/auth/[...nextauth]/route in 1382ms (1118 modules)
+ ○ Compiling /api/user/route ...
+ ✓ Compiled /api/user/route in 1414ms (893 modules)
+ ○ Compiling /cuadrillas/page ...
+ ✓ Compiled /cuadrillas/page in 1812ms (1338 modules)
+ ✓ Compiled /cuadrillas/reportes/page in 444ms (1352 modules)
+ ○ Compiling /cuadrillas/[id]/page ...
+ ✓ Compiled /cuadrillas/[id]/page in 6.9s (3439 modules)
+ ○ Compiling /(dashboard)/dashboard/page ...
+ ✓ Compiled /(dashboard)/dashboard/page in 1369ms (2280 modules)
+ ○ Compiling /api/servicios-externos/[...path]/route ...
+ ✓ Compiled /api/servicios-externos/[...path]/route in 509ms (872 modules)
+ ✓ Compiled (878 modules)
+ ✓ Compiled /not-found in 178ms (880 modules)
+ ✓ Compiled (883 modules)
+ ○ Compiling /(dashboard)/dashboard/qr/page ...
+ ✓ Compiled /(dashboard)/dashboard/qr/page in 948ms (2355 modules)
+ ○ Compiling /api/qr-codes/route ...
+ ✓ Compiled /api/qr-codes/route in 602ms (1001 modules)
+ ✓ Compiled /(dashboard)/dashboard/servicios/page in 413ms (2455 modules)
+ ○ Compiling /(dashboard)/dashboard/settings/page ...
+ ✓ Compiled /(dashboard)/dashboard/settings/page in 1400ms (2396 modules)
+ ✓ Compiled /api/tipoReclamo/route in 194ms (941 modules)
+ ✓ Compiled (943 modules)
+ ✓ Compiled /api/user/roles/route in 177ms (945 modules)
+ ✓ Compiled /api/user/route in 468ms (947 modules)
+ ✓ Compiled in 745ms (2396 modules)
+ ✓ Compiled in 1029ms (2410 modules)
+ ✓ Compiled in 722ms (2410 modules)
+ ✓ Compiled in 604ms (2410 modules)
+ ✓ Compiled in 720ms (2410 modules)
+ ✓ Compiled in 639ms (923 modules)
+ ✓ Compiled in 788ms (2410 modules)
+ ✓ Compiled in 12ms
+ ✓ Compiled in 918ms (2410 modules)
+ ✓ Compiled /middleware in 104ms (160 modules)
+ ✓ Compiled /api/user/menu-permissions/route in 175ms (941 modules)
+ ✓ Compiled in 912ms (2428 modules)
+ ✓ Compiled in 1093ms (2428 modules)
+ ✓ Compiled in 847ms (2428 modules)
+ ✓ Compiled in 326ms (941 modules)
+ ✓ Compiled in 1335ms (2588 modules)
+ ✓ Compiled in 1335ms (2574 modules)
+ ✓ Compiled in 472ms (1487 modules)
+ ✓ Compiled in 664ms (1487 modules)
+ ✓ Compiled in 479ms (1487 modules)
+ ✓ Compiled in 605ms (1487 modules)
+ ✓ Compiled in 1206ms (2588 modules)
+ ✓ Compiled in 1321ms (2574 modules)
+ ✓ Compiled in 1188ms (2588 modules)
+ ✓ Compiled in 1164ms (2574 modules)
+ ✓ Compiled in 1289ms (2588 modules)
+ ✓ Compiled in 1280ms (2574 modules)
+ ✓ Compiled in 1231ms (2588 modules)
+ ✓ Compiled in 1217ms (2574 modules)
+ ✓ Compiled in 1132ms (2588 modules)
+ ✓ Compiled in 1265ms (2574 modules)
+ ✓ Compiled in 802ms (1487 modules)
+ ✓ Compiled in 477ms (1487 modules)
+ ✓ Compiled in 410ms (1487 modules)
+ ✓ Compiled in 456ms (1487 modules)
+ ✓ Compiled in 461ms (1487 modules)
+ ✓ Compiled in 457ms (1487 modules)
+ ✓ Compiled in 576ms (1487 modules)
+ ✓ Compiled in 604ms (1487 modules)
+ ✓ Compiled in 473ms (1487 modules)
+ ○ Compiling /not-found ...
+ ✓ Compiled /not-found in 588ms (943 modules)
+ ○ Compiling /api/auth/[...nextauth]/route ...
+ ✓ Compiled /api/auth/[...nextauth]/route in 751ms (945 modules)
+ ○ Compiling /favicon.ico/route ...
+ ✓ Compiled /favicon.ico/route in 919ms (2458 modules)
+ ✓ Compiled /api/servicios-externos/[...path]/route in 318ms (974 modules)
+ ✓ Compiled (978 modules)
+ ○ Compiling /api/user/roles/route ...
+ ✓ Compiled /api/user/roles/route in 684ms (982 modules)
+ ✓ Compiled /api/user/route in 373ms (984 modules)
+ ○ Compiling /(dashboard)/dashboard/encuestas/page ...
+ ✓ Compiled /(dashboard)/dashboard/encuestas/page in 6.8s (5041 modules)
+ ✓ Compiled /api/core/encuestaobras/[...path]/route in 349ms (2760 modules)
+ ✓ Compiled in 232ms (160 modules)
+ ✓ Compiled /(dashboard)/dashboard/servicios/page in 332ms (2769 modules)
+ ✓ Compiled /api/qr-codes/route in 398ms (2851 modules)
+ ✓ Compiled in 1477ms (5148 modules)
+ ○ Compiling /(auth)/(signin)/page ...
+ ✓ Compiled /(auth)/(signin)/page in 526ms (2804 modules)
+ ✓ Compiled (2823 modules)
+ ✓ Compiled /api/registro-reclamo/route in 418ms (2825 modules)
+ ✓ Compiled in 2.9s (5178 modules)
+ ✓ Compiled /api/user/menu-permissions/route in 492ms (5020 modules)
+ ○ Compiling /api/auth/[...nextauth]/route ...
+ ✓ Compiled /api/auth/[...nextauth]/route in 991ms (2711 modules)
+ ✓ Compiled /api/user/menu-permissions/route in 263ms (2727 modules)
+ ✓ Compiled /api/servicios-externos/[...path]/route in 424ms (2729 modules)
+ ✓ Compiled (2735 modules)
+ ○ Compiling /not-found ...
+ ✓ Compiled /not-found in 619ms (2737 modules)
+ ✓ Compiled /api/tipoReclamo/route in 483ms (2739 modules)
+ ✓ Compiled (2742 modules)
+ ✓ Compiled /api/user/roles/route in 363ms (2745 modules)
+ ✓ Compiled /api/user/route in 366ms (2747 modules)
+ ✓ Compiled /api/users/route in 329ms (2716 modules)
+ ✓ Compiled /api/auth/[...nextauth]/route in 371ms (2718 modules)
+ ✓ Compiled /api/servicios-externos/[...path]/route in 249ms (2720 modules)
+ ✓ Compiled (2726 modules)
+ ✓ Compiled /not-found in 505ms (2729 modules)
+ ○ Compiling /(dashboard)/dashboard/servicios/profesionales/page ...
+ ✓ Compiled /(dashboard)/dashboard/servicios/profesionales/page in 1086ms (5051 modules)

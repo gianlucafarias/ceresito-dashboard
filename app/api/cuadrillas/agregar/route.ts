@@ -1,9 +1,17 @@
-import prisma from '@/lib/prisma';
-import { NextResponse } from 'next/server';
+import prisma from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
+import { requireMenuAccess } from "@/lib/route-access";
 
 export async function POST(request: Request) {
+  const access = await requireMenuAccess("obras");
+  if (!access.ok) {
+    return access.response;
+  }
+
   try {
-    const { nombre, telefono, tipos, limiteReclamosSimultaneos } = await request.json();
+    const { nombre, telefono, tipos, limiteReclamosSimultaneos } =
+      await request.json();
 
     // Crear la nueva cuadrilla
     const nuevaCuadrilla = await prisma.cuadrilla.create({
@@ -12,15 +20,18 @@ export async function POST(request: Request) {
         telefono,
         limiteReclamosSimultaneos,
         tipo: {
-          connect: tipos.map((tipoId: number) => ({ id: tipoId }))
-        }
+          connect: tipos.map((tipoId: number) => ({ id: tipoId })),
+        },
       },
-      include: { tipo: true }
+      include: { tipo: true },
     });
 
     return NextResponse.json(nuevaCuadrilla);
   } catch (error) {
-    console.error('Error al crear la cuadrilla:', error);
-    return NextResponse.json({ error: 'Error al crear la cuadrilla' }, { status: 500 });
+    console.error("Error al crear la cuadrilla:", error);
+    return NextResponse.json(
+      { error: "Error al crear la cuadrilla" },
+      { status: 500 },
+    );
   }
 }

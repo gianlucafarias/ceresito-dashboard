@@ -1,16 +1,24 @@
-import {  NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { requireMenuAccess } from "@/lib/route-access";
 
 type Params = {
-    id: any
-  }
+  id: any;
+};
 
 export async function GET(context: { params: Params }) {
+  const access = await requireMenuAccess("obras");
+  if (!access.ok) {
+    return access.response;
+  }
+
   const { id } = context.params;
   const cuadrillaId = parseInt(id, 10);
 
   if (isNaN(cuadrillaId)) {
-    return new NextResponse(JSON.stringify({ error: 'Invalid cuadrillaId' }), { status: 400 });
+    return new NextResponse(JSON.stringify({ error: "Invalid cuadrillaId" }), {
+      status: 400,
+    });
   }
 
   try {
@@ -19,23 +27,33 @@ export async function GET(context: { params: Params }) {
         cuadrillaId: cuadrillaId,
       },
       orderBy: {
-        timestamp: 'asc',
+        timestamp: "asc",
       },
     });
     return new NextResponse(JSON.stringify(mensajes), { status: 200 });
   } catch (error) {
-    console.error('Error al obtener los mensajes:', error);
-    return new NextResponse(JSON.stringify({ error: 'Error al obtener los mensajes' }), { status: 500 });
+    console.error("Error al obtener los mensajes:", error);
+    return new NextResponse(
+      JSON.stringify({ error: "Error al obtener los mensajes" }),
+      { status: 500 },
+    );
   }
 }
 
 export async function POST(request: Request, context: { params: Params }) {
+  const access = await requireMenuAccess("obras");
+  if (!access.ok) {
+    return access.response;
+  }
+
   const { id } = context.params;
   const cuadrillaId = parseInt(id, 10);
   const { contenido, remitente } = await request.json();
 
   if (isNaN(cuadrillaId)) {
-    return new NextResponse(JSON.stringify({ error: 'Invalid cuadrillaId' }), { status: 400 });
+    return new NextResponse(JSON.stringify({ error: "Invalid cuadrillaId" }), {
+      status: 400,
+    });
   }
 
   try {
@@ -49,17 +67,27 @@ export async function POST(request: Request, context: { params: Params }) {
     });
     return new NextResponse(JSON.stringify(nuevoMensaje), { status: 201 });
   } catch (error) {
-    console.error('Error al enviar el mensaje:', error);
-    return new NextResponse(JSON.stringify({ error: 'Error al enviar el mensaje' }), { status: 500 });
+    console.error("Error al enviar el mensaje:", error);
+    return new NextResponse(
+      JSON.stringify({ error: "Error al enviar el mensaje" }),
+      { status: 500 },
+    );
   }
 }
 
 export async function PATCH(request: Request, context: { params: Params }) {
+  const access = await requireMenuAccess("obras");
+  if (!access.ok) {
+    return access.response;
+  }
+
   const { id } = context.params;
   const cuadrillaId = parseInt(id, 10);
 
   if (isNaN(cuadrillaId)) {
-    return new NextResponse(JSON.stringify({ error: 'Invalid cuadrillaId' }), { status: 400 });
+    return new NextResponse(JSON.stringify({ error: "Invalid cuadrillaId" }), {
+      status: 400,
+    });
   }
 
   try {
@@ -73,7 +101,10 @@ export async function PATCH(request: Request, context: { params: Params }) {
     });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('Error al marcar los mensajes como leídos:', error);
-    return new NextResponse(JSON.stringify({ error: 'Error al marcar los mensajes como leídos' }), { status: 500 });
+    console.error("Error al marcar los mensajes como leídos:", error);
+    return new NextResponse(
+      JSON.stringify({ error: "Error al marcar los mensajes como leídos" }),
+      { status: 500 },
+    );
   }
 }

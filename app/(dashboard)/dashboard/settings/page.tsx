@@ -1,6 +1,12 @@
-"use client"
+"use client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -8,16 +14,16 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { DeleteIcon, Pencil, PlusCircle } from "lucide-react";
-import {useForm} from 'react-hook-form'
-import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast";
 import { RolesCard } from "./components/RolesCard";
-import ProfilePhotoCard from './components/ProfilePhotoCard';
+import ProfilePhotoCard from "./components/ProfilePhotoCard";
 import { MenuPermissionsCard } from "./components/MenuPermissionsCard";
 import {
   AlertDialog,
@@ -28,7 +34,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -37,27 +43,32 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DEFAULT_MENU_PERMISSIONS,
+  MENU_SECTIONS,
+} from "@/types/menu-permissions";
 
 interface Role {
-  id: number,
-  name: string,
-  menuPermissions: string[]
+  id: number;
+  name: string;
+  menuPermissions: string[];
 }
 
 interface User {
-  id: number,
-  username: string,
-  email?: string,
-  role: Role,
-  roleId: number
+  id: number;
+  username: string;
+  email?: string;
+  role: Role;
+  roleId: number;
 }
 
 interface TipoReclamo {
-  id: number,
-  nombre: string
+  id: number;
+  nombre: string;
 }
 
 const tipoReclamoSchema = z.object({
@@ -70,6 +81,9 @@ const roleSchema = z.object({
   name: z.string().min(2, {
     message: "El nombre debe tener al menos 2 caracteres.",
   }),
+  menuPermissions: z
+    .array(z.string())
+    .default(Array.from(DEFAULT_MENU_PERMISSIONS)),
 });
 
 export default function Page() {
@@ -79,13 +93,16 @@ export default function Page() {
   const [users, setUsers] = useState<User[]>([]);
   const { toast } = useToast();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [pendingRoleChange, setPendingRoleChange] = useState<{ userId: number; roleId: number } | null>(null);
+  const [pendingRoleChange, setPendingRoleChange] = useState<{
+    userId: number;
+    roleId: number;
+  } | null>(null);
   const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [editedRoleName, setEditedRoleName] = useState('');
+  const [editedRoleName, setEditedRoleName] = useState("");
   const [isEditTipoDialogOpen, setIsEditTipoDialogOpen] = useState(false);
   const [editingTipo, setEditingTipo] = useState<TipoReclamo | null>(null);
-  const [editedTipoName, setEditedTipoName] = useState('');
+  const [editedTipoName, setEditedTipoName] = useState("");
   const [isCreateRoleDialogOpen, setIsCreateRoleDialogOpen] = useState(false);
   const [isCreateTipoDialogOpen, setIsCreateTipoDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -94,10 +111,10 @@ export default function Page() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const tipoReclamosResponse = await fetch('/api/tipoReclamo');
-        const rolesResponse = await fetch('/api/user/roles');
-        const usersResponse = await fetch('/api/user');
-        
+        const tipoReclamosResponse = await fetch("/api/tipoReclamo");
+        const rolesResponse = await fetch("/api/user/roles");
+        const usersResponse = await fetch("/api/user");
+
         if (tipoReclamosResponse.ok && rolesResponse.ok && usersResponse.ok) {
           const tipoReclamosData = await tipoReclamosResponse.json();
           const rolesData = await rolesResponse.json();
@@ -107,14 +124,14 @@ export default function Page() {
           setRoles(rolesData);
           setUsers(Array.isArray(usersData) ? usersData : []);
         } else {
-          console.error('Failed to fetch initial data:', {
+          console.error("Failed to fetch initial data:", {
             tipos: tipoReclamosResponse.status,
             roles: rolesResponse.status,
-            users: usersResponse.status
+            users: usersResponse.status,
           });
         }
       } catch (error) {
-        console.error('Error fetching initial data:', error);
+        console.error("Error fetching initial data:", error);
       } finally {
         setIsLoading(false);
       }
@@ -134,15 +151,19 @@ export default function Page() {
     resolver: zodResolver(roleSchema),
     defaultValues: {
       name: "",
+      menuPermissions: Array.from(DEFAULT_MENU_PERMISSIONS),
     },
   });
+  const selectedRolePermissions = roleForm.watch("menuPermissions") ?? [];
 
-  const onSubmitTipoReclamo = async (values: z.infer<typeof tipoReclamoSchema>) => {
+  const onSubmitTipoReclamo = async (
+    values: z.infer<typeof tipoReclamoSchema>,
+  ) => {
     try {
-      const response = await fetch('/api/tipoReclamo', {
-        method: 'POST',
+      const response = await fetch("/api/tipoReclamo", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(values),
       });
@@ -150,44 +171,47 @@ export default function Page() {
       if (response.ok) {
         tipoReclamoForm.reset();
         const nuevoTipoReclamo = await response.json();
-        setTipoReclamos(prev => [...prev, nuevoTipoReclamo]);
+        setTipoReclamos((prev) => [...prev, nuevoTipoReclamo]);
         toast({
           description: "Tipo de arreglo cargado con éxito.",
-          variant: 'default'
+          variant: "default",
         });
         setIsCreateTipoDialogOpen(false);
       } else {
-        console.error('Error al enviar el tipo de reclamo');
+        console.error("Error al enviar el tipo de reclamo");
       }
     } catch (error) {
-      console.error('Error al enviar el tipo de reclamo:', error);
+      console.error("Error al enviar el tipo de reclamo:", error);
     }
   };
 
   const onSubmitRole = async (values: z.infer<typeof roleSchema>) => {
     try {
-      const response = await fetch('/api/user/roles', {
-        method: 'POST',
+      const response = await fetch("/api/user/roles", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(values),
       });
 
       if (response.ok) {
-        roleForm.reset();
+        roleForm.reset({
+          name: "",
+          menuPermissions: Array.from(DEFAULT_MENU_PERMISSIONS),
+        });
         const nuevoRole = await response.json();
-        setRoles(prev => [...prev, nuevoRole]);
+        setRoles((prev) => [...prev, nuevoRole]);
         toast({
           description: "Rol creado con éxito.",
-          variant: 'default'
+          variant: "default",
         });
         setIsCreateRoleDialogOpen(false);
       } else {
-        console.error('Error al crear el rol');
+        console.error("Error al crear el rol");
       }
     } catch (error) {
-      console.error('Error al crear el rol:', error);
+      console.error("Error al crear el rol:", error);
     }
   };
 
@@ -201,40 +225,48 @@ export default function Page() {
 
     try {
       const response = await fetch(`/api/tipoReclamo/${tipoToDeleteId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.ok) {
-        setTipoReclamos(prevTipos => prevTipos.filter(tipo => tipo.id !== tipoToDeleteId));
+        setTipoReclamos((prevTipos) =>
+          prevTipos.filter((tipo) => tipo.id !== tipoToDeleteId),
+        );
         toast({
           description: "Tipo de arreglo eliminado con éxito.",
-          variant: 'default'
+          variant: "default",
         });
       } else {
-         const errorData = await response.json().catch(() => ({}));
-         console.error('Error al eliminar el tipo de reclamo:', response.status, errorData);
-         toast({
-           title: "Error",
-           description: `No se pudo eliminar el tipo de arreglo. ${errorData.message || ''}`,
-           variant: "destructive",
-         });
+        const errorData = await response.json().catch(() => ({}));
+        console.error(
+          "Error al eliminar el tipo de reclamo:",
+          response.status,
+          errorData,
+        );
+        toast({
+          title: "Error",
+          description: `No se pudo eliminar el tipo de arreglo. ${
+            errorData.message || ""
+          }`,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Error de red al eliminar el tipo de reclamo:', error);
+      console.error("Error de red al eliminar el tipo de reclamo:", error);
       toast({
         title: "Error",
         description: "Ocurrió un error de red al eliminar el tipo de arreglo.",
         variant: "destructive",
       });
     } finally {
-       setIsDeleteDialogOpen(false);
-       setTipoToDeleteId(null);
+      setIsDeleteDialogOpen(false);
+      setTipoToDeleteId(null);
     }
   };
 
   const handleRoleChange = (userId: number, roleId: number) => {
     setPendingRoleChange({ userId, roleId });
-    setIsAlertOpen(true); 
+    setIsAlertOpen(true);
   };
 
   const confirmRoleChange = async () => {
@@ -243,44 +275,50 @@ export default function Page() {
     const { userId, roleId } = pendingRoleChange;
 
     try {
-      const response = await fetch(`/api/user/${userId}`, { 
-        method: 'PATCH',
+      const response = await fetch(`/api/user/${userId}`, {
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ roleId: roleId }), 
+        body: JSON.stringify({ roleId: roleId }),
       });
 
       if (response.ok) {
-        setUsers(prevUsers => 
-          prevUsers.map(user => {
+        setUsers((prevUsers) =>
+          prevUsers.map((user) => {
             if (user.id === userId) {
-              const newRole = roles.find(r => r.id === roleId);
+              const newRole = roles.find((r) => r.id === roleId);
               return { ...user, role: newRole!, roleId: roleId };
             }
             return user;
-          })
+          }),
         );
         toast({
           description: "Rol de usuario actualizado con éxito.",
-          variant: 'default'
+          variant: "default",
         });
       } else {
-         const errorData = await response.json().catch(() => ({}));
-         console.error('Error al actualizar el rol:', response.status, errorData);
-         toast({
-           title: "Error",
-           description: `No se pudo actualizar el rol. ${errorData.message || ''}`,
-           variant: "destructive",
-         });
+        const errorData = await response.json().catch(() => ({}));
+        console.error(
+          "Error al actualizar el rol:",
+          response.status,
+          errorData,
+        );
+        toast({
+          title: "Error",
+          description: `No se pudo actualizar el rol. ${
+            errorData.message || ""
+          }`,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-       console.error('Error al actualizar el rol:', error);
-       toast({
-         title: "Error",
-         description: "Ocurrió un error de red al actualizar el rol.",
-         variant: "destructive",
-       });
+      console.error("Error al actualizar el rol:", error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error de red al actualizar el rol.",
+        variant: "destructive",
+      });
     } finally {
       setIsAlertOpen(false);
       setPendingRoleChange(null);
@@ -295,12 +333,13 @@ export default function Page() {
 
   const handleSaveRoleEdit = async () => {
     if (!editingRole || !editedRoleName || editedRoleName.trim().length < 2) {
-       toast({
-         title: "Error",
-         description: "El nombre del rol no puede estar vacío y debe tener al menos 2 caracteres.",
-         variant: "destructive",
-       });
-      return; 
+      toast({
+        title: "Error",
+        description:
+          "El nombre del rol no puede estar vacío y debe tener al menos 2 caracteres.",
+        variant: "destructive",
+      });
+      return;
     }
     if (editedRoleName === editingRole.name) {
       setIsEditRoleDialogOpen(false);
@@ -310,16 +349,16 @@ export default function Page() {
 
     try {
       const response = await fetch(`/api/user/roles/${editingRole.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: editedRoleName }),
       });
 
       if (response.ok) {
         const updatedRole = await response.json();
-        
-        setRoles(prevRoles => 
-          prevRoles.map(r => (r.id === updatedRole.id ? updatedRole : r))
+
+        setRoles((prevRoles) =>
+          prevRoles.map((r) => (r.id === updatedRole.id ? updatedRole : r)),
         );
 
         toast({ description: "Rol actualizado con éxito." });
@@ -327,15 +366,21 @@ export default function Page() {
         setEditingRole(null);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Error al actualizar el rol:', response.status, errorData);
+        console.error(
+          "Error al actualizar el rol:",
+          response.status,
+          errorData,
+        );
         toast({
           title: "Error",
-          description: `No se pudo actualizar el rol. ${errorData.message || ''}`,
+          description: `No se pudo actualizar el rol. ${
+            errorData.message || ""
+          }`,
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Error de red al actualizar el rol:', error);
+      console.error("Error de red al actualizar el rol:", error);
       toast({
         title: "Error",
         description: "Ocurrió un error de red al actualizar el rol.",
@@ -354,10 +399,11 @@ export default function Page() {
     if (!editingTipo || !editedTipoName || editedTipoName.trim().length < 2) {
       toast({
         title: "Error",
-        description: "El nombre del tipo de arreglo no puede estar vacío y debe tener al menos 2 caracteres.",
+        description:
+          "El nombre del tipo de arreglo no puede estar vacío y debe tener al menos 2 caracteres.",
         variant: "destructive",
       });
-      return; 
+      return;
     }
     if (editedTipoName === editingTipo.nombre) {
       setIsEditTipoDialogOpen(false);
@@ -367,35 +413,42 @@ export default function Page() {
 
     try {
       const response = await fetch(`/api/tipoReclamo/${editingTipo.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre: editedTipoName }),
       });
 
       if (response.ok) {
         const updatedTipo = await response.json();
-        setTipoReclamos(prevTipos => 
-          prevTipos.map(t => (t.id === updatedTipo.id ? updatedTipo : t))
+        setTipoReclamos((prevTipos) =>
+          prevTipos.map((t) => (t.id === updatedTipo.id ? updatedTipo : t)),
         );
         toast({ description: "Tipo de arreglo actualizado con éxito." });
         setIsEditTipoDialogOpen(false);
         setEditingTipo(null);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Error al actualizar tipo de arreglo:', response.status, errorData);
+        console.error(
+          "Error al actualizar tipo de arreglo:",
+          response.status,
+          errorData,
+        );
         toast({
           title: "Error",
-          description: `No se pudo actualizar el tipo de arreglo. ${errorData.message || ''}`,
+          description: `No se pudo actualizar el tipo de arreglo. ${
+            errorData.message || ""
+          }`,
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Error de red al actualizar tipo de arreglo:', error);
-       toast({
-         title: "Error",
-         description: "Ocurrió un error de red al actualizar el tipo de arreglo.",
-         variant: "destructive",
-       });
+      console.error("Error de red al actualizar tipo de arreglo:", error);
+      toast({
+        title: "Error",
+        description:
+          "Ocurrió un error de red al actualizar el tipo de arreglo.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -407,51 +460,62 @@ export default function Page() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-                <CardTitle>Tipos de Reclamos</CardTitle>
-                <CardDescription>
-                  Administra los tipos de reclamos que se pueden reportar.
-                </CardDescription>
-             </div>
-             <Button onClick={() => setIsCreateTipoDialogOpen(true)} size="sm">
-                 <PlusCircle className="mr-2 h-4 w-4" />
-                 Crear Tipo
-             </Button>
+              <CardTitle>Tipos de Reclamos</CardTitle>
+              <CardDescription>
+                Administra los tipos de reclamos que se pueden reportar.
+              </CardDescription>
+            </div>
+            <Button onClick={() => setIsCreateTipoDialogOpen(true)} size="sm">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Crear Tipo
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 mt-6">
-              <h2 className="font-semibold text-lg">Tipos de Arreglos Existentes</h2>
+              <h2 className="font-semibold text-lg">
+                Tipos de Arreglos Existentes
+              </h2>
               <div className="grid gap-2">
                 {isLoading ? (
-                   <>
-                     <Skeleton className="h-10 w-full" /> 
-                     <Skeleton className="h-10 w-full" /> 
-                     <Skeleton className="h-10 w-full" /> 
-                   </>
-                )
-                : tipoReclamos.length > 0 ? (
+                  <>
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </>
+                ) : tipoReclamos.length > 0 ? (
                   tipoReclamos.map((tipoReclamo) => (
-                     <div key={tipoReclamo.id} className="flex items-center justify-between bg-gray-100 px-4 py-3 rounded-md dark:bg-gray-950">
-                       <span>{tipoReclamo.nombre}</span>
-                       <div className="flex items-center gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleEditTipoClick(tipoReclamo)}
-                            className="h-8 w-8" 
-                          >
-                            <Pencil className="h-4 w-4" />
-                            <span className="sr-only">Editar Tipo</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteTipoClick(tipoReclamo.id)} className="h-8 w-8">
-                            <DeleteIcon className="w-4 h-4" />
-                            <span className="sr-only">Eliminar Tipo</span>
-                          </Button>
-                       </div>
-                     </div>
+                    <div
+                      key={tipoReclamo.id}
+                      className="flex items-center justify-between bg-gray-100 px-4 py-3 rounded-md dark:bg-gray-950"
+                    >
+                      <span>{tipoReclamo.nombre}</span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditTipoClick(tipoReclamo)}
+                          className="h-8 w-8"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Editar Tipo</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteTipoClick(tipoReclamo.id)}
+                          className="h-8 w-8"
+                        >
+                          <DeleteIcon className="w-4 h-4" />
+                          <span className="sr-only">Eliminar Tipo</span>
+                        </Button>
+                      </div>
+                    </div>
                   ))
                 ) : (
-                   <p className="text-sm text-muted-foreground">No hay tipos de arreglos creados aún.</p>
-                 )} 
+                  <p className="text-sm text-muted-foreground">
+                    No hay tipos de arreglos creados aún.
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -459,27 +523,30 @@ export default function Page() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-             <div>
-                <CardTitle>Administrar Roles</CardTitle>
-                <CardDescription>
-                  Administra los roles existentes o crea uno nuevo.
-                </CardDescription>
-             </div>
-             <Button onClick={() => setIsCreateRoleDialogOpen(true)} size="sm">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Crear Rol
-             </Button>
+            <div>
+              <CardTitle>Administrar Roles</CardTitle>
+              <CardDescription>
+                Administra los roles existentes o crea uno nuevo.
+              </CardDescription>
+            </div>
+            <Button onClick={() => setIsCreateRoleDialogOpen(true)} size="sm">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Crear Rol
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 mt-6">
               <h2 className="font-semibold text-lg">Roles Existentes</h2>
               <div className="grid gap-2">
                 {roles.map((role) => (
-                  <div key={role.id} className="flex items-center justify-between bg-gray-100 px-4 py-3 rounded-md dark:bg-gray-950">
+                  <div
+                    key={role.id}
+                    className="flex items-center justify-between bg-gray-100 px-4 py-3 rounded-md dark:bg-gray-950"
+                  >
                     <span>{role.name}</span>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleEditRoleClick(role)}
                       className="h-8 w-8"
                     >
@@ -489,19 +556,21 @@ export default function Page() {
                   </div>
                 ))}
                 {roles.length === 0 && (
-                   <p className="text-sm text-muted-foreground">No hay roles creados aún.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No hay roles creados aún.
+                  </p>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <RolesCard 
-            users={users} 
-            roles={roles} 
-            onRoleChange={handleRoleChange} 
-            setUsers={setUsers}
-            toast={toast}
+        <RolesCard
+          users={users}
+          roles={roles}
+          onRoleChange={handleRoleChange}
+          setUsers={setUsers}
+          toast={toast}
         />
 
         <MenuPermissionsCard roles={roles} />
@@ -512,17 +581,24 @@ export default function Page() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Cambio de Rol</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro de que quieres cambiar el rol de este usuario? 
+              ¿Estás seguro de que quieres cambiar el rol de este usuario?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingRoleChange(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRoleChange}>Confirmar</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setPendingRoleChange(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRoleChange}>
+              Confirmar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={isEditRoleDialogOpen} onOpenChange={setIsEditRoleDialogOpen}>
+      <Dialog
+        open={isEditRoleDialogOpen}
+        onOpenChange={setIsEditRoleDialogOpen}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Editar Nombre del Rol</DialogTitle>
@@ -535,29 +611,37 @@ export default function Page() {
               <Label htmlFor="role-name" className="text-right">
                 Nombre
               </Label>
-              <Input 
-                id="role-name" 
-                value={editedRoleName} 
+              <Input
+                id="role-name"
+                value={editedRoleName}
                 onChange={(e) => setEditedRoleName(e.target.value)}
-                className="col-span-3" 
+                className="col-span-3"
               />
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
-                <Button type="button" variant="outline">Cancelar</Button>
+              <Button type="button" variant="outline">
+                Cancelar
+              </Button>
             </DialogClose>
-            <Button type="button" onClick={handleSaveRoleEdit}>Guardar Cambios</Button>
+            <Button type="button" onClick={handleSaveRoleEdit}>
+              Guardar Cambios
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isEditTipoDialogOpen} onOpenChange={setIsEditTipoDialogOpen}>
+      <Dialog
+        open={isEditTipoDialogOpen}
+        onOpenChange={setIsEditTipoDialogOpen}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Editar Tipo de Arreglo</DialogTitle>
             <DialogDescription>
-              Cambia el nombre del tipo de arreglo. Haz clic en guardar cuando termines.
+              Cambia el nombre del tipo de arreglo. Haz clic en guardar cuando
+              termines.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -565,33 +649,52 @@ export default function Page() {
               <Label htmlFor="tipo-name" className="text-right">
                 Nombre
               </Label>
-              <Input 
-                id="tipo-name" 
-                value={editedTipoName} 
+              <Input
+                id="tipo-name"
+                value={editedTipoName}
                 onChange={(e) => setEditedTipoName(e.target.value)}
-                className="col-span-3" 
+                className="col-span-3"
               />
             </div>
           </div>
           <DialogFooter>
-             <DialogClose asChild>
-                 <Button type="button" variant="outline">Cancelar</Button>
-             </DialogClose>
-            <Button type="button" onClick={handleSaveTipoEdit}>Guardar Cambios</Button>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleSaveTipoEdit}>
+              Guardar Cambios
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isCreateRoleDialogOpen} onOpenChange={setIsCreateRoleDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      <Dialog
+        open={isCreateRoleDialogOpen}
+        onOpenChange={(open) => {
+          setIsCreateRoleDialogOpen(open);
+          if (!open) {
+            roleForm.reset({
+              name: "",
+              menuPermissions: Array.from(DEFAULT_MENU_PERMISSIONS),
+            });
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle>Crear Nuevo Rol</DialogTitle>
             <DialogDescription>
-              Ingresa el nombre del nuevo rol que deseas crear.
+              El rol se crea con Panel y Salir por defecto. Puedes sumar mÃ¡s
+              secciones ahora o luego desde permisos.
             </DialogDescription>
           </DialogHeader>
           <Form {...roleForm}>
-            <form onSubmit={roleForm.handleSubmit(onSubmitRole)} className="space-y-4 py-4">
+            <form
+              onSubmit={roleForm.handleSubmit(onSubmitRole)}
+              className="space-y-4 py-4"
+            >
               <FormField
                 control={roleForm.control}
                 name="name"
@@ -605,9 +708,62 @@ export default function Page() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={roleForm.control}
+                name="menuPermissions"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Secciones habilitadas</FormLabel>
+                    <div className="grid gap-3 rounded-md border p-4">
+                      {MENU_SECTIONS.map((section) => {
+                        const isChecked = selectedRolePermissions.includes(
+                          section.id,
+                        );
+
+                        return (
+                          <label
+                            key={section.id}
+                            htmlFor={`create-role-${section.id}`}
+                            className="flex items-start gap-3 cursor-pointer"
+                          >
+                            <Checkbox
+                              id={`create-role-${section.id}`}
+                              checked={isChecked}
+                              onCheckedChange={(checked) => {
+                                const nextPermissions = checked
+                                  ? [...selectedRolePermissions, section.id]
+                                  : selectedRolePermissions.filter(
+                                      (permission) => permission !== section.id,
+                                    );
+
+                                roleForm.setValue(
+                                  "menuPermissions",
+                                  Array.from(new Set(nextPermissions)),
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                            <div className="space-y-1 leading-none">
+                              <p className="text-sm font-medium">
+                                {section.title}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {section.url}
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button" variant="outline">Cancelar</Button>
+                  <Button type="button" variant="outline">
+                    Cancelar
+                  </Button>
                 </DialogClose>
                 <Button type="submit">Crear Rol</Button>
               </DialogFooter>
@@ -616,7 +772,10 @@ export default function Page() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isCreateTipoDialogOpen} onOpenChange={setIsCreateTipoDialogOpen}>
+      <Dialog
+        open={isCreateTipoDialogOpen}
+        onOpenChange={setIsCreateTipoDialogOpen}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Crear Nuevo Tipo de Arreglo</DialogTitle>
@@ -625,7 +784,10 @@ export default function Page() {
             </DialogDescription>
           </DialogHeader>
           <Form {...tipoReclamoForm}>
-            <form onSubmit={tipoReclamoForm.handleSubmit(onSubmitTipoReclamo)} className="space-y-4 py-4">
+            <form
+              onSubmit={tipoReclamoForm.handleSubmit(onSubmitTipoReclamo)}
+              className="space-y-4 py-4"
+            >
               <FormField
                 control={tipoReclamoForm.control}
                 name="nombre"
@@ -641,7 +803,9 @@ export default function Page() {
               />
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button" variant="outline">Cancelar</Button>
+                  <Button type="button" variant="outline">
+                    Cancelar
+                  </Button>
                 </DialogClose>
                 <Button type="submit">Crear Tipo</Button>
               </DialogFooter>
@@ -650,20 +814,28 @@ export default function Page() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente el tipo de arreglo.
+              Esta acción no se puede deshacer. Esto eliminará permanentemente
+              el tipo de arreglo.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setTipoToDeleteId(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteTipoReclamo}>Eliminar</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setTipoToDeleteId(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteTipoReclamo}>
+              Eliminar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </main>
-  )
+  );
 }
