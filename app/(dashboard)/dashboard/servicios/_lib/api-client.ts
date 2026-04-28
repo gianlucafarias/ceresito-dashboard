@@ -544,6 +544,13 @@ export interface APIObservabilitySummaryResponse {
   recentFailures: APIObservabilityEvent[];
 }
 
+export interface APIPlatformObservabilitySummaryResponse {
+  totals: APIObservabilitySummaryResponse["totals"];
+  statusBreakdown: APIObservabilitySummaryResponse["statusBreakdown"];
+  domainBreakdown: APIObservabilitySummaryResponse["domainBreakdown"];
+  recentFailures: APIObservabilityEvent[];
+}
+
 export interface APIObservabilityEventDetailResponse {
   event: APIObservabilityEvent;
   timeline: APIObservabilityEvent[];
@@ -561,6 +568,13 @@ export interface APIObservabilityEventsResponse {
   filters?: ObservabilityEventsParams & {
     query?: string | null;
   };
+}
+
+export interface APIPlatformObservabilityEventsResponse {
+  success: true;
+  data: APIObservabilityEvent[];
+  pagination: APIObservabilityEventsResponse["pagination"];
+  filters?: Record<string, unknown>;
 }
 
 type RawCategoryPayload = {
@@ -1578,6 +1592,57 @@ class ServicesAPIClient {
     }
 
     return result;
+  }
+
+  async getPlatformObservabilitySummary(): Promise<
+    APIResponse<APIPlatformObservabilitySummaryResponse> | APIError
+  > {
+    const result = await this.request<APIPlatformObservabilitySummaryResponse>(
+      "/api/admin/observability/summary",
+    );
+    if ("pagination" in result) {
+      return {
+        success: false,
+        error: "unexpected_response",
+        message: "Se esperaba una respuesta simple, se recibio una respuesta paginada",
+      };
+    }
+    return result as APIResponse<APIPlatformObservabilitySummaryResponse> | APIError;
+  }
+
+  async listPlatformObservabilityEvents(
+    params?: Omit<ObservabilityEventsParams, "source">,
+  ): Promise<APIPlatformObservabilityEventsResponse | APIError> {
+    const queryParams = new URLSearchParams();
+
+    if (params?.from) queryParams.set("from", params.from);
+    if (params?.to) queryParams.set("to", params.to);
+    if (params?.domain) queryParams.set("domain", params.domain);
+    if (params?.actorId) queryParams.set("actorId", params.actorId);
+    if (params?.kind) queryParams.set("kind", params.kind);
+    if (params?.status) queryParams.set("status", params.status);
+    if (params?.entityType) queryParams.set("entityType", params.entityType);
+    if (params?.entityId) queryParams.set("entityId", params.entityId);
+    if (params?.requestId) queryParams.set("requestId", params.requestId);
+    if (params?.query) queryParams.set("query", params.query);
+    if (params?.page) queryParams.set("page", String(params.page));
+    if (params?.limit) queryParams.set("limit", String(params.limit));
+
+    const endpoint = `/api/admin/observability/events${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+    const result = await this.request<APIObservabilityEvent>(endpoint);
+    if (!result.success) {
+      return result as APIError;
+    }
+    if (!("pagination" in result)) {
+      return {
+        success: false,
+        error: "unexpected_response",
+        message: "Se esperaba una respuesta paginada",
+      };
+    }
+    return result as APIPlatformObservabilityEventsResponse;
   }
 
   /**
