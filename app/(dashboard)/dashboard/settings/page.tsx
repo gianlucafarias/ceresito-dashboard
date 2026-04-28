@@ -111,24 +111,38 @@ export default function Page() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const tipoReclamosResponse = await fetch("/api/tipoReclamo");
-        const rolesResponse = await fetch("/api/user/roles");
-        const usersResponse = await fetch("/api/user");
+        const [tipoReclamosResponse, rolesResponse, usersResponse] =
+          await Promise.all([
+            fetch("/api/tipoReclamo"),
+            fetch("/api/user/roles"),
+            fetch("/api/user"),
+          ]);
 
-        if (tipoReclamosResponse.ok && rolesResponse.ok && usersResponse.ok) {
+        const failedStatuses: Record<string, number> = {};
+
+        if (tipoReclamosResponse.ok) {
           const tipoReclamosData = await tipoReclamosResponse.json();
-          const rolesData = await rolesResponse.json();
-          const usersData = await usersResponse.json();
+          setTipoReclamos(Array.isArray(tipoReclamosData) ? tipoReclamosData : []);
+        } else {
+          failedStatuses.tipos = tipoReclamosResponse.status;
+        }
 
-          setTipoReclamos(tipoReclamosData);
-          setRoles(rolesData);
+        if (rolesResponse.ok) {
+          const rolesData = await rolesResponse.json();
+          setRoles(Array.isArray(rolesData) ? rolesData : []);
+        } else {
+          failedStatuses.roles = rolesResponse.status;
+        }
+
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
           setUsers(Array.isArray(usersData) ? usersData : []);
         } else {
-          console.error("Failed to fetch initial data:", {
-            tipos: tipoReclamosResponse.status,
-            roles: rolesResponse.status,
-            users: usersResponse.status,
-          });
+          failedStatuses.users = usersResponse.status;
+        }
+
+        if (Object.keys(failedStatuses).length > 0) {
+          console.error("Failed to fetch initial data:", failedStatuses);
         }
       } catch (error) {
         console.error("Error fetching initial data:", error);
@@ -178,10 +192,25 @@ export default function Page() {
         });
         setIsCreateTipoDialogOpen(false);
       } else {
-        console.error("Error al enviar el tipo de reclamo");
+        const errorData = await response.json().catch(() => ({}));
+        const message =
+          response.status === 409
+            ? "Ese tipo de reclamo ya existe."
+            : errorData.message || "No se pudo crear el tipo de reclamo.";
+        console.error("Error al enviar el tipo de reclamo:", response.status, errorData);
+        toast({
+          title: "Error",
+          description: message,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error al enviar el tipo de reclamo:", error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error de red al crear el tipo de reclamo.",
+        variant: "destructive",
+      });
     }
   };
 

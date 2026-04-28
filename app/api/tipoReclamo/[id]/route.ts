@@ -3,9 +3,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { requestTiposReclamoCore } from "@/lib/reclamos-tipos-core";
 import { requireMenuAccess } from "@/lib/route-access";
 
+type RouteParams = { id: string };
+
+async function resolveId(
+  params: RouteParams | Promise<RouteParams>,
+): Promise<number> {
+  const resolved = await Promise.resolve(params);
+  return Number.parseInt(resolved.id, 10);
+}
+
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: RouteParams | Promise<RouteParams> },
 ) {
   const access = await requireMenuAccess("ajustes");
   if (!access.ok) {
@@ -13,7 +22,7 @@ export async function PATCH(
   }
 
   try {
-    const tipoId = Number.parseInt(params.id, 10);
+    const tipoId = await resolveId(params);
     if (Number.isNaN(tipoId)) {
       return NextResponse.json(
         { message: "Invalid ID format" },
@@ -52,7 +61,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: RouteParams | Promise<RouteParams> },
 ) {
   const access = await requireMenuAccess("ajustes");
   if (!access.ok) {
@@ -60,7 +69,7 @@ export async function DELETE(
   }
 
   try {
-    const tipoId = Number.parseInt(params.id, 10);
+    const tipoId = await resolveId(params);
     if (Number.isNaN(tipoId)) {
       return NextResponse.json(
         { message: "Invalid ID format" },
