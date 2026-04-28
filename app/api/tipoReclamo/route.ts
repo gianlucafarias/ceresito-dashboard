@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import prisma from "@/lib/prisma";
+import { requestTiposReclamoCore } from "@/lib/reclamos-tipos-core";
 import { requireMenuAccess } from "@/lib/route-access";
 
 export async function POST(request: NextRequest) {
@@ -19,13 +19,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newTipoReclamo = await prisma.tipoReclamo.create({
-      data: {
-        nombre: nombre.trim(),
-      },
+    const response = await requestTiposReclamoCore("/reclamos/tipos", {
+      method: "POST",
+      body: JSON.stringify({ nombre: nombre.trim() }),
     });
-
-    return NextResponse.json(newTipoReclamo);
+    return NextResponse.json(response.body, { status: response.status });
   } catch (error) {
     console.error("Error creating tipo reclamo:", error);
     return NextResponse.json(
@@ -42,13 +40,10 @@ export async function GET() {
   }
 
   try {
-    const obtenerTipoReclamo = await prisma.tipoReclamo.findMany({
-      orderBy: {
-        nombre: "asc",
-      },
+    const response = await requestTiposReclamoCore("/reclamos/tipos", {
+      method: "GET",
     });
-
-    return NextResponse.json(obtenerTipoReclamo);
+    return NextResponse.json(response.body, { status: response.status });
   } catch (error) {
     console.error("Error fetching tipos reclamo:", error);
     return NextResponse.json(

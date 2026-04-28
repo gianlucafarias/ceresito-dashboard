@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import prisma from "@/lib/prisma";
+import { requestTiposReclamoCore } from "@/lib/reclamos-tipos-core";
 import { requireMenuAccess } from "@/lib/route-access";
 
 export async function PATCH(
@@ -31,28 +31,17 @@ export async function PATCH(
       );
     }
 
-    const updatedTipoReclamo = await prisma.tipoReclamo.update({
-      where: { id: tipoId },
-      data: { nombre: nombre.trim() },
-    });
+    const response = await requestTiposReclamoCore(
+      `/reclamos/tipos/${tipoId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ nombre: nombre.trim() }),
+      },
+    );
 
-    return NextResponse.json(updatedTipoReclamo, { status: 200 });
+    return NextResponse.json(response.body, { status: response.status });
   } catch (error: any) {
     console.error("Error updating TipoReclamo:", error);
-
-    if (error.code === "P2025") {
-      return NextResponse.json(
-        { message: "TipoReclamo not found" },
-        { status: 404 },
-      );
-    }
-
-    if (error.code === "P2002") {
-      return NextResponse.json(
-        { message: "TipoReclamo name already exists." },
-        { status: 409 },
-      );
-    }
 
     return NextResponse.json(
       { message: "Error updating TipoReclamo" },
@@ -79,33 +68,16 @@ export async function DELETE(
       );
     }
 
-    await prisma.tipoReclamo.delete({
-      where: { id: tipoId },
-    });
-
-    return NextResponse.json(
-      { message: "TipoReclamo deleted successfully" },
-      { status: 200 },
+    const response = await requestTiposReclamoCore(
+      `/reclamos/tipos/${tipoId}`,
+      {
+        method: "DELETE",
+      },
     );
+
+    return NextResponse.json(response.body, { status: response.status });
   } catch (error: any) {
     console.error("Error deleting TipoReclamo:", error);
-
-    if (error.code === "P2025") {
-      return NextResponse.json(
-        { message: "TipoReclamo not found" },
-        { status: 404 },
-      );
-    }
-
-    if (error.code === "P2003") {
-      return NextResponse.json(
-        {
-          message:
-            "Cannot delete TipoReclamo as it is still referenced elsewhere.",
-        },
-        { status: 409 },
-      );
-    }
 
     return NextResponse.json(
       { message: "Error deleting TipoReclamo" },
