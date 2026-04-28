@@ -129,6 +129,10 @@ export const navItems = {
           title: "Contactos",
           url: "/dashboard/contacts",
         },
+        {
+          title: "Bot Observabilidad",
+          url: "/dashboard/ceresito/observabilidad",
+        },
       ],
     },
     {

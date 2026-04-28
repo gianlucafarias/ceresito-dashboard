@@ -24,6 +24,9 @@ const CENTRAL_API_KEY = USE_PROXY
     process.env.OPS_API_KEY ||
     process.env.ADMIN_API_KEY;
 
+const OBS_SOURCE_SERVICES = "plataforma-servicios-ceres";
+const OBS_SOURCE_BOT = "bot";
+
 export interface APIError {
   success: false;
   error: string;
@@ -1457,7 +1460,7 @@ class ServicesAPIClient {
   // ==================== OBSERVABILIDAD ====================
 
   async getObservabilitySummary(
-    source: string = 'plataforma-servicios-ceres'
+    source: string = OBS_SOURCE_SERVICES
   ): Promise<APIResponse<APIObservabilitySummaryResponse> | APIError> {
     const queryParams = new URLSearchParams();
     if (source) queryParams.set('source', source);
@@ -1485,7 +1488,7 @@ class ServicesAPIClient {
   ): Promise<APIObservabilityEventsResponse | APIError> {
     const queryParams = new URLSearchParams();
 
-    queryParams.set('source', params?.source || 'plataforma-servicios-ceres');
+    queryParams.set('source', params?.source || OBS_SOURCE_SERVICES);
     if (params?.from) queryParams.set('from', params.from);
     if (params?.to) queryParams.set('to', params.to);
     if (params?.domain) queryParams.set('domain', params.domain);
@@ -1537,6 +1540,44 @@ class ServicesAPIClient {
       };
     }
     return result as APIResponse<APIObservabilityEventDetailResponse> | APIError;
+  }
+
+  async getBotObservabilitySummary(): Promise<
+    APIResponse<APIObservabilitySummaryResponse> | APIError
+  > {
+    return this.getObservabilitySummary(OBS_SOURCE_BOT);
+  }
+
+  async listBotObservabilityEvents(
+    params?: Omit<ObservabilityEventsParams, "source">,
+  ): Promise<APIObservabilityEventsResponse | APIError> {
+    return this.listObservabilityEvents({
+      ...(params || {}),
+      source: OBS_SOURCE_BOT,
+    });
+  }
+
+  async getBotObservabilityEvent(
+    id: string,
+  ): Promise<APIResponse<APIObservabilityEventDetailResponse> | APIError> {
+    const result = await this.getObservabilityEvent(id);
+    if (!result.success) {
+      return result;
+    }
+
+    const hasNonBotInTimeline = result.data.timeline.some(
+      (event) => event.source !== OBS_SOURCE_BOT,
+    );
+
+    if (result.data.event.source !== OBS_SOURCE_BOT || hasNonBotInTimeline) {
+      return {
+        success: false,
+        error: "invalid_observability_source",
+        message: "El evento solicitado no pertenece a la observabilidad del bot",
+      };
+    }
+
+    return result;
   }
 
   /**
