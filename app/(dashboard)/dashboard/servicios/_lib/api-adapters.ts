@@ -157,14 +157,40 @@ export function adaptProfessionals(apiProfessionals: APIProfessionalResponse[]):
  * Adapta las estadísticas del dashboard
  */
 export function adaptDashboardStats(apiStats: APIStatsResponse) {
+  const topCategories = (apiStats.topCategories || []).map((item) => {
+    const rawCount = (item as any).count;
+    const countValue =
+      typeof rawCount === "number"
+        ? rawCount
+        : typeof rawCount === "object" && rawCount !== null
+          ? Number((rawCount as Record<string, unknown>).categoryId || 0)
+          : 0;
+
+    return {
+      category: item.category?.name || "Sin categoria",
+      count: Number.isFinite(countValue) ? countValue : 0,
+    };
+  });
+
   return {
     totalProfessionals: apiStats.overview.totalProfessionals,
     activeProfessionals: apiStats.overview.activeProfessionals,
     pendingProfessionals: apiStats.overview.pendingProfessionals,
+    suspendedProfessionals: apiStats.overview.suspendedProfessionals,
     totalServices: apiStats.overview.totalServices,
-    totalContactRequests: 0, // No disponible en API aún
-    pendingContactRequests: 0, // No disponible en API aún
-    averageRating: 0, // No disponible en API aún, calcular del lado del cliente si es necesario
+    totalUsers: apiStats.overview.totalUsers,
+    totalContactRequests: apiStats.overview.totalContactRequests,
+    totalReviews: apiStats.overview.totalReviews,
+    totalBugReports: apiStats.overview.totalBugReports,
+    openBugReports: apiStats.overview.openBugReports,
+    activeLocations: apiStats.overview.activeLocations,
+    growth: {
+      newProfessionalsThisWeek: apiStats.growth.newProfessionalsThisWeek,
+      newProfessionalsThisMonth: apiStats.growth.newProfessionalsThisMonth,
+      newUsersThisWeek: apiStats.growth.newUsersThisWeek,
+      newUsersThisMonth: apiStats.growth.newUsersThisMonth,
+      newServicesThisMonth: apiStats.growth.newServicesThisMonth,
+    },
     professionalsByCategory: apiStats.categoryDistribution.map(item => ({
       category: item.category === 'oficios' ? 'Oficios' : 'Profesiones',
       count: item.count,
@@ -173,7 +199,10 @@ export function adaptDashboardStats(apiStats: APIStatsResponse) {
       location: item.location,
       count: item.count,
     })),
-    monthlyRegistrations: [], // No disponible en API aún
+    topCategories,
+    bugReportsBySeverity: apiStats.bugReportsBySeverity || [],
+    contactRequestsByStatus: apiStats.contactRequestsByStatus || [],
+    monthlyRegistrations: [],
   };
 }
 
