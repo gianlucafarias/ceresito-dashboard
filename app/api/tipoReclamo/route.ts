@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await requestTiposReclamoCore("/reclamos/tipos", {
+    const response = await requestTiposReclamoCore("/reclamos/admin/tipos", {
       method: "POST",
       body: JSON.stringify({ nombre: nombre.trim() }),
     });
@@ -40,7 +40,7 @@ export async function GET() {
   }
 
   try {
-    const response = await requestTiposReclamoCore("/reclamos/tipos", {
+    const response = await requestTiposReclamoCore("/reclamos/admin/tipos", {
       method: "GET",
     });
     return NextResponse.json(response.body, { status: response.status });

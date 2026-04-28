@@ -41,7 +41,7 @@ export async function PATCH(
     }
 
     const response = await requestTiposReclamoCore(
-      `/reclamos/tipos/${tipoId}`,
+      `/reclamos/admin/tipos/${tipoId}`,
       {
         method: "PATCH",
         body: JSON.stringify({ nombre: nombre.trim() }),
@@ -78,7 +78,7 @@ export async function DELETE(
     }
 
     const response = await requestTiposReclamoCore(
-      `/reclamos/tipos/${tipoId}`,
+      `/reclamos/admin/tipos/${tipoId}`,
       {
         method: "DELETE",
       },
