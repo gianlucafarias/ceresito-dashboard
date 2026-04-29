@@ -102,6 +102,9 @@ export interface APIProfessionalResponse {
   documentation?: {
     required?: boolean;
     criminalRecordPresent?: boolean;
+    criminalRecordStatus?: 'pending' | 'approved' | 'rejected' | null;
+    criminalRecordReviewedAt?: string | null;
+    criminalRecordAdminNotes?: string | null;
     hasLaborReferences?: boolean;
     criminalRecord?: {
       objectKey?: string;
@@ -483,6 +486,35 @@ export interface ListCertificationsParams {
 export interface UpdateCertificationData {
   status: 'approved' | 'rejected' | 'suspended';
   adminNotes?: string;
+}
+
+export interface APICriminalRecordReviewResponse {
+  id: string;
+  professionalId: string;
+  criminalRecordObjectKey: string | null;
+  criminalRecordFileName: string | null;
+  criminalRecordStatus: 'pending' | 'approved' | 'rejected' | null;
+  criminalRecordReviewedAt: string | null;
+  criminalRecordAdminNotes: string | null;
+  updatedAt: string;
+  professional: {
+    id: string;
+    verified: boolean;
+    status: 'pending' | 'active' | 'suspended';
+    user: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
+  };
+}
+
+export interface ListCriminalRecordReviewsParams {
+  page?: number;
+  limit?: number;
+  status?: 'pending' | 'approved' | 'rejected';
+  professionalId?: string;
 }
 
 export interface APIObservabilityEvent {
@@ -1469,6 +1501,52 @@ class ServicesAPIClient {
       };
     }
     return result as APIResponse<{ id: string }> | APIError;
+  }
+
+  async listCriminalRecordReviews(
+    params?: ListCriminalRecordReviewsParams
+  ): Promise<PaginatedAPIResponse<APICriminalRecordReviewResponse> | APIError> {
+    const queryParams = new URLSearchParams();
+
+    if (params?.page) queryParams.set('page', params.page.toString());
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+    if (params?.status) queryParams.set('status', params.status);
+    if (params?.professionalId) queryParams.set('professionalId', params.professionalId);
+
+    const query = queryParams.toString();
+    const endpoint = `/api/admin/criminal-records${query ? `?${query}` : ''}`;
+
+    const result = await this.request<APICriminalRecordReviewResponse>(endpoint);
+    if (result.success && !('pagination' in result)) {
+      return {
+        success: false,
+        error: 'unexpected_response',
+        message: 'Se esperaba una respuesta paginada',
+      };
+    }
+    return result as PaginatedAPIResponse<APICriminalRecordReviewResponse> | APIError;
+  }
+
+  async reviewProfessionalCriminalRecord(
+    professionalId: string,
+    data: { status: 'approved' | 'rejected'; adminNotes?: string }
+  ): Promise<APIResponse<APICriminalRecordReviewResponse> | APIError> {
+    const result = await this.request<APICriminalRecordReviewResponse>(
+      `/api/admin/professionals/${professionalId}/criminal-record`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    );
+
+    if ('pagination' in result) {
+      return {
+        success: false,
+        error: 'unexpected_response',
+        message: 'Se esperaba una respuesta simple, se recibió una respuesta paginada',
+      };
+    }
+    return result as APIResponse<APICriminalRecordReviewResponse> | APIError;
   }
 
   // ==================== OBSERVABILIDAD ====================

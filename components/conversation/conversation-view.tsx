@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { ChatMessage } from "@/types/contact-detail"; // Usamos el tipo ChatMessage
 import { Skeleton } from "@/components/ui/skeleton"; // Podría ser útil para un estado de carga de mensajes individuales
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 // Interfaz para la respuesta de la API de detalles de conversación (mensajes)
 interface ConversationMessagesApiResponse {
@@ -30,9 +32,16 @@ export const ConversationView = ({ details }: ConversationViewProps) => {
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isUpdatingHandoff, setIsUpdatingHandoff] = useState(false);
+  const [isHumanMode, setIsHumanMode] = useState(false);
+  const [outgoingMessage, setOutgoingMessage] = useState('');
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendSuccess, setSendSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const scrollHeightBeforeLoad = useRef<number>(0);
+  const pollingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const formatMessages = useCallback((apiMessages: any[]): ChatMessage[] => {
     return apiMessages
@@ -140,6 +149,155 @@ export const ConversationView = ({ details }: ConversationViewProps) => {
     []
   );
 
+  const clearPolling = useCallback(() => {
+    if (pollingTimerRef.current) {
+      clearTimeout(pollingTimerRef.current);
+      pollingTimerRef.current = null;
+    }
+  }, []);
+
+  const mergeUniqueMessages = useCallback((current: ChatMessage[], incoming: ChatMessage[]) => {
+    const byId = new Map<string | number, ChatMessage>();
+
+    for (const msg of current) {
+      byId.set(msg.id, msg);
+    }
+
+    for (const msg of incoming) {
+      byId.set(msg.id, msg);
+    }
+
+    return Array.from(byId.values()).sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+  }, []);
+
+  const refreshMessages = useCallback(
+    async (opts?: { merge?: boolean }) => {
+      if (!details) return;
+      const data = await fetchConversationMessages(1, details.contactId, details.conversationId);
+      const formatted = formatMessages(data.messages);
+      setCurrentPage(data.currentPage);
+      setTotalPages(data.totalPages);
+
+      if (opts?.merge) {
+        setMessages((prev) => mergeUniqueMessages(prev, formatted));
+      } else {
+        setMessages(formatted);
+      }
+    },
+    [details, fetchConversationMessages, formatMessages, mergeUniqueMessages]
+  );
+
+  const startShortPolling = useCallback(() => {
+    clearPolling();
+    const startedAt = Date.now();
+    const maxDurationMs = 25000;
+    const intervalMs = 2500;
+
+    const tick = async () => {
+      const elapsed = Date.now() - startedAt;
+      if (elapsed > maxDurationMs) {
+        clearPolling();
+        return;
+      }
+
+      try {
+        await refreshMessages({ merge: true });
+      } catch {
+        // evitar romper UX por errores intermitentes durante polling
+      }
+
+      pollingTimerRef.current = setTimeout(tick, intervalMs);
+    };
+
+    pollingTimerRef.current = setTimeout(tick, intervalMs);
+  }, [clearPolling, refreshMessages]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!details?.contactId || isSending || !isHumanMode) return;
+    const message = outgoingMessage.trim();
+    if (!message) return;
+
+    setIsSending(true);
+    setSendError(null);
+    setSendSuccess(null);
+    clearPolling();
+
+    try {
+      const response = await fetch('/api/core/history/human-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contactId: details.contactId,
+          conversationId: details.conversationId,
+          message,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { message?: string; error?: string }
+        | null;
+
+      if (!response.ok) {
+        const errorMessage =
+          payload?.message || payload?.error || 'No se pudo enviar el mensaje.';
+        throw new Error(errorMessage);
+      }
+
+      setOutgoingMessage('');
+      setSendSuccess(payload?.message || 'Mensaje enviado correctamente.');
+      await refreshMessages();
+      startShortPolling();
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : 'Error al enviar mensaje.');
+    } finally {
+      setIsSending(false);
+    }
+  }, [clearPolling, details, isHumanMode, isSending, outgoingMessage, refreshMessages, startShortPolling]);
+
+  const handleToggleHandoff = useCallback(async () => {
+    if (!details?.contactId || isUpdatingHandoff) return;
+
+    setIsUpdatingHandoff(true);
+    setSendError(null);
+    setSendSuccess(null);
+
+    try {
+      const targetAction = isHumanMode ? 'release' : 'take';
+      const response = await fetch('/api/core/history/human-handoff', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contactId: details.contactId,
+          conversationId: details.conversationId,
+          action: targetAction,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { message?: string; error?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.message || payload?.error || 'No se pudo actualizar el handoff.');
+      }
+
+      setIsHumanMode(!isHumanMode);
+      setSendSuccess(
+        payload?.message ||
+          (!isHumanMode ? 'Conversación tomada por humano.' : 'Conversación devuelta al bot.'),
+      );
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : 'Error al actualizar handoff.');
+    } finally {
+      setIsUpdatingHandoff(false);
+    }
+  }, [details, isHumanMode, isUpdatingHandoff]);
 
   const loadMoreMessages = useCallback(async () => {
     if (!details || isLoadingMore || currentPage >= totalPages) {
@@ -188,6 +346,11 @@ export const ConversationView = ({ details }: ConversationViewProps) => {
 
     setIsLoading(true);
     setError(null);
+    setSendError(null);
+    setSendSuccess(null);
+    setOutgoingMessage('');
+    setIsHumanMode(false);
+    clearPolling();
     setMessages([]);
     setCurrentPage(1);
     setTotalPages(1);
@@ -211,7 +374,7 @@ export const ConversationView = ({ details }: ConversationViewProps) => {
             }
         });
       });
-  }, [details, formatMessages, fetchConversationMessages]);
+  }, [clearPolling, details, formatMessages, fetchConversationMessages]);
 
   useEffect(() => {
     const container = chatContainerRef.current;
@@ -226,13 +389,20 @@ export const ConversationView = ({ details }: ConversationViewProps) => {
     };
   }, [isLoadingMore, currentPage, totalPages, loadMoreMessages]);
 
+  useEffect(() => {
+    return () => {
+      clearPolling();
+    };
+  }, [clearPolling]);
+
   if (!details && !isLoading) {
     return <div className="p-4 text-center text-muted-foreground">Seleccione una conversación para ver los detalles.</div>;
   }
 
   return (
-    <div ref={chatContainerRef} className="mt-1 p-1 border rounded-md max-h-[500px] h-[500px] overflow-y-auto flex flex-col-reverse bg-muted/20">
-      <div className="space-y-3 p-3">
+    <div className="flex h-full flex-col gap-3 p-1">
+      <div ref={chatContainerRef} className="mt-1 p-1 border rounded-md max-h-[500px] h-[500px] overflow-y-auto flex flex-col-reverse bg-muted/20">
+        <div className="space-y-3 p-3">
         {isLoading && messages.length === 0 && (
             Array.from({ length: 5 }).map((_, index) => (
                 <div key={`skel-${index}`} className={`flex ${index % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
@@ -266,11 +436,60 @@ export const ConversationView = ({ details }: ConversationViewProps) => {
           ))}
         </div>
 
-      {isLoadingMore && (
+        {isLoadingMore && (
           <div className="text-center py-3 sticky top-0 bg-muted/80 w-full backdrop-blur-sm">
             <p className="text-sm">Cargando mensajes anteriores...</p> 
           </div>
-        )}
+          )}
+      </div>
+
+      {details?.contactId ? (
+        <div className="border rounded-md p-3 space-y-2 bg-background">
+          <Textarea
+            value={outgoingMessage}
+            onChange={(event) => setOutgoingMessage(event.target.value)}
+            placeholder="Escribí un mensaje para este contacto..."
+            rows={3}
+            disabled={isSending}
+          />
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs">
+              {sendError ? <span className="text-red-500">{sendError}</span> : null}
+              {!sendError && sendSuccess ? (
+                <span className="text-emerald-600">{sendSuccess}</span>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant={isHumanMode ? 'secondary' : 'outline'}
+                onClick={handleToggleHandoff}
+                disabled={isUpdatingHandoff}
+              >
+                {isUpdatingHandoff
+                  ? 'Actualizando...'
+                  : isHumanMode
+                    ? 'Devolver al bot'
+                    : 'Tomar conversación'}
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSendMessage}
+                disabled={
+                  isSending || outgoingMessage.trim().length === 0 || !isHumanMode
+                }
+              >
+                {isSending ? 'Enviando...' : 'Enviar'}
+              </Button>
+            </div>
+          </div>
+          {!isHumanMode ? (
+            <p className="text-xs text-muted-foreground">
+              Tomá la conversación para pausar flujos del bot antes de responder.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }; 

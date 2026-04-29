@@ -95,6 +95,9 @@ export function adaptProfessional(apiProfessional: APIProfessionalResponse): Pro
     ? {
         required: apiProfessional.documentation.required,
         criminalRecordPresent: apiProfessional.documentation.criminalRecordPresent,
+        criminalRecordStatus: apiProfessional.documentation.criminalRecordStatus ?? null,
+        criminalRecordReviewedAt: apiProfessional.documentation.criminalRecordReviewedAt ?? null,
+        criminalRecordAdminNotes: apiProfessional.documentation.criminalRecordAdminNotes ?? null,
         hasLaborReferences: apiProfessional.documentation.hasLaborReferences,
         criminalRecord: apiProfessional.documentation.criminalRecord
           ? {
@@ -241,5 +244,4 @@ export function prepareUpdateProfessionalData(formData: any) {
 
   return data;
 }
-
 
