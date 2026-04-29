@@ -189,6 +189,9 @@ export interface LaborReference {
 export interface ProfessionalDocumentation {
   required?: boolean;
   criminalRecordPresent?: boolean;
+  criminalRecordStatus?: 'pending' | 'approved' | 'rejected' | null;
+  criminalRecordReviewedAt?: string | null;
+  criminalRecordAdminNotes?: string | null;
   hasLaborReferences?: boolean;
   criminalRecord?: PrivateDocumentFile | null;
   laborReferences?: LaborReference[];

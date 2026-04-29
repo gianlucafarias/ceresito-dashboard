@@ -71,6 +71,7 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
   const [error, setError] = useState<string | null>(null);
   const [approvalNotes, setApprovalNotes] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isReviewingCriminalRecord, setIsReviewingCriminalRecord] = useState(false);
 
   // Cargar datos del profesional
   useEffect(() => {
@@ -189,6 +190,10 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
   const isCertified = certifications.some((certification) => certification.status === "approved");
   const toProxyDownloadPath = (downloadPath?: string) =>
     downloadPath ? `/api/servicios-externos${downloadPath}` : null;
+  const criminalRecordReviewStatus = documentation?.criminalRecordStatus ?? "pending";
+  const canReviewCriminalRecord =
+    !!documentation?.criminalRecord &&
+    (criminalRecordReviewStatus === "pending" || criminalRecordReviewStatus === null);
   
   // TODO: Las reviews aún vienen como mock, pendiente de endpoint en la API
   const professionalReviews = mockReviews.filter(r => r.professionalId === professional.id);
@@ -283,13 +288,13 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
     
     setIsProcessing(true);
     try {
-      const response = await apiClient.updateProfessionalStatus(professional.id, 'active', true);
+      const response = await apiClient.updateProfessionalStatus(professional.id, 'active', false);
       
       if (response.success) {
         await reloadProfessional();
         toast({
           title: "Profesional aprobado",
-          description: "El profesional ya quedó activo y verificado.",
+          description: "El profesional quedó activo. El tilde azul se habilita al aprobar antecedentes.",
         });
       } else {
         toast({
@@ -373,6 +378,47 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
       });
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleCriminalRecordReview = async (status: "approved" | "rejected") => {
+    if (!professional) return;
+
+    try {
+      setIsReviewingCriminalRecord(true);
+      const response = await apiClient.reviewProfessionalCriminalRecord(professional.id, {
+        status,
+        adminNotes: approvalNotes || undefined,
+      });
+
+      if (response.success) {
+        await reloadProfessional();
+        toast({
+          title:
+            status === "approved"
+              ? "Antecedentes aprobados"
+              : "Antecedentes rechazados",
+          description:
+            status === "approved"
+              ? "Se otorgó el estado verificado al profesional."
+              : "El profesional quedó sin verificar hasta nueva revisión.",
+        });
+      } else {
+        toast({
+          title: "No se pudo actualizar antecedentes",
+          description: response.message,
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error("Error reviewing criminal record:", err);
+      toast({
+        title: "Error al revisar antecedentes",
+        description: "Ocurrió un problema al actualizar la revisión del documento.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsReviewingCriminalRecord(false);
     }
   };
 
@@ -672,6 +718,18 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
                     <p className="text-sm text-muted-foreground">
                       {documentation?.criminalRecord?.fileName || "No cargado"}
                     </p>
+                    {documentation?.criminalRecord && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Estado revisión:{" "}
+                        <span className="font-medium">
+                          {documentation.criminalRecordStatus === "approved"
+                            ? "Aprobado"
+                            : documentation.criminalRecordStatus === "rejected"
+                              ? "Rechazado"
+                              : "Pendiente"}
+                        </span>
+                      </p>
+                    )}
                   </div>
                   {documentation?.criminalRecord?.downloadPath && (
                     <a
@@ -683,6 +741,32 @@ export default function ProfessionalDetailPage({ params }: ProfessionalDetailPag
                     </a>
                   )}
                 </div>
+                {canReviewCriminalRecord && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => handleCriminalRecordReview("approved")}
+                      disabled={isReviewingCriminalRecord}
+                    >
+                      Aprobar antecedentes
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleCriminalRecordReview("rejected")}
+                      disabled={isReviewingCriminalRecord}
+                    >
+                      Rechazar antecedentes
+                    </Button>
+                    {isReviewingCriminalRecord && (
+                      <span className="inline-flex items-center text-xs text-muted-foreground">
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        Actualizando estado...
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">

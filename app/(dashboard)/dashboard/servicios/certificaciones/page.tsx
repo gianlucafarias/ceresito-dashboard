@@ -40,7 +40,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { apiClient, APICertificationResponse } from "../_lib/api-client";
+import {
+  apiClient,
+  APICertificationResponse,
+  APICriminalRecordReviewResponse,
+} from "../_lib/api-client";
 
 type CertificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
@@ -49,6 +53,7 @@ export default function CertificacionesPage() {
   const searchParams = useSearchParams();
   const professionalId = searchParams.get('professionalId');
   const [certifications, setCertifications] = useState<APICertificationResponse[]>([]);
+  const [criminalRecords, setCriminalRecords] = useState<APICriminalRecordReviewResponse[]>([]);
   const [statusFilter, setStatusFilter] = useState<CertificationStatus | "all">("pending");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,13 +93,34 @@ export default function CertificacionesPage() {
     }
   }, [pagination.page, pagination.limit, statusFilter, professionalId]);
 
+  const fetchCriminalRecords = useCallback(async () => {
+    try {
+      const response = await apiClient.listCriminalRecordReviews({
+        page: 1,
+        limit: 100,
+        status: statusFilter === "suspended" ? undefined : (statusFilter as "pending" | "approved" | "rejected" | undefined),
+        professionalId: professionalId || undefined,
+      });
+
+      if (response.success && "pagination" in response) {
+        setCriminalRecords(response.data);
+      }
+    } catch (err) {
+      console.error("Error fetching criminal records:", err);
+    }
+  }, [professionalId, statusFilter]);
+
   useEffect(() => {
     fetchCertifications();
   }, [fetchCertifications]);
 
+  useEffect(() => {
+    fetchCriminalRecords();
+  }, [fetchCriminalRecords]);
+
   const handleStatusChange = async (
     cert: APICertificationResponse,
-    newStatus: CertificationStatus
+    newStatus: "approved" | "rejected" | "suspended"
   ) => {
     try {
       setIsLoading(true);
@@ -113,6 +139,29 @@ export default function CertificacionesPage() {
     } catch (err) {
       console.error("Error updating certification:", err);
       setError("Error de conexión al actualizar certificación");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCriminalRecordStatusChange = async (
+    record: APICriminalRecordReviewResponse,
+    newStatus: "approved" | "rejected"
+  ) => {
+    try {
+      setIsLoading(true);
+      const response = await apiClient.reviewProfessionalCriminalRecord(record.professionalId, {
+        status: newStatus,
+      });
+
+      if (response.success) {
+        await fetchCriminalRecords();
+      } else {
+        setError(response.message || "Error al actualizar antecedentes");
+      }
+    } catch (err) {
+      console.error("Error updating criminal record review:", err);
+      setError("Error de conexión al actualizar antecedentes");
     } finally {
       setIsLoading(false);
     }
@@ -213,6 +262,83 @@ export default function CertificacionesPage() {
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Antecedentes Penales</CardTitle>
+          <CardDescription>
+            Revisión manual de certificados de antecedentes cargados por profesionales.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Profesional</TableHead>
+                <TableHead>Documento</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {criminalRecords.map((record) => (
+                <TableRow key={record.id}>
+                  <TableCell>
+                    <div className="font-medium">
+                      {record.professional.user.firstName} {record.professional.user.lastName}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {record.professional.user.email}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">
+                      {record.criminalRecordFileName || "Sin archivo"}
+                    </span>
+                  </TableCell>
+                  <TableCell>{getStatusBadge((record.criminalRecordStatus || "pending") as CertificationStatus)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          router.push(`/dashboard/servicios/profesionales/${record.professionalId}`)
+                        }
+                      >
+                        Ver perfil
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        disabled={record.criminalRecordStatus === "approved"}
+                        onClick={() => handleCriminalRecordStatusChange(record, "approved")}
+                      >
+                        Aprobar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={record.criminalRecordStatus === "rejected"}
+                        onClick={() => handleCriminalRecordStatusChange(record, "rejected")}
+                      >
+                        Rechazar
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {criminalRecords.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">
+                    No hay antecedentes para revisar con los filtros actuales.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
